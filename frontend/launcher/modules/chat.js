@@ -35,9 +35,18 @@ export const chat = {
   async open(agentNum, initialInput) {
     const agent = this._findAgentByNum(agentNum);
     if (!agent) {
+      const meta = CORE_AGENTS.find(a => a.num === agentNum);
+      const nice = meta ? `${meta.emoji} ${meta.name}` : `#${agentNum}`;
+      // 一般同仁友善版
+      const isAdmin = document.documentElement.dataset.role === "admin";
+      const adminHint = isAdmin
+        ? `<div style="margin-top:12px;padding:10px;background:var(--bg-base);border-radius:6px;font-size:12px;color:var(--text-secondary);font-family:var(--font-mono)">
+             管理員補充:執行 <code>python3 scripts/create-agents.py --tier core</code> 建立助手
+           </div>`
+        : "";
       modal.alert(
-        `找不到 Agent <strong>#${agentNum}</strong><br><br>請先執行:<br><code>python3 scripts/create-agents.py --tier core</code>`,
-        { title: "Agent 未建立", icon: "🤖", primary: "知道了" }
+        `系統還沒準備好「${escapeHtml(nice)}」這位助手,請聯絡管理員協助。${adminHint}`,
+        { title: "助手尚未就緒", icon: "🤖", primary: "知道了" }
       );
       return;
     }

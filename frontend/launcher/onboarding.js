@@ -1,76 +1,50 @@
 /**
- * 承富 AI · 擴充版 Onboarding(互動式教學 · 10 步)
+ * 承富 AI · Onboarding(v4.3 · 任務型 3 步)
  *
- * 從單純 4 步介紹 → 10 步互動任務 · 讓使用者真的會用
+ * 對齊老闆 top 3 任務:設計 / 提案撰寫 / 廠商聯繫
+ * 不嚇跑資深同仁:不講 Level 03、不露技術字
  * localStorage 記進度 · 中途離開可繼續
  */
 
 const STEPS = [
   {
-    title: "👋 歡迎使用承富 AI",
-    body: "我是你的 AI 小幫手。接下來 5 分鐘,我帶你做 10 個小任務,做完就會用了。<br><br><strong>承諾:</strong>所有對話都能重來 · 不會影響別人 · 錯了也沒事。",
-    next: "開始 · 5 分鐘",
-    action: null,
+    title: "🎨 任務 1/3:設計 Brief 一鍵到位",
+    body: `資深設計師 90 分鐘寫 Brief、你 3 分鐘搞定。<br><br>
+      <strong>試試:</strong>按 <kbd>⌘3</kbd> 進設計協作,告訴助手:<br>
+      <code>「幫我想 3 個中秋節 FB / IG / LINE 主視覺方向,
+      品牌是 XX 客戶,預算 5 萬,3 天要」</code><br><br>
+      它會直接產出:3 組方向 + 色調建議 + 每個尺寸的素材清單。`,
+    next: "試了 · 下一步",
+    action: () => {
+      document.querySelector('[data-ws="3"]')?.scrollIntoView({ block: "center" });
+      highlight('[data-ws="3"]');
+    },
   },
   {
-    title: "🎯 10 個 AI 專家各司其職",
-    body: "承富 AI 不是一個聊天機器人,是 10 位專家。你不用記名字 —— 直接把事情丟給「主管家」(⌘0 或首頁),它會判斷該用誰。<br><br>右邊 Sidebar 你會看到所有專家。",
-    next: "懂了",
-    action: () => highlight(".sidebar-section"),
+    title: "🎯 任務 2/3:貼一段招標看值不值得投",
+    body: `60 頁招標須知,10 分鐘判斷 Go / No-Go。<br><br>
+      <strong>試試:</strong>按 <kbd>⌘1</kbd> 進投標,把招標須知整段貼進對話,說:<br>
+      <code>「幫我 Go/No-Go · 我們有 8 週準備」</code><br><br>
+      它會回:8 維度評分 + 明確建議 + 如果 Go 要先做什麼。`,
+    next: "試了 · 下一步",
+    action: () => {
+      document.querySelector('[data-ws="1"]')?.scrollIntoView({ block: "center" });
+      highlight('[data-ws="1"]');
+    },
   },
   {
-    title: "📝 任務 1:用人話問主管家",
-    body: "不用學 prompt。直接在首頁輸入框,用你平常講話的方式問。<br><br><strong>試試:</strong>在首頁輸入<br><code>「幫我想一則中秋節給客戶的訊息」</code><br>然後按 <kbd>⌘Enter</kbd>。",
-    next: "我試了",
-    action: () => highlight(".hero-input-card"),
-  },
-  {
-    title: "📁 任務 2:建立第一個專案",
-    body: "每個標案 / 活動當作一個「專案」,對話跟檔案都綁專案,交接、回顧都方便。<br><br><strong>試試:</strong>按 <kbd>⌘P</kbd> 進專案頁 → 點「+ 新專案」。",
-    next: "建好了",
-    action: () => { app?.showView?.("projects"); highlight('[data-view="projects"]'); },
-  },
-  {
-    title: "📚 任務 3:查承富過往知識",
-    body: "10 年累積的建議書、結案、新聞稿,都可以用人話問。<br><br><strong>試試:</strong>找「📚 知識庫查詢」助手,問<br><code>「我們做過什麼環保類的案?」</code>",
-    next: "下一步",
-    action: () => highlight('[data-view="skills"]'),
-  },
-  {
-    title: "🔒 重要:資料分級",
-    body: "<strong>⚠️ Level 03 機敏資料絕對不可用 AI</strong>:<br>• 選情分析 / 政治敏感<br>• 未公告的標案內情<br>• 客戶個資(身份證 / 電話 / 私密訊息)<br><br>不確定?問管理員或牆上海報。系統會自動偵測,但你的判斷是第一道關。",
-    next: "記住了",
-    action: null,
-  },
-  {
-    title: "📢 任務 4:看新標案",
-    body: "系統每天早上自動掃政府採購網,找到承富關鍵字的標案。<br><br><strong>試試:</strong>按 <kbd>⌘T</kbd> 進標案監測頁,看看最近有沒有感興趣的。",
-    next: "看過了",
-    action: () => { app?.showView?.("tenders"); highlight('[data-view="tenders"]'); },
-  },
-  {
-    title: "💼 任務 5:商機 Pipeline",
-    body: "把投標看成漏斗:<br>新機會 → 評估 → 提案 → 送件 → 得/落標 → 執行 → 結案<br><br><strong>試試:</strong>按 <kbd>⌘I</kbd> 進 Pipeline。喜歡的標案匯入後,拖拉卡片到對應階段。",
-    next: "酷",
-    action: () => { app?.showView?.("crm"); highlight('[data-view="crm"]'); },
-  },
-  {
-    title: "👍 任務 6:給 AI 回饋",
-    body: "每個 AI 回應下面都有 👍 / 👎。<strong>幫我們越用越準!</strong><br><br>• 👍 好用的 → 系統學起來,以後優先用類似 pattern<br>• 👎 不好的 → 月底會分析,調整助手行為<br><br><strong>試試:</strong>下次對話,記得給個 👍 或 👎。",
-    next: "好",
-    action: null,
-  },
-  {
-    title: "🎤 任務 7:語音輸入",
-    body: "不想打字?首頁輸入框旁邊有 🎤 按鈕,按下說話,繁中辨識。<br><br>適合:<br>• 通勤時想到 idea<br>• 開會中快速筆記<br>• 打字慢的資深同仁",
-    next: "下一步",
-    action: null,
-  },
-  {
-    title: "✨ 完成!你已經會用了",
-    body: "其他快捷鍵按 <kbd>?</kbd> 隨時看。<br><br>有問題找:<br>• AI Champion:__________(分機 __)<br>• Sterio:__________<br>• LINE 群組:承富 AI 互助<br><br><strong>現在去做你真正的工作,讓 AI 幫你省時間。</strong>",
-    next: "開始使用 🚀",
-    action: null,
+    title: "🎪 任務 3/3:廠商比價信一鍵產",
+    body: `發 10 家廠商問報價,不用再複製貼上 10 次。<br><br>
+      <strong>試試:</strong>按 <kbd>⌘2</kbd> 進活動執行,說:<br>
+      <code>「請 5 家音響廠商報『200 人記者會 · 3 小時 · 台北』,
+      給我比價信範本」</code><br><br>
+      送前人工看一次,再手動送(v1.1 會加自動群發)。<br><br>
+      <strong>⌨️ 按 ? 看所有快捷鍵 · 按 ⌘K 全域搜尋</strong>`,
+    next: "開始工作 🚀",
+    action: () => {
+      document.querySelector('[data-ws="2"]')?.scrollIntoView({ block: "center" });
+      highlight('[data-ws="2"]');
+    },
   },
 ];
 
@@ -121,7 +95,7 @@ const tour = {
     localStorage.setItem("chengfu-tour-done", new Date().toISOString());
     localStorage.removeItem("chengfu-tour-idx");
     document.querySelectorAll(".onboarding-highlight").forEach(el => el.classList.remove("onboarding-highlight"));
-    if (window.toast) toast.success("🎉 Onboarding 完成 · 可隨時按 ? 看快捷鍵");
+    if (window.toast) toast.success("🎉 完成!有問題隨時按 ? 查快捷鍵,或 ⌘K 全域搜尋");
   },
 };
 
