@@ -322,36 +322,76 @@ export const chat = {
 
   async history() {
     try {
-      const r = await fetch("/api/convos?pageSize=20", { credentials: "include" });
+      const r = await authFetch("/api/convos?pageSize=20");
       const data = await r.json();
       const convos = data.conversations || data.data || data;
       if (!Array.isArray(convos) || convos.length === 0) { toast.info("尚無歷史對話"); return; }
+      // 打開 modal 後 · 用 event delegation 在 modal body 點 li 時 · close modal 並 loadConvo
       const list = convos.slice(0, 10).map(c =>
-        `<li style="padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer"
-             data-convo-id="${escapeHtml(c.conversationId || c._id)}">${escapeHtml(c.title || "未命名")}</li>`
+        `<li style="padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;border-radius:6px"
+             data-convo-id="${escapeHtml(c.conversationId || c._id)}"
+             onmouseover="this.style.background='var(--bg-base)'"
+             onmouseout="this.style.background='transparent'">${escapeHtml(c.title || "未命名")}</li>`
       ).join("");
-      await modal.alert(`<ul style="list-style:none;padding:0" id="chat-history-list">${list}</ul>`,
-        { title: "歷史對話", icon: "🕒" });
-      // after modal closed, the delegated listener is lost, but user clicked inside modal triggered close
-      // simpler:在 modal 開著時直接綁(修為用事件委派)
+      // Use DOM content listener instead of alert
+      const root = document.createElement("div");
+      root.innerHTML = `<ul style="list-style:none;padding:0;margin:0" id="chat-history-list">${list}</ul>`;
+      root.addEventListener("click", async (e) => {
+        const li = e.target.closest("[data-convo-id]");
+        if (!li) return;
+        const cid = li.dataset.convoId;
+        // 關閉 modal
+        document.querySelectorAll(".modal2-backdrop.open, .modal2-box.open").forEach(el => el.classList.remove("open"));
+        setTimeout(() => {
+          document.querySelectorAll(".modal2-backdrop, .modal2-box").forEach(el => el.remove());
+        }, 200);
+        await this.loadConvo(cid);
+      });
+      modal.alert(root.innerHTML, { title: "歷史對話 · 點一筆開啟", icon: "🕒", primary: "關閉" });
+      // alert 的 body 被 re-innerHTML · 重新綁
+      setTimeout(() => {
+        document.querySelectorAll(".modal2-body [data-convo-id]").forEach(li => {
+          li.addEventListener("click", async () => {
+            const cid = li.dataset.convoId;
+            document.querySelectorAll(".modal2-backdrop.open, .modal2-box.open").forEach(el => el.classList.remove("open"));
+            setTimeout(() => document.querySelectorAll(".modal2-backdrop, .modal2-box").forEach(el => el.remove()), 200);
+            await this.loadConvo(cid);
+          });
+        });
+      }, 50);
     } catch {
       toast.error("無法載入歷史對話");
     }
   },
 
   async loadConvo(convoId) {
+    if (!convoId) return;
     this.currentConvoId = convoId;
     try {
-      const r = await fetch(`/api/messages/${convoId}`, { credentials: "include" });
+      const r = await authFetch(`/api/messages/${convoId}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const msgs = await r.json();
       const container = document.getElementById("chat-messages");
       if (!container) return;
-      container.innerHTML = "";
-      for (const m of (msgs || [])) {
+
+      // 確保 chat pane 是開的(從 URL 直接進來時 · pane 可能沒開)
+      document.getElementById("chat-pane")?.classList.add("open");
+      document.body.classList.add("chat-open");
+
+      container.innerHTML = "";  // 清 welcome + 舊訊息
+      if (!Array.isArray(msgs) || msgs.length === 0) {
+        container.innerHTML = '<div class="chat-welcome"><div class="chat-welcome-title">對話無訊息</div><div class="chat-welcome-sub">這串對話還沒內容</div></div>';
+        return;
+      }
+      // 依時間序 append
+      msgs.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+      for (const m of msgs) {
         this.appendMessage(m.isCreatedByUser ? "user" : "assistant", m.text || "");
       }
-    } catch {
-      toast.error("載入對話失敗");
+      toast.success(`已載入對話 · ${msgs.length} 則訊息`);
+    } catch (e) {
+      console.warn("載入對話失敗", e);
+      toast.error("載入對話失敗 · 可能對話已被刪除");
     }
   },
 

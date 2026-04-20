@@ -317,9 +317,21 @@ def main() -> int:
             agent_id = resp.get("id") or resp.get("_id") or "unknown"
             print(f"✅ {agent['name']}")
             print(f"   agent_id={agent_id}")
-            # 建立後 · 嘗試共享給全公司(可選)
-            if agent_id != "unknown" and share_agent_globally(token, agent_id):
-                print("   🌐 已共享給全公司")
+            # 建立後 · 共享給全公司 · v4.4 起 · 共享失敗視為錯誤(避免表面成功實質沒共享)
+            if agent_id != "unknown":
+                if share_agent_globally(token, agent_id):
+                    print("   🌐 已共享給全公司")
+                else:
+                    # 若要停掉 hard-fail(某些 LibreChat 升版 projectIds 改變),
+                    # 設環境變數 CHENGFU_SHARE_SOFT_FAIL=1
+                    if os.environ.get("CHENGFU_SHARE_SOFT_FAIL") != "1":
+                        print(f"❌ {agent['name']} 共享失敗 · agent 已建但未對全公司可見")
+                        print("   原因通常是:instance project id 找不到 · 或 Mongo 手動加 projectIds")
+                        print("   請見 docs/LIBRECHAT-UPGRADE-CHECKLIST.md 第 5a 步")
+                        fail += 1
+                        continue
+                    else:
+                        print("   ⚠ 共享失敗但 SOFT_FAIL=1 · 略過")
             success += 1
         except Exception as e:
             print(f"❌ {agent['name']}")

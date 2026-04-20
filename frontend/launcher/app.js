@@ -662,13 +662,32 @@ window.Projects    = Projects;
 window.palette     = palette;
 
 // ============================================================
-//  URL ?pending=... · Chrome Extension 轉送的初始輸入
+//  URL 參數處理 · pending(Chrome Ext) · convo(歷史對話重開)
 // ============================================================
 const urlParams = new URLSearchParams(window.location.search);
 const pendingInput = urlParams.get("pending");
+const convoToOpen  = urlParams.get("convo");
+
 if (pendingInput) {
   window.addEventListener("DOMContentLoaded", () => {
     chat.open("00", decodeURIComponent(pendingInput));
+  });
+}
+
+if (convoToOpen) {
+  // v4.3 · 最近對話 click → /chat/c/:id → librechat-relabel.js 302 回 /?convo=:id
+  // Launcher 認領 · 打開 chat pane · 用主管家身份載入歷史
+  window.addEventListener("DOMContentLoaded", async () => {
+    // 等 agents 載入好再 open · 不然 _findAgentByNum 會失敗
+    await new Promise(r => setTimeout(r, 300));
+    try {
+      await chat.open("00");  // 以主管家 agent 開 pane
+      await chat.loadConvo(decodeURIComponent(convoToOpen));
+      // 清 URL query 避免 reload 再執行
+      history.replaceState({}, document.title, window.location.pathname);
+    } catch (e) {
+      console.warn("載入對話失敗", e);
+    }
   });
 }
 

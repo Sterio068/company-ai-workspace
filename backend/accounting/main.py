@@ -991,11 +991,74 @@ def cost_summary(days: int = 30, _admin: str = Depends(require_admin)):
 # ============================================================
 
 # Anthropic 定價(USD per 1M tokens · 2026-04 · 需定期更新)
+# v4.4:加 PRICE_VERSION 讓 admin 看得到「這是哪版定價 · 何時該 refresh」
+_PRICE_VERSION = "2026-04-21"  # 更新時請改日期 · Admin 儀表可查
 _ANTHROPIC_PRICING_USD = {
     "claude-opus-4-7":    {"input": 15.0,  "output": 75.0},
     "claude-sonnet-4-6":  {"input":  3.0,  "output": 15.0},
     "claude-haiku-4-5":   {"input":  0.25, "output":  1.25},
 }
+
+
+# ============================================================
+# LibreChat transactions schema adapter
+# v4.4:外部 reviewer 指 ROI endpoint 過度依賴 LibreChat 私有 schema,
+#       升版改名 / 改結構時會 silently 變 0。抽一層 adapter,讓升版時只改一處。
+# ============================================================
+_LC_TX_SCHEMA_CHECKED = {"checked": False, "ok": False, "issue": ""}
+
+
+def _lc_tx_probe() -> dict:
+    """啟動時自檢 LibreChat transactions schema · 結果快取 · admin 可查。"""
+    if _LC_TX_SCHEMA_CHECKED["checked"]:
+        return _LC_TX_SCHEMA_CHECKED
+    _LC_TX_SCHEMA_CHECKED["checked"] = True
+    try:
+        doc = db.transactions.find_one({}, {"rawAmount": 1, "model": 1, "user": 1, "createdAt": 1})
+        if not doc:
+            _LC_TX_SCHEMA_CHECKED["ok"] = True
+            _LC_TX_SCHEMA_CHECKED["issue"] = "transactions 尚無資料(正常)"
+            return _LC_TX_SCHEMA_CHECKED
+        missing = []
+        if not isinstance(doc.get("rawAmount"), dict): missing.append("rawAmount(non-dict)")
+        elif "prompt" not in doc["rawAmount"] and "completion" not in doc["rawAmount"]:
+            missing.append("rawAmount.prompt|completion")
+        if "model" not in doc:      missing.append("model")
+        if "user" not in doc:       missing.append("user")
+        if "createdAt" not in doc:  missing.append("createdAt")
+        if missing:
+            _LC_TX_SCHEMA_CHECKED["ok"] = False
+            _LC_TX_SCHEMA_CHECKED["issue"] = f"缺欄位:{missing}"
+        else:
+            _LC_TX_SCHEMA_CHECKED["ok"] = True
+    except Exception as e:
+        _LC_TX_SCHEMA_CHECKED["ok"] = False
+        _LC_TX_SCHEMA_CHECKED["issue"] = f"probe 失敗:{e}"
+    return _LC_TX_SCHEMA_CHECKED
+
+
+def _lc_tx_normalize(doc: dict) -> dict:
+    """把 LibreChat transaction doc normalize 成承富統一格式 · 未來升版只改這裡"""
+    raw = doc.get("rawAmount") or {}
+    return {
+        "model": doc.get("model") or "",
+        "prompt_tokens": int(raw.get("prompt") or 0),
+        "completion_tokens": int(raw.get("completion") or 0),
+        "user_id": doc.get("user"),
+        "created_at": doc.get("createdAt"),
+    }
+
+
+@app.get("/admin/librechat-contract")
+def librechat_contract(_admin: str = Depends(require_admin)):
+    """升版後第一件事 · 驗 LibreChat 私有 schema 是否還相容"""
+    probe = _lc_tx_probe()
+    return {
+        "price_version": _PRICE_VERSION,
+        "transactions_schema_ok": probe["ok"],
+        "transactions_issue": probe["issue"],
+        "pricing_models": list(_ANTHROPIC_PRICING_USD.keys()),
+    }
 _USD_TO_NTD = float(os.getenv("USD_TO_NTD", "32.5"))
 _MONTHLY_BUDGET_NTD = float(os.getenv("MONTHLY_BUDGET_NTD", "12000"))
 # Per-user soft cap 上限(NT$)· hard_stop 超過擋送(v1.1 真裝)

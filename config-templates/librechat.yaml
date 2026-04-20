@@ -68,7 +68,7 @@ fileConfig:
 #   → 不需在此檔宣告
 #
 # Agent:
-#   承富 29 個工作單位的載體,見下方 endpoints.agents 設定
+#   承富 10 個職能助手的載體(主管家 + 9 專家 · v4.0 決議精簡)· 見下方 endpoints.agents 設定
 #
 endpoints:
   agents:
@@ -92,7 +92,7 @@ endpoints:
 
 # ==================== Agent modelSpecs(5 Workspace 快速入口)====================
 #
-# 用途:將 29 個 Agent 以 Workspace 分組,在 UI「Model Spec 選單」呈現快速入口
+# 用途:將 10 個助手以 5 個工作區分組,在 UI「Model Spec 選單」呈現快速入口
 # 命名慣例(Round 1 U-1 方案 A):每個 label 前加 emoji 代表 Workspace
 #   🎯 投標 · [Agent 名]
 #   🎪 活動 · [Agent 名]

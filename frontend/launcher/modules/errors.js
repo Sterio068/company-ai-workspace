@@ -30,14 +30,23 @@ export async function withErrorBoundary(fn, { fallback, message = "載入失敗 
 
 /**
  * 全域未捕捉錯誤 handler · 避免整頁崩潰
+ * v4.4:前台只顯示可恢復話術 · 細節寫 console + 用 request id 串 backend log
  */
+function _makeRid() {
+  return "rid-" + Math.random().toString(36).slice(2, 10);
+}
+
 export function installGlobalErrorHandler() {
   window.addEventListener("error", (e) => {
-    console.error("[Global Error]", e.error);
-    toast.error(`⚠️ 未預期錯誤:${e.message}`);
+    const rid = _makeRid();
+    console.error(`[Global Error ${rid}]`, e.error || e.message, e.filename, e.lineno);
+    toast.error(`系統暫時有點問題 · 請按 ⌘⇧R 重新整理 · 問題編號 ${rid}`);
   });
   window.addEventListener("unhandledrejection", (e) => {
-    console.error("[Unhandled Promise]", e.reason);
-    toast.error(`⚠️ Promise 錯誤:${e.reason?.message || e.reason}`);
+    const rid = _makeRid();
+    console.error(`[Unhandled Promise ${rid}]`, e.reason);
+    // 若是 SessionExpiredError,讓 auth banner 處理,不 toast
+    if (e.reason?.name === "SessionExpiredError") return;
+    toast.error(`網路或服務短暫異常 · 再試一次 · 問題編號 ${rid}`);
   });
 }

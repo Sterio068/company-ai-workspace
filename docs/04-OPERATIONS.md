@@ -176,8 +176,12 @@ LibreChat admin panel → Users → 選使用者 → Monthly Token Limit。
 ## 6. 成本監控
 
 ### 6.1 Anthropic 月預算
-`.env` 設 `MONTHLY_BUDGET_USD=400`(約 NT$ 12,000)。
-超過 **80%** email 通知 ADMIN_EMAIL,超過 **100%** 自動暫停新對話。
+`.env` 設 `MONTHLY_BUDGET_NTD=12000`(預設上限)。
+
+**v4.3 現況(老實說):**
+- **有:** Launcher 首頁 ROI 卡片顯示預算進度(綠→橘→紅)· `/admin/budget-status` endpoint
+- **沒有(v1.1 做):** 80% 自動 email、100% 自動擋送。目前靠老闆或 Champion 每週看一次。
+- **備援:** Anthropic console 自己設 spending limit(<https://console.anthropic.com> → Billing)
 
 查實際花費:https://console.anthropic.com → Usage → 本月
 
