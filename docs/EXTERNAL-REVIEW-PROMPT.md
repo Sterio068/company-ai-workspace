@@ -4,10 +4,9 @@
 > 他們應該能從頭到尾讀完後,不用再追問背景,就給出具體可執行的建議。
 >
 > **完整專案原始碼(public repo · 免認證可讀):**
-> - GitHub Pull Request(**推薦入口**):<https://github.com/Sterio068/pet-care-platform/pull/1>
-> - 分支樹瀏覽:<https://github.com/Sterio068/pet-care-platform/tree/chengfu/v1-launcher-refactor/ChengFu>
-> - Clone:`git clone -b chengfu/v1-launcher-refactor https://github.com/Sterio068/pet-care-platform.git && cd pet-care-platform/ChengFu`
-> - 專案根目錄 = `ChengFu/`(repo 本身是 monorepo,其他子目錄與本審查無關)
+> - GitHub 網址:<https://github.com/Sterio068/chengfu-ai>
+> - Clone:`git clone https://github.com/Sterio068/chengfu-ai.git && cd chengfu-ai`
+> - 專案根目錄 = repo 根(所有相對路徑如 `frontend/launcher/app.js` 都直接可讀)
 >
 > **本機開發路徑(作者的 Mac mini · 若是跟作者同場討論時參考):**
 > - Project root:`/Users/sterio/Workspace/ChengFu`
