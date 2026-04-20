@@ -1,0 +1,59 @@
+# ========================================
+#  承富 AI · git ignore
+# ========================================
+
+# macOS 垃圾
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE / tools
+.idea/
+*.swp
+*~
+.vscode/launch.json
+
+# Secrets · 絕對不 commit
+config-templates/.env
+config-templates/.env.local
+config-templates/.env.production
+*.pem
+*.key
+*_rsa
+*_rsa.pub
+
+# Docker 資料卷(mongo / meili / uptime)· 每個環境自己長出來
+config-templates/data/
+config-templates/logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Playwright / test artifacts
+tests/playwright-report/
+tests/test-results/
+tests/.playwright/
+
+# Launch 會寫入目前 cwd · 本機 only
+.claude/launch.json
+
+# Agent output / task cache
+tasks/*.output
+tasks/cache/
+
+# Build artifacts
+dist/
+build/
+.cache/

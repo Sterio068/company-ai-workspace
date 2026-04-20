@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="auto">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0F2340">
+<title>承富 AI · 首頁 v4.1</title>
+<link rel="stylesheet" href="/static/launcher.css?v=41">
+</head>
+<body>
+
+<div class="app" id="app" hidden>
+
+  <!-- ============== SIDEBAR ============== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand">
+        <div class="brand-logo">承</div>
+        <div>
+          <div class="brand-name">承富 AI</div>
+          <div class="brand-sub">10 人協作平台</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sidebar-section">
+      <div class="sidebar-section-label">首頁</div>
+      <a class="sidebar-item nav-item active" data-view="dashboard">
+        <span class="sidebar-icon">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12L12 3l9 9"/><path d="M5 10v10h14V10"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">Dashboard</span>
+        <kbd class="sidebar-shortcut">⌘0</kbd>
+      </a>
+    </nav>
+
+    <nav class="sidebar-section">
+      <div class="sidebar-section-label">Workspace</div>
+      <a class="sidebar-item ws-nav" data-ws="1" style="--ws-color:#FF3B30">
+        <span class="sidebar-icon" style="color:#FF3B30">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none">
+            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">投標</span>
+        <kbd class="sidebar-shortcut">⌘1</kbd>
+      </a>
+      <a class="sidebar-item ws-nav" data-ws="2" style="--ws-color:#FF9500">
+        <span class="sidebar-icon" style="color:#FF9500">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">活動執行</span>
+        <kbd class="sidebar-shortcut">⌘2</kbd>
+      </a>
+      <a class="sidebar-item ws-nav" data-ws="3" style="--ws-color:#AF52DE">
+        <span class="sidebar-icon" style="color:#AF52DE">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none">
+            <circle cx="12" cy="12" r="10"/><circle cx="7" cy="10" r="1.5" fill="currentColor"/><circle cx="17" cy="10" r="1.5" fill="currentColor"/><circle cx="9.5" cy="15" r="1.5" fill="currentColor"/><circle cx="14.5" cy="15" r="1.5" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">設計協作</span>
+        <kbd class="sidebar-shortcut">⌘3</kbd>
+      </a>
+      <a class="sidebar-item ws-nav" data-ws="4" style="--ws-color:#34C759">
+        <span class="sidebar-icon" style="color:#34C759">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 11l18-5v12L3 13z"/><path d="M11.5 19.5L8 22v-6"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">公關溝通</span>
+        <kbd class="sidebar-shortcut">⌘4</kbd>
+      </a>
+      <a class="sidebar-item ws-nav" data-ws="5" style="--ws-color:#007AFF">
+        <span class="sidebar-icon" style="color:#007AFF">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 12h4M7 8h10M7 16h7"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">營運後勤</span>
+        <kbd class="sidebar-shortcut">⌘5</kbd>
+      </a>
+    </nav>
+
+    <nav class="sidebar-section">
+      <div class="sidebar-section-label">資料</div>
+      <a class="sidebar-item nav-item" data-view="projects">
+        <span class="sidebar-icon">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">專案</span>
+        <span class="sidebar-count" id="project-count">0</span>
+      </a>
+      <a class="sidebar-item nav-item" data-view="crm">
+        <span class="sidebar-icon">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">商機 Pipeline</span>
+        <span class="sidebar-count" id="crm-count">—</span>
+      </a>
+      <a class="sidebar-item nav-item" data-view="tenders">
+        <span class="sidebar-icon">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 11l18-5v12L3 13z"/><path d="M11.5 19.5L8 22v-6"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">標案監測</span>
+        <span class="sidebar-count" id="tender-count">—</span>
+      </a>
+      <a class="sidebar-item nav-item" data-view="accounting">
+        <span class="sidebar-icon">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">會計</span>
+        <span class="sidebar-count" id="accounting-tx-count">—</span>
+      </a>
+      <a class="sidebar-item nav-item" data-view="skills">
+        <span class="sidebar-icon">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">技能庫</span>
+        <span class="sidebar-count">29</span>
+      </a>
+      <a class="sidebar-item nav-item" data-view="workflows">
+        <span class="sidebar-icon">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="13 2 13 9 20 9"/><path d="M20 9L13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">自動化流程</span>
+      </a>
+      <a class="sidebar-item nav-item" data-view="admin" id="admin-nav" style="display:none">
+        <span class="sidebar-icon">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3v18h18"/><polyline points="7 14 11 10 15 14 21 8"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">管理面板</span>
+      </a>
+    </nav>
+
+    <nav class="sidebar-section">
+      <div class="sidebar-section-label">工具</div>
+      <a class="sidebar-item" data-slash="/know">
+        <span class="sidebar-icon">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">知識庫</span>
+        <kbd class="sidebar-shortcut">/know</kbd>
+      </a>
+      <a class="sidebar-item" data-slash="/meet">
+        <span class="sidebar-icon">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">會議速記</span>
+        <kbd class="sidebar-shortcut">/meet</kbd>
+      </a>
+      <a class="sidebar-item" data-agent="00">
+        <span class="sidebar-icon" style="color:#0F2340">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">主管家</span>
+        <kbd class="sidebar-shortcut">⌘⏎</kbd>
+      </a>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="user-name">載入中</div>
+        <div class="user-role" id="user-role">—</div>
+      </div>
+      <button class="theme-toggle" onclick="app.toggleTheme()" title="切換深/淺色(⌘⇧L)">
+        <svg class="icon" width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="health-indicator ok" id="health-indicator" title="服務狀態">
+      <span class="health-dot">●</span>
+      <span class="health-text">系統正常</span>
+    </div>
+  </aside>
+
+  <!-- ============== MAIN ============== -->
+  <main class="main">
+
+    <!-- ========== VIEW: DASHBOARD ========== -->
+    <div class="view view-dashboard active" data-view="dashboard">
+      <div class="main-header">
+        <div>
+          <h1 class="greeting" id="greeting">早安 👋</h1>
+          <div class="greeting-sub" id="date-line">—</div>
+        </div>
+        <div class="header-actions">
+          <button class="search-btn" onclick="app.openPalette()" title="全域搜尋(⌘K)">
+            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <span>搜尋功能、對話、知識…</span>
+            <kbd>⌘K</kbd>
+          </button>
+        </div>
+      </div>
+
+      <!-- 常用 -->
+      <section class="block frequent">
+        <div class="block-title">
+          <h2>📌 常用</h2>
+          <div class="block-hint" id="frequent-hint">根據您最近 7 天使用</div>
+        </div>
+        <div class="chip-row" id="frequent-chips">
+          <div class="chip-empty">尚無常用 · 送出第一個問題,或點下方 Workspace 開始</div>
+        </div>
+      </section>
+
+      <!-- 5 個 Workspace(主角)-->
+      <section class="block">
+        <div class="block-title">
+          <h2>🗂️ Workspace</h2>
+          <div class="block-hint">按 ⌘1-5 快速切換 · 每個 Workspace 是一整條工作流</div>
+        </div>
+        <div class="workspaces" id="workspaces-grid">
+
+          <div class="workspace-card ws-1" onclick="app.openWorkspace(1)">
+            <div class="ws-head">
+              <div class="ws-icon">
+                <svg class="icon" width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none">
+                  <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/>
+                </svg>
+              </div>
+              <div class="ws-name">投標</div>
+              <span class="ws-shortcut">⌘1</span>
+            </div>
+            <div class="ws-desc">從看到招標須知,到送件前最後一哩的完整流程。</div>
+            <div class="ws-meta">
+              <div class="ws-meta-item">🎯 <span class="ws-meta-num" id="ws1-agents">1</span> Agent</div>
+              <div class="ws-meta-item">📅 本月 <span class="ws-meta-num" id="ws1-month">—</span> 次</div>
+              <div class="ws-meta-item">⭐ 勝率 <span class="ws-meta-num" id="ws1-winrate">—</span></div>
+            </div>
+          </div>
+
+          <div class="workspace-card ws-2" onclick="app.openWorkspace(2)">
+            <div class="ws-head">
+              <div class="ws-icon">
+                <svg class="icon" width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/>
+                </svg>
+              </div>
+              <div class="ws-name">活動執行</div>
+              <span class="ws-shortcut">⌘2</span>
+            </div>
+            <div class="ws-desc">3D 場景模擬、舞台、動線、現場體驗、廠商合約一站到位。</div>
+            <div class="ws-meta">
+              <div class="ws-meta-item">🎪 <span class="ws-meta-num" id="ws2-agents">1</span> Agent</div>
+              <div class="ws-meta-item">📅 本月 <span class="ws-meta-num" id="ws2-month">—</span> 次</div>
+              <div class="ws-meta-item">⏱ 省時 <span class="ws-meta-num" id="ws2-hours">—</span></div>
+            </div>
+          </div>
+
+          <div class="workspace-card ws-3" onclick="app.openWorkspace(3)">
+            <div class="ws-head">
+              <div class="ws-icon">
+                <svg class="icon" width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none">
+                  <circle cx="12" cy="12" r="10"/><circle cx="7" cy="10" r="1.5" fill="currentColor"/><circle cx="17" cy="10" r="1.5" fill="currentColor"/><circle cx="9.5" cy="15" r="1.5" fill="currentColor"/><circle cx="14.5" cy="15" r="1.5" fill="currentColor"/>
+                </svg>
+              </div>
+              <div class="ws-name">設計協作</div>
+              <span class="ws-shortcut">⌘3</span>
+            </div>
+            <div class="ws-desc">主視覺發想、設計 Brief、AI 圖像、多渠道適配。PM × 設計師無縫接棒。</div>
+            <div class="ws-meta">
+              <div class="ws-meta-item">🎨 <span class="ws-meta-num" id="ws3-agents">1</span> Agent</div>
+              <div class="ws-meta-item">📅 本月 <span class="ws-meta-num" id="ws3-month">—</span> 次</div>
+              <div class="ws-meta-item">✨ 滿意 <span class="ws-meta-num" id="ws3-sat">—</span></div>
+            </div>
+          </div>
+
+          <div class="workspace-card ws-4" onclick="app.openWorkspace(4)">
+            <div class="ws-head">
+              <div class="ws-icon">
+                <svg class="icon" width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 11l18-5v12L3 13z"/><path d="M11.5 19.5L8 22v-6"/>
+                </svg>
+              </div>
+              <div class="ws-name">公關溝通</div>
+              <span class="ws-shortcut">⌘4</span>
+            </div>
+            <div class="ws-desc">新聞稿、社群月企劃、Email、會議速記。對外發聲全部搞定。</div>
+            <div class="ws-meta">
+              <div class="ws-meta-item">📣 <span class="ws-meta-num" id="ws4-agents">2</span> Agent</div>
+              <div class="ws-meta-item">📅 本月 <span class="ws-meta-num" id="ws4-month">—</span> 次</div>
+              <div class="ws-meta-item">📈 曝光 <span class="ws-meta-num" id="ws4-reach">—</span></div>
+            </div>
+          </div>
+
+          <div class="workspace-card ws-5" onclick="app.openWorkspace(5)">
+            <div class="ws-head">
+              <div class="ws-icon">
+                <svg class="icon" width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 12h4M7 8h10M7 16h7"/>
+                </svg>
+              </div>
+              <div class="ws-name">營運後勤</div>
+              <span class="ws-shortcut">⌘5</span>
+            </div>
+            <div class="ws-desc">結案、報價、追蹤、CRM、合約、稅務、新人 onboarding。內部管理中樞。</div>
+            <div class="ws-meta">
+              <div class="ws-meta-item">📊 <span class="ws-meta-num" id="ws5-agents">3</span> Agent</div>
+              <div class="ws-meta-item">📅 本月 <span class="ws-meta-num" id="ws5-month">—</span> 次</div>
+              <div class="ws-meta-item">💰 節省 <span class="ws-meta-num" id="ws5-saved">—</span></div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- 全域工具 -->
+      <section class="block global-tools">
+        <div class="block-title">
+          <h2>⚡ 全域工具</h2>
+          <div class="block-hint">在任何對話中用 <code>/</code> 指令快速呼叫</div>
+        </div>
+        <div class="global-tools-grid">
+          <div class="tool-card" style="--tool-color:#0F2340" onclick="app.slashCmd('/know')">
+            <div class="tool-icon">
+              <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </div>
+            <div class="tool-info">
+              <div class="tool-name">知識庫查詢</div>
+              <div class="tool-slash">/know</div>
+            </div>
+          </div>
+          <div class="tool-card" style="--tool-color:#C9603A" onclick="app.slashCmd('/email')">
+            <div class="tool-icon">
+              <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h16c1 0 2 1 2 2v12c0 1-1 2-2 2H4c-1 0-2-1-2-2V6c0-1 1-2 2-2z"/><path d="M22 6l-10 7L2 6"/>
+              </svg>
+            </div>
+            <div class="tool-info">
+              <div class="tool-name">Email 草稿</div>
+              <div class="tool-slash">/email</div>
+            </div>
+          </div>
+          <div class="tool-card" style="--tool-color:#34C759" onclick="app.slashCmd('/vendor')">
+            <div class="tool-icon">
+              <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="16" rx="2"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/>
+              </svg>
+            </div>
+            <div class="tool-info">
+              <div class="tool-name">廠商比價</div>
+              <div class="tool-slash">/vendor</div>
+            </div>
+          </div>
+          <div class="tool-card" style="--tool-color:#007AFF" onclick="app.slashCmd('/tax')">
+            <div class="tool-icon">
+              <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+              </svg>
+            </div>
+            <div class="tool-info">
+              <div class="tool-name">稅務諮詢</div>
+              <div class="tool-slash">/tax</div>
+            </div>
+          </div>
+          <div class="tool-card" style="--tool-color:#AF52DE" onclick="app.slashCmd('/meet')">
+            <div class="tool-icon">
+              <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+              </svg>
+            </div>
+            <div class="tool-info">
+              <div class="tool-name">會議速記</div>
+              <div class="tool-slash">/meet</div>
+            </div>
+          </div>
+          <div class="tool-card" style="--tool-color:#FF9500" onclick="app.slashCmd('/help')">
+            <div class="tool-icon">
+              <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12" y2="17"/>
+              </svg>
+            </div>
+            <div class="tool-info">
+              <div class="tool-name">新人 Onboarding</div>
+              <div class="tool-slash">/help</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 專案預覽(保留但縮小)-->
+      <section class="block">
+        <div class="block-title">
+          <h2>📁 進行中的專案</h2>
+          <div class="block-hint">
+            <a href="#" onclick="app.showView('projects');return false;" class="link">管理全部 →</a>
+          </div>
+        </div>
+        <div class="projects-preview" id="projects-preview">
+          <div class="chip-empty">
+            還沒有專案 ·
+            <a href="#" onclick="app.newProject();return false;" class="link">建立第一個</a>
+            (如:「2026-04 環保局宣導案」)
+          </div>
+        </div>
+      </section>
+
+      <!-- 隱藏的 agent grid / hero-input,保持向後相容(核心 Agent 改從 Workspace 入口)-->
+      <div class="agents-grid" id="core-agents-grid" hidden></div>
+      <form style="display:none" onsubmit="app.submitHeroInput(event)"><textarea id="hero-input"></textarea></form>
+    </div>
+
+    <!-- ========== VIEW: PROJECTS ========== -->
+    <div class="view view-projects" data-view="projects">
+      <div class="main-header">
+        <div>
+          <h1 class="greeting">📁 專案</h1>
+          <div class="greeting-sub">每個標案 / 活動獨立管理,對話跟檔案都跟著專案走</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn-primary" onclick="app.newProject()">+ 新專案</button>
+        </div>
+      </div>
+
+      <div class="projects-filter">
+        <button class="filter-chip active" data-filter="all">全部</button>
+        <button class="filter-chip" data-filter="active">進行中</button>
+        <button class="filter-chip" data-filter="closed">已結案</button>
+      </div>
+
+      <div class="projects-grid" id="projects-grid"></div>
+
+      <!-- v1.0 說明 -->
+      <div class="v10-notice">
+        ℹ️ v1.0 專案資料儲存於你的瀏覽器(localStorage)· v1.1 將升級為團隊共享。
+      </div>
+    </div>
+
+    <!-- ========== VIEW: SKILLS ========== -->
+    <div class="view view-skills" data-view="skills">
+      <div class="main-header">
+        <div>
+          <h1 class="greeting">📚 技能庫</h1>
+          <div class="greeting-sub">承富 12 個專屬 Skills + Anthropic 官方 17 個 Claude Skills + OpenClaw 參考庫,AI 會自動引用。</div>
+        </div>
+      </div>
+
+      <div class="block-title"><h2>承富 12 Skills</h2></div>
+      <div class="skills-grid" id="skills-grid"></div>
+
+      <div class="block-title" style="margin-top: 40px"><h2>Anthropic 官方 Skills(Claude 平台)</h2></div>
+      <div class="skills-grid" id="claude-skills-grid"></div>
+    </div>
+
+    <!-- ========== VIEW: ACCOUNTING ========== -->
+    <div class="view view-accounting" data-view="accounting">
+      <div class="main-header">
+        <div>
+          <h1 class="greeting">💰 會計</h1>
+          <div class="greeting-sub">承富內建會計模組 · 科目 / 交易 / 發票 / 報價 / 報表 · 讓 AI 財務試算直接讀寫</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn-primary" onclick="accounting.newTransaction()">+ 新交易</button>
+        </div>
+      </div>
+
+      <section class="mini-stats">
+        <div class="stat-card">
+          <div class="stat-num" id="acc-month-income">—</div>
+          <div class="stat-label">本月收入 NT$</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="acc-month-expense">—</div>
+          <div class="stat-label">本月支出 NT$</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="acc-month-profit">—</div>
+          <div class="stat-label">本月淨利 NT$</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="acc-aging-90">—</div>
+          <div class="stat-label">逾 90 天應收</div>
+        </div>
+      </section>
+
+      <div class="block">
+        <div class="block-title">
+          <h2>🧾 最近交易</h2>
+          <div class="block-hint">
+            <a href="/api-accounting/docs" target="_blank" class="link">完整 API 文件 →</a>
+          </div>
+        </div>
+        <div class="recent-list" id="acc-transactions">
+          <div class="chip-empty">載入中…</div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">
+          <h2>📄 最近發票 / 報價</h2>
+        </div>
+        <div class="projects-grid" id="acc-invoices">
+          <div class="chip-empty">尚無發票</div>
+        </div>
+      </div>
+
+      <div class="v10-notice">
+        💡 想開發票或建報價,直接跟「💰 財務試算」Agent 說,它會自動呼叫會計 API 處理。
+      </div>
+    </div>
+
+    <!-- ========== VIEW: TENDERS(採購網監測)========== -->
+    <div class="view view-tenders" data-view="tenders">
+      <div class="main-header">
+        <div>
+          <h1 class="greeting">📢 標案監測</h1>
+          <div class="greeting-sub">每日自動抓政府電子採購網 · 符合承富關鍵字的新標案</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn-ghost" onclick="tenders.refresh()">🔄 重整</button>
+        </div>
+      </div>
+
+      <div class="projects-filter">
+        <button class="filter-chip active" data-tender-filter="all">全部</button>
+        <button class="filter-chip" data-tender-filter="new">新發現</button>
+        <button class="filter-chip" data-tender-filter="interested">有興趣</button>
+        <button class="filter-chip" data-tender-filter="skipped">已忽略</button>
+      </div>
+
+      <div class="recent-list" id="tenders-list">
+        <div class="chip-empty">載入中 · 首次需要 cron 跑過一次 tender-monitor.py</div>
+      </div>
+
+      <div class="v10-notice">
+        💡 想加關鍵字?編輯 `scripts/tender-monitor.py` 的 TENDER_MONITOR_KEYWORDS 環境變數。
+        cron 設定見 DEPLOY.md Phase 4.5。
+      </div>
+    </div>
+
+    <!-- ========== VIEW: WORKFLOWS(自動化多 Agent 流程)========== -->
+    <div class="view view-workflows" data-view="workflows">
+      <div class="main-header">
+        <div>
+          <h1 class="greeting">⚡ 自動化流程</h1>
+          <div class="greeting-sub">主管家協調多個專家串接 · 一句話完成完整工作流(v2.0 功能)</div>
+        </div>
+      </div>
+
+      <div class="workspaces" id="workflows-grid">
+        <div class="chip-empty" style="grid-column: 1 / -1">載入中…</div>
+      </div>
+
+      <div class="v10-notice">
+        ⚠️ v2.0 實驗性功能 · 需要 LibreChat v0.8.4 的 Agent API 支援。
+        若執行失敗,請改用單一 Agent 手動操作。
+      </div>
+    </div>
+
+    <!-- ========== VIEW: CRM PIPELINE(Kanban · v2.0 核心業務)========== -->
+    <div class="view view-crm" data-view="crm">
+      <div class="main-header">
+        <div>
+          <h1 class="greeting">💼 商機 Pipeline</h1>
+          <div class="greeting-sub">拖拉卡片 · 跟 Agent 協作 · 視覺化承富投標全閉環</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn-ghost" onclick="crm.importFromTenders()">📥 匯入「有興趣」標案</button>
+          <button class="btn-primary" onclick="crm.newLead()">+ 新商機</button>
+        </div>
+      </div>
+
+      <!-- 漏斗統計 -->
+      <section class="mini-stats" style="margin-bottom: 20px">
+        <div class="stat-card">
+          <div class="stat-num" id="crm-stat-total">—</div>
+          <div class="stat-label">總商機數</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="crm-stat-win-rate">—</div>
+          <div class="stat-label">歷史勝率 %</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="crm-stat-pipeline">—</div>
+          <div class="stat-label">進行中預期值 NT$</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="crm-stat-active">—</div>
+          <div class="stat-label">執行中案</div>
+        </div>
+      </section>
+
+      <!-- Kanban 看板 -->
+      <div class="kanban" id="kanban-board">
+        <div class="chip-empty" style="grid-column: 1 / -1">載入中…</div>
+      </div>
+    </div>
+
+    <!-- ========== VIEW: ADMIN DASHBOARD(管理員專用)========== -->
+    <div class="view view-admin" data-view="admin">
+      <div class="main-header">
+        <div>
+          <h1 class="greeting">📊 管理面板</h1>
+          <div class="greeting-sub">成本 / 品質 / 使用量 · 僅管理員可見</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn-ghost" onclick="admin.refresh()">🔄 重整</button>
+        </div>
+      </div>
+
+      <!-- 3 大區塊 · 成本 -->
+      <section class="block">
+        <div class="block-title">
+          <h2>💰 本月財務</h2>
+          <div class="block-hint">從會計 API 即時彙總</div>
+        </div>
+        <div class="mini-stats">
+          <div class="stat-card">
+            <div class="stat-num" id="admin-income">—</div>
+            <div class="stat-label">收入 NT$</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="admin-expense">—</div>
+            <div class="stat-label">支出 NT$</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="admin-net">—</div>
+            <div class="stat-label">淨利 NT$</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="admin-projects">—</div>
+            <div class="stat-label">進行中專案</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 品質 -->
+      <section class="block">
+        <div class="block-title">
+          <h2>👍 品質指標</h2>
+          <div class="block-hint">由 👍👎 回饋彙總</div>
+        </div>
+        <div class="mini-stats">
+          <div class="stat-card">
+            <div class="stat-num" id="admin-satisfaction">—</div>
+            <div class="stat-label">整體滿意度 %</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="admin-feedback-total">—</div>
+            <div class="stat-label">總回饋數</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="admin-convos">—</div>
+            <div class="stat-label">本月對話</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="admin-convos-total">—</div>
+            <div class="stat-label">對話累計</div>
+          </div>
+        </div>
+
+        <div class="block-title" style="margin-top:24px"><h2>各 Agent 品質排行</h2></div>
+        <div class="recent-list" id="admin-agent-stats">
+          <div class="chip-empty">載入中…</div>
+        </div>
+      </section>
+
+      <!-- 成本 by model -->
+      <section class="block">
+        <div class="block-title">
+          <h2>🤖 API 用量(近 30 天)</h2>
+          <div class="block-hint">從 LibreChat transactions 收集</div>
+        </div>
+        <div class="recent-list" id="admin-cost-stats">
+          <div class="chip-empty">載入中…</div>
+        </div>
+      </section>
+
+      <div class="v10-notice">
+        ℹ️ 若 FastAPI /api-accounting 未就緒 · 此頁面顯示離線狀態。異常告警將在 v1.2 加入(Slack/Email)。
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ============== INSPECTOR ============== -->
+  <aside class="inspector">
+    <section class="insp-section">
+      <div class="insp-label">本月用量</div>
+      <div class="usage-card">
+        <div class="usage-row">
+          <div class="usage-amt"><span id="usage-used">—</span></div>
+          <div class="usage-max">/ <span id="usage-limit">—</span></div>
+        </div>
+        <div class="usage-bar"><div class="usage-fill" id="usage-fill"></div></div>
+        <div class="usage-stats">
+          <div class="usage-stat">剩餘 <b id="usage-remaining">—</b></div>
+          <div class="usage-stat">日均 <b id="usage-avg">—</b></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="insp-section">
+      <div class="insp-label">最近對話</div>
+      <div class="recent-list" id="recent-list">
+        <div class="chip-empty">尚無對話</div>
+      </div>
+    </section>
+
+    <section class="insp-section">
+      <div class="insp-label">💡 智慧建議</div>
+      <div class="suggestions" id="suggestions">
+        <div class="suggestion" onclick="app.openWorkspace(1)">
+          <div class="sug-icon">📅</div>
+          <div class="sug-title">標案監測 · 每日自動抓</div>
+          <div class="sug-desc">符合關鍵字的新標案會進這裡 · 點我看本月有哪些要跟。</div>
+        </div>
+        <div class="suggestion" onclick="app.openAgent('06')">
+          <div class="sug-icon">📚</div>
+          <div class="sug-title">先試:問知識庫</div>
+          <div class="sug-desc">找過往案例 / Skills / 承富內部規範 · 打一句話就好。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="insp-section">
+      <div class="insp-label">系統狀態</div>
+      <div class="status-list">
+        <div class="status-row"><span class="status-dot ok"></span>對話引擎 · Claude API</div>
+        <div class="status-row"><span class="status-dot" id="status-kb"></span>知識庫 · <span id="status-kb-text">檢查中</span></div>
+        <div class="status-row"><span class="status-dot ok"></span>備份 · 每日自動</div>
+      </div>
+    </section>
+  </aside>
+
+</div>
+
+<!-- ============== PROJECT EDIT MODAL ============== -->
+<div class="modal-backdrop" id="project-modal-backdrop" onclick="app.closeProjectModal()"></div>
+<div class="modal" id="project-modal">
+  <div class="modal-header">
+    <h3 id="project-modal-title">新專案</h3>
+    <button class="modal-close" onclick="app.closeProjectModal()">✕</button>
+  </div>
+  <form class="modal-body" id="project-form" onsubmit="app.saveProject(event)">
+    <label>
+      <span>專案名稱 <em>(必填)</em></span>
+      <input type="text" name="name" placeholder="例:2026-04 環保局宣導案" required>
+    </label>
+    <label>
+      <span>客戶</span>
+      <input type="text" name="client" placeholder="例:環境部環境管理署">
+    </label>
+    <div class="field-row">
+      <label>
+        <span>預算(NT$)</span>
+        <input type="number" name="budget" placeholder="3000000">
+      </label>
+      <label>
+        <span>截止日</span>
+        <input type="date" name="deadline">
+      </label>
+    </div>
+    <label>
+      <span>描述 / 專案 context</span>
+      <textarea name="description" rows="4" placeholder="例:政府宣導案,著重海洋廢棄物減量,目標 5 場說明會 + 3 場記者會,主打在地共創"></textarea>
+    </label>
+    <label>
+      <span>狀態</span>
+      <select name="status">
+        <option value="active">進行中</option>
+        <option value="closed">已結案</option>
+      </select>
+    </label>
+    <div class="modal-actions">
+      <button type="button" class="btn-ghost" id="project-delete-btn" onclick="app.deleteProject()" style="display:none">刪除</button>
+      <div style="flex:1"></div>
+      <button type="button" class="btn-ghost" onclick="app.closeProjectModal()">取消</button>
+      <button type="submit" class="btn-primary">儲存</button>
+    </div>
+  </form>
+</div>
+
+<!-- ============== ⌘K PALETTE ============== -->
+<div class="palette-backdrop" id="palette-backdrop" onclick="app.closePalette()"></div>
+<div class="palette" id="palette">
+  <input type="text" class="palette-input" id="palette-input" placeholder="搜尋 Agent / 專案 / 技能 / 對話…" autocomplete="off">
+  <div class="palette-results" id="palette-results"></div>
+  <div class="palette-footer">
+    <span><kbd>↑↓</kbd> 移動</span>
+    <span><kbd>Enter</kbd> 選擇</span>
+    <span><kbd>Esc</kbd> 關閉</span>
+  </div>
+</div>
+
+<!-- ============== ONBOARDING TOUR ============== -->
+<div class="tour-backdrop" id="tour-backdrop"></div>
+<div class="tour-bubble" id="tour-bubble">
+  <div class="tour-step"><span id="tour-step-n">1</span>/<span id="tour-step-total">4</span></div>
+  <h3 class="tour-title" id="tour-title"></h3>
+  <p class="tour-body" id="tour-body"></p>
+  <div class="tour-actions">
+    <button class="btn-ghost" onclick="tour.skip()">略過</button>
+    <button class="btn-primary" onclick="tour.next()" id="tour-next">下一步</button>
+  </div>
+</div>
+
+<!-- ============== CHAT PANE(Launcher 內建對話 · 路線 A)============== -->
+<aside class="chat-pane" id="chat-pane">
+  <header class="chat-head">
+    <button class="chat-close" onclick="chat.close()" aria-label="關閉對話">✕</button>
+    <div class="chat-agent">
+      <span class="chat-agent-emoji" id="chat-agent-emoji">✨</span>
+      <div class="chat-agent-info">
+        <div class="chat-agent-name" id="chat-agent-name">主管家</div>
+        <div class="chat-agent-sub" id="chat-agent-sub">Opus · 承富全能助理</div>
+      </div>
+    </div>
+    <div class="chat-head-actions">
+      <button class="chat-action" onclick="chat.newConversation()" title="新對話">↻</button>
+      <button class="chat-action" onclick="chat.history()" title="歷史對話">🕒</button>
+    </div>
+  </header>
+
+  <div class="chat-messages" id="chat-messages">
+    <div class="chat-welcome" id="chat-welcome">
+      <div class="chat-welcome-emoji">✨</div>
+      <div class="chat-welcome-title">嗨!我是承富 AI</div>
+      <div class="chat-welcome-sub">用人話告訴我你要做什麼 · 我會判斷該用哪個專家</div>
+    </div>
+  </div>
+
+  <form class="chat-input-area" onsubmit="chat.send(event)" id="chat-form">
+    <div class="chat-attachments" id="chat-attachments"></div>
+    <div class="chat-input-row">
+      <button type="button" class="chat-attach-btn" onclick="chat.pickFile()" title="上傳檔案(PDF / Word / 音檔)">📎</button>
+      <textarea class="chat-input-ta" id="chat-input" rows="1"
+                placeholder="問任何問題 · Shift+Enter 換行"
+                onkeydown="chat.onKey(event)"></textarea>
+      <button type="submit" class="chat-send" id="chat-send-btn" title="送出 (Enter)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+    <input type="file" id="chat-file-input" hidden multiple>
+  </form>
+</aside>
+
+<!-- ============== TEMPLATES ============== -->
+<!-- 渲染卡片時 clone 這些 template · 避免 innerHTML 拼字 -->
+<template id="tpl-project-card">
+  <article class="project-card">
+    <div class="project-card-name" data-slot="name"></div>
+    <div class="project-card-client" data-slot="client"></div>
+    <div class="agent-card-desc" data-slot="description" style="margin-top:4px"></div>
+    <div class="project-card-meta">
+      <span data-slot="deadline"></span>
+      <span data-slot="budget"></span>
+      <span data-slot="updated"></span>
+    </div>
+  </article>
+</template>
+
+<template id="tpl-skill-card">
+  <article class="skill-card">
+    <div class="skill-card-num" data-slot="num"></div>
+    <span class="skill-card-ws" data-slot="ws"></span>
+    <div class="skill-card-name" data-slot="name"></div>
+    <div class="skill-card-desc" data-slot="desc"></div>
+  </article>
+</template>
+
+<template id="tpl-recent-item">
+  <a class="recent-item">
+    <span class="recent-dot" data-slot="dotColor"></span>
+    <div class="recent-content">
+      <div class="recent-title" data-slot="title"></div>
+      <div class="recent-meta">
+        <span class="recent-preset" data-slot="preset"></span>
+        <span class="recent-time" data-slot="time"></span>
+      </div>
+    </div>
+  </a>
+</template>
+
+<template id="tpl-lead-card">
+  <div class="lead-card" draggable="true">
+    <div class="lead-card-title" data-slot="title"></div>
+    <div class="lead-card-client" data-slot="client"></div>
+    <div class="lead-card-meta">
+      <span class="lead-card-tag" data-slot="budget"></span>
+      <span class="lead-card-tag" data-slot="deadline"></span>
+      <span class="lead-card-tag" data-slot="source"></span>
+      <span class="lead-card-tag lead-card-prob" data-slot="prob"></span>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-chip">
+  <button class="chip">
+    <span data-slot="emoji"></span>
+    <span data-slot="name"></span>
+    <span class="chip-badge" data-slot="badge"></span>
+  </button>
+</template>
+
+<!-- ============== LOADING ============== -->
+<div class="loading" id="loading">
+  <div class="loading-dot"></div>
+  <div class="loading-dot"></div>
+  <div class="loading-dot"></div>
+</div>
+
+<!-- ============== CAPTION ============== -->
+<div class="caption" id="caption">
+  <span><kbd>⌘K</kbd> 搜尋</span>
+  <span><kbd>⌘Enter</kbd> 快速問主管家</span>
+  <span><a href="#" onclick="tour.start();return false;" class="link">看引導</a></span>
+</div>
+
+<script type="module" src="/static/app.js?v=41"></script>
+<script src="/static/onboarding.js?v=41"></script>
+</body>
+</html>

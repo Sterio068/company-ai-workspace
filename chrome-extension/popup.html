@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { width: 320px; padding: 16px; font-family: -apple-system, "PingFang TC", sans-serif;
+         background: #F5F5F7; margin: 0; color: #1D1D1F; }
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .logo { width: 32px; height: 32px; background: #0F2340; color: white;
+          border-radius: 8px; display: grid; place-items: center; font-weight: 700; }
+  .title { font-size: 15px; font-weight: 600; }
+  .sub { font-size: 11px; color: #6E6E73; }
+  .section { margin-top: 12px; padding: 10px; background: white; border-radius: 8px;
+             border: 1px solid rgba(0,0,0,0.08); }
+  label { font-size: 12px; color: #6E6E73; display: block; margin-bottom: 4px; }
+  input { width: 100%; padding: 6px 8px; font-size: 13px; box-sizing: border-box;
+          border: 1px solid rgba(0,0,0,0.1); border-radius: 4px; }
+  button { width: 100%; padding: 10px; margin-top: 10px; background: #0F2340;
+           color: white; border: none; border-radius: 6px; font-size: 13px;
+           font-weight: 500; cursor: pointer; }
+  button:hover { background: #1A3358; }
+  .hint { font-size: 11px; color: #8E8E93; margin-top: 8px; line-height: 1.5; }
+  kbd { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 3px;
+        font-family: "SF Mono", monospace; font-size: 10px; }
+</style>
+</head>
+<body>
+
+<div class="brand">
+  <div class="logo">承</div>
+  <div>
+    <div class="title">承富 AI 快捷</div>
+    <div class="sub">從任何網頁一鍵送給主管家</div>
+  </div>
+</div>
+
+<div class="section">
+  <label>承富 AI 位址</label>
+  <input type="text" id="base-url" placeholder="http://localhost 或 https://ai.chengfu.com">
+  <button id="save">儲存</button>
+</div>
+
+<div class="section">
+  <label>快捷鍵</label>
+  <div class="hint">
+    選取文字後:<kbd>⌘⇧C</kbd>(Mac)/ <kbd>Ctrl+Shift+C</kbd>(Win)
+    <br><br>
+    右鍵選單:
+    <ul style="padding-left: 16px; margin: 4px 0;">
+      <li>送到承富 AI · 主管家</li>
+      <li>當作標案 PDF 送出(投標顧問)</li>
+      <li>當作事實稿送公關寫手</li>
+      <li>送整頁網址</li>
+    </ul>
+  </div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+name: CI · 承富 AI 系統
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-backend:
+    name: FastAPI 會計模組測試
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install deps
+        run: |
+          cd backend/accounting
+          pip install -r requirements.txt
+      - name: Run pytest
+        run: |
+          cd backend/accounting
+          pytest test_main.py -v --tb=short
+
+  lint-agent-json:
+    name: 10 Agent JSON 格式驗證
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JSON
+        run: |
+          for f in config-templates/presets/[0-9]*.json; do
+            echo "Validating $f..."
+            python3 -c "import json; data=json.load(open('$f')); assert data['presetId'], '$f 缺 presetId'; assert data['promptPrefix'], '$f 缺 promptPrefix'; print('  OK')"
+          done
+
+  lint-actions:
+    name: Actions OpenAPI schema 驗證
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install openapi-spec-validator
+        run: pip install openapi-spec-validator
+      - name: Validate each action
+        run: |
+          for f in config-templates/actions/*.json; do
+            echo "Validating $f..."
+            openapi-spec-validator "$f"
+          done
+
+  dry-run-create-agents:
+    name: create-agents.py 乾跑
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dry run
+        run: |
+          python3 scripts/create-agents.py --dry-run --tier core
+          python3 scripts/create-agents.py --dry-run --tier all
+
+  docker-build:
+    name: Docker images 能 build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build accounting image
+        run: docker build -t chengfu-accounting backend/accounting/
+      - name: Verify compose syntax
+        run: docker compose -f config-templates/docker-compose.yml config > /dev/null
+
+  e2e-test:
+    name: Playwright E2E(可選 · 需實機啟動)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Install Playwright
+        run: |
+          cd tests/e2e
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Lint tests(不實際跑 · 需真實服務)
+        run: |
+          cd tests/e2e
+          npx playwright test --list

@@ -1,0 +1,150 @@
+# 承富 AI 系統 · Docker Compose 設定
+#
+# 用法:
+#   docker compose pull
+#   docker compose up -d
+#
+# 停止:
+#   docker compose down
+#
+# 重新構建:
+#   docker compose up -d --force-recreate
+#
+# 變更紀錄:
+#   2026-04-18 · 依 DESIGN-REVIEW T-2 移除 rag-api / vectordb / whisper 三個容器
+#   2026-04-18 · 依 DESIGN-REVIEW T-5 image 改 pin 具體版本(避免 latest 破壞性更新)
+#   2026-04-18 · 依 Docker Compose v2 移除 obsolete `version` 欄位
+#
+# 重要提醒:
+#   API key 與密碼應透過 scripts/start.sh 從 macOS Keychain 注入,
+#   .env 僅存非機密設定(見 .env.example 與 docs/05-SECURITY.md)。
+
+services:
+  # ==================== nginx 反向代理 + 承富 Launcher ====================
+  # 職責:
+  # - 根路徑 /           → 承富 Launcher(客製首頁,macOS 風)
+  # - /chat, /api/*, 其他 → LibreChat
+  # - 注入客製 CSS/JS 到 LibreChat 回應(sub_filter)
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: chengfu-nginx
+    restart: unless-stopped
+    depends_on:
+      - librechat
+    ports:
+      - "80:80"       # 對外唯一入口
+    volumes:
+      - ../frontend/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../frontend/nginx/chengfu-proxy.conf:/etc/nginx/chengfu-proxy.conf:ro
+      - ../frontend/launcher:/var/www/launcher:ro
+      - ../frontend/custom:/var/www/custom:ro
+      - ./logs/nginx:/var/log/nginx
+    networks:
+      - chengfu-network
+    mem_limit: 256m
+
+  # ==================== LibreChat 主服務 ====================
+  # 原生能力覆蓋:
+  # - file_search(內建 RAG,不需 rag-api 容器)
+  # - code_interpreter(毛利試算、Excel 輸出)
+  # - web_search(內建)
+  # - speech_to_text(內建,不需 whisper 容器)
+  librechat:
+    image: ghcr.io/danny-avila/librechat:v0.8.4  # 2026-03-20 釋出的穩定版(2026-04-19 驗證)
+    container_name: chengfu-librechat
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+      - meilisearch
+    # 不再對外 expose 3080,改由 nginx 代理
+    expose:
+      - "3080"
+    env_file: .env
+    environment:
+      - HOST=0.0.0.0
+      - MONGO_URI=mongodb://mongodb:27017/chengfu
+      - MEILI_HOST=http://meilisearch:7700
+    volumes:
+      - ./librechat.yaml:/app/librechat.yaml:ro
+      - ./images:/app/client/public/images
+      - ./logs:/app/api/logs
+      - ./uploads:/app/uploads
+    networks:
+      - chengfu-network
+    # 限制記憶體避免吃爆 16/24GB Mac mini
+    mem_limit: 6g
+    mem_reservation: 2g
+
+  # ==================== MongoDB 資料庫 ====================
+  # 儲存對話紀錄、使用者、Agent 定義、檔案中繼資料
+  mongodb:
+    image: mongo:7.0
+    container_name: chengfu-mongo
+    restart: unless-stopped
+    command: mongod --quiet --logpath /dev/null
+    volumes:
+      - ./data/mongo:/data/db
+    networks:
+      - chengfu-network
+    mem_limit: 2g
+
+  # ==================== Meilisearch 全文檢索 ====================
+  # 對話歷史搜尋(不是 RAG,是 UI 層的歷史對話搜尋)
+  meilisearch:
+    image: getmeili/meilisearch:v1.12.0
+    container_name: chengfu-meili
+    restart: unless-stopped
+    environment:
+      - MEILI_NO_ANALYTICS=true
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+    volumes:
+      - ./data/meili:/meili_data
+    networks:
+      - chengfu-network
+    mem_limit: 1g
+
+  # ==================== 會計 API(承富內建)====================
+  # 台灣格式會計模組 + 專案 / 回饋 / Admin / L3 classifier / Orchestrator / 採購網監測
+  accounting:
+    build: ../backend/accounting
+    container_name: chengfu-accounting
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/chengfu
+      - LIBRECHAT_INTERNAL_URL=http://librechat:3080
+      - TZ=Asia/Taipei
+    expose:
+      - "8000"
+    networks:
+      - chengfu-network
+    mem_limit: 512m
+
+  # ==================== Uptime 監控 ====================
+  # 承富系統健康儀表 · 失敗推 Slack/Email
+  # 首次進 http://localhost:3001 建管理帳號 + 加監控目標(見 docs/04-OPERATIONS.md)
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: chengfu-uptime
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./data/uptime:/app/data
+    networks:
+      - chengfu-network
+    mem_limit: 256m
+
+networks:
+  chengfu-network:
+    driver: bridge
+
+# 預期資源佔用(24GB Mac mini,10 人尖峰):
+#   librechat:     ~3-4 GB
+#   mongodb:       ~500 MB - 1 GB
+#   meilisearch:   ~300-500 MB
+#   Docker Desktop overhead: ~2 GB
+#   macOS + Apps:  ~6-8 GB
+#   尖峰預留:      ~10 GB
+#   合計:         約 22 GB,24GB 有餘裕

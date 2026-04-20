@@ -1,0 +1,150 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "承富會計 API(內建)",
+    "description": "承富 AI 系統內建會計模組 · Agents 可直接讀寫財務資料",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "http://accounting:8000" }
+  ],
+  "paths": {
+    "/accounts": {
+      "get": {
+        "operationId": "listAccounts",
+        "summary": "列出會計科目",
+        "parameters": [
+          { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["asset", "liability", "equity", "income", "expense"] } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/transactions": {
+      "post": {
+        "operationId": "createTransaction",
+        "summary": "記一筆交易(雙式簿記)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["date", "memo", "debit_account", "credit_account", "amount"],
+                "properties": {
+                  "date": { "type": "string", "format": "date" },
+                  "memo": { "type": "string", "description": "摘要說明" },
+                  "debit_account": { "type": "string", "description": "借方科目編號(費用/資產增加)" },
+                  "credit_account": { "type": "string", "description": "貸方科目編號(收入/負債增加)" },
+                  "amount": { "type": "number", "description": "金額(未稅)" },
+                  "project_id": { "type": "string", "description": "綁定專案 id" },
+                  "vendor": { "type": "string" },
+                  "customer": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      },
+      "get": {
+        "operationId": "listTransactions",
+        "summary": "查詢交易",
+        "parameters": [
+          { "name": "project_id", "in": "query", "schema": { "type": "string" } },
+          { "name": "date_from", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "date_to", "in": "query", "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/invoices": {
+      "post": {
+        "operationId": "createInvoice",
+        "summary": "開立發票",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["date", "customer", "items"],
+                "properties": {
+                  "date": { "type": "string", "format": "date" },
+                  "customer": { "type": "string" },
+                  "customer_tax_id": { "type": "string", "description": "統編" },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "description": { "type": "string" },
+                        "quantity": { "type": "number" },
+                        "unit_price": { "type": "number" }
+                      }
+                    }
+                  },
+                  "tax_included": { "type": "boolean", "default": false },
+                  "project_id": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK · 回傳 invoice_no" } }
+      }
+    },
+    "/quotes": {
+      "post": {
+        "operationId": "createQuote",
+        "summary": "建立報價單",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["date", "customer", "items", "valid_until"],
+                "properties": {
+                  "date": { "type": "string", "format": "date" },
+                  "customer": { "type": "string" },
+                  "items": { "type": "array" },
+                  "valid_until": { "type": "string", "format": "date" },
+                  "project_id": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK · 回傳 quote_no" } }
+      }
+    },
+    "/projects/{project_id}/finance": {
+      "get": {
+        "operationId": "getProjectFinance",
+        "summary": "查詢某專案的財務狀況(收入/支出/毛利)",
+        "parameters": [
+          { "name": "project_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/reports/pnl": {
+      "get": {
+        "operationId": "pnlReport",
+        "summary": "損益表",
+        "parameters": [
+          { "name": "date_from", "in": "query", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "name": "date_to", "in": "query", "required": true, "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/reports/aging": {
+      "get": {
+        "operationId": "agingReport",
+        "summary": "應收帳款帳齡分析",
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  }
+}

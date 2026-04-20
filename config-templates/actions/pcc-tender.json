@@ -1,0 +1,109 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "政府電子採購網查詢(g0v 社群 API)",
+    "description": "承富投標顧問透過 g0v Ronny Wang 收集的 PCC 開放 API 查詢標案(CORS 開放 · 非營利使用免費)",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "https://pcc.g0v.ronny.tw/api" }
+  ],
+  "paths": {
+    "/searchbytitle": {
+      "get": {
+        "operationId": "searchByTitle",
+        "summary": "以標案名稱關鍵字搜尋",
+        "description": "用標案名稱關鍵字搜尋。建議:環保、文化、觀光、AI、宣導、活動等承富業務領域關鍵字。",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "example": "海洋廢棄物"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 1 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "標案清單",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "records": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "unit_name": { "type": "string" },
+                          "job_number": { "type": "string" },
+                          "brief": {
+                            "type": "object",
+                            "properties": {
+                              "type": { "type": "string" },
+                              "title": { "type": "string" },
+                              "companies": { "type": "object" }
+                            }
+                          },
+                          "date": { "type": "integer" }
+                        }
+                      }
+                    },
+                    "total_records": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/listbyunit": {
+      "get": {
+        "operationId": "listByUnit",
+        "summary": "以招標機關名稱搜尋",
+        "description": "搜尋某政府單位最近公告的標案。例:環境部、文化部",
+        "parameters": [
+          { "name": "unit_name", "in": "query", "required": true, "schema": { "type": "string" }, "example": "環境部" },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } }
+        ],
+        "responses": {
+          "200": { "description": "標案清單", "content": { "application/json": { "schema": { "type": "object" } } } }
+        }
+      }
+    },
+    "/tender": {
+      "get": {
+        "operationId": "getTenderDetail",
+        "summary": "取得標案詳情",
+        "description": "用 unit_id + job_number 取得完整標案公告內容",
+        "parameters": [
+          { "name": "unit_id", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "job_number", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "標案詳情", "content": { "application/json": { "schema": { "type": "object" } } } }
+        }
+      }
+    },
+    "/listbydate": {
+      "get": {
+        "operationId": "listByDate",
+        "summary": "依日期查詢當日公告標案",
+        "parameters": [
+          { "name": "date", "in": "query", "required": true, "schema": { "type": "string" }, "description": "格式:YYYYMMDD", "example": "20260419" }
+        ],
+        "responses": {
+          "200": { "description": "當日標案清單", "content": { "application/json": { "schema": { "type": "object" } } } }
+        }
+      }
+    }
+  }
+}

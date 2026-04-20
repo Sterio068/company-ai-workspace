@@ -1,0 +1,153 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Fal.ai Image Generation",
+    "description": "承富設計夥伴呼叫 Fal.ai 生圖 API · 繁中文字場景用 Recraft v3,設計感用 Ideogram v2,寫實用 Flux Pro",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "https://fal.run/fal-ai" }
+  ],
+  "security": [
+    { "falApiKey": [] }
+  ],
+  "paths": {
+    "/recraft-v3": {
+      "post": {
+        "operationId": "generateRecraftV3",
+        "summary": "Recraft v3 · 含繁中文字的設計(KV、海報、背板)最佳",
+        "description": "當使用者需要含中文字的最終設計(主視覺、海報、IG 含文字貼文)時使用。文字排版最專業。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["prompt"],
+                "properties": {
+                  "prompt": { "type": "string", "description": "英文 prompt 最好,可含中文文字指令" },
+                  "image_size": {
+                    "type": "string",
+                    "enum": ["square_hd", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"],
+                    "default": "square_hd"
+                  },
+                  "style": {
+                    "type": "string",
+                    "enum": ["any", "realistic_image", "digital_illustration", "vector_illustration"],
+                    "default": "digital_illustration"
+                  },
+                  "num_images": { "type": "integer", "default": 1, "minimum": 1, "maximum": 4 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "產出圖片 URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "images": {
+                      "type": "array",
+                      "items": { "type": "object", "properties": { "url": { "type": "string" } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ideogram/v2": {
+      "post": {
+        "operationId": "generateIdeogramV2",
+        "summary": "Ideogram v2 · 設計感 + 文字排版",
+        "description": "Logo / 品牌視覺探索 / 有英文字的 poster 最佳。繁中支援尚可但不如 Recraft。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["prompt"],
+                "properties": {
+                  "prompt": { "type": "string" },
+                  "aspect_ratio": { "type": "string", "enum": ["1:1", "16:9", "9:16", "4:3", "3:4"], "default": "1:1" },
+                  "style_type": { "type": "string", "enum": ["AUTO", "GENERAL", "REALISTIC", "DESIGN", "RENDER_3D", "ANIME"], "default": "DESIGN" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "產出圖片", "content": { "application/json": { "schema": { "type": "object" } } } }
+        }
+      }
+    },
+    "/flux-pro/v1.1": {
+      "post": {
+        "operationId": "generateFluxPro",
+        "summary": "Flux Pro 1.1 · 寫實 / 攝影級",
+        "description": "寫實場景、產品照、人像(非 KV 設計)。品質最高。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["prompt"],
+                "properties": {
+                  "prompt": { "type": "string" },
+                  "image_size": { "type": "string", "enum": ["square_hd", "portrait_16_9", "landscape_16_9"], "default": "landscape_16_9" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "產出圖片", "content": { "application/json": { "schema": { "type": "object" } } } }
+        }
+      }
+    },
+    "/flux/schnell": {
+      "post": {
+        "operationId": "generateFluxSchnell",
+        "summary": "Flux Schnell · 快速探索(最便宜)",
+        "description": "概念探索、brainstorm 草稿、內部溝通。2-3 秒,~$0.003/張。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["prompt"],
+                "properties": {
+                  "prompt": { "type": "string" },
+                  "image_size": { "type": "string", "default": "square_hd" },
+                  "num_images": { "type": "integer", "default": 4, "maximum": 4 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "產出圖片", "content": { "application/json": { "schema": { "type": "object" } } } }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "falApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "格式:Key <FAL_API_KEY>"
+      }
+    }
+  }
+}

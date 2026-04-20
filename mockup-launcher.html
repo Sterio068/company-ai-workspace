@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>承富 AI · 系統設計 Mockup</title>
+<style>
+/* ============================================================
+   系統設計 Tokens · macOS 設計語言
+   ============================================================ */
+:root {
+  /* Brand */
+  --accent: #0F2340;
+  --accent-hover: #1A3358;
+
+  /* macOS Semantic */
+  --green: #34C759;
+  --orange: #FF9500;
+  --red: #FF3B30;
+  --blue: #007AFF;
+  --purple: #AF52DE;
+  --pink: #FF2D55;
+
+  /* Light mode (default) */
+  --bg-base: #F5F5F7;
+  --bg-content: #FFFFFF;
+  --bg-float: rgba(255, 255, 255, 0.72);
+  --bg-modal: #FFFFFF;
+  --bg-sidebar: rgba(246, 246, 246, 0.8);
+
+  --text-primary: #1D1D1F;
+  --text-secondary: #6E6E73;
+  --text-tertiary: #C7C7CC;
+
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.15);
+
+  --shadow-1: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-2: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-3: 0 20px 48px rgba(0,0,0,0.15), 0 8px 16px rgba(0,0,0,0.06);
+
+  --blur: blur(30px) saturate(180%);
+
+  /* Spacing (8pt grid) */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px;
+
+  /* Radius */
+  --r-sm: 4px; --r-md: 6px; --r-lg: 8px; --r-xl: 10px; --r-2xl: 12px; --r-3xl: 16px;
+
+  /* Typography */
+  --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC", "Noto Sans TC", sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang TC", "Noto Sans TC", sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", Menlo, monospace;
+}
+
+[data-theme="dark"] {
+  --bg-base: #1C1C1E;
+  --bg-content: #2C2C2E;
+  --bg-float: rgba(44, 44, 46, 0.72);
+  --bg-modal: #3A3A3C;
+  --bg-sidebar: rgba(30, 30, 32, 0.85);
+
+  --text-primary: #F5F5F7;
+  --text-secondary: #AEAEB2;
+  --text-tertiary: #48484A;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.15);
+
+  --shadow-1: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-2: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-3: 0 20px 48px rgba(0,0,0,0.5);
+}
+
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  font-family: var(--font-system);
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--text-primary);
+  background: var(--bg-base);
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.3s, color 0.3s;
+}
+
+body {
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+/* ============================================================
+   Layout
+   ============================================================ */
+.app {
+  display: grid;
+  grid-template-columns: 240px 1fr 320px;
+  height: 100vh;
+}
+
+/* ============================================================
+   Sidebar(左側導航)
+   ============================================================ */
+.sidebar {
+  background: var(--bg-sidebar);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border-right: 1px solid var(--border);
+  padding: var(--s-5) 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  padding: 0 var(--s-4);
+  margin-bottom: var(--s-5);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-lg);
+  transition: background 0.15s;
+}
+
+.brand:hover { background: var(--border); }
+
+.brand-logo {
+  width: 28px; height: 28px;
+  background: var(--accent);
+  border-radius: var(--r-md);
+  display: grid;
+  place-items: center;
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.brand-name {
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.brand-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+
+.sidebar-section {
+  margin-bottom: var(--s-5);
+}
+
+.sidebar-section-label {
+  padding: 0 var(--s-4) var(--s-2);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-4);
+  margin: 0 var(--s-2);
+  border-radius: var(--r-md);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.1s;
+  font-size: 13px;
+}
+
+.sidebar-item:hover { background: var(--border); }
+
+.sidebar-item.active {
+  background: var(--accent);
+  color: white;
+}
+
+.sidebar-icon {
+  width: 18px; height: 18px;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+
+.sidebar-label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.sidebar-shortcut {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  opacity: 0.7;
+}
+
+.sidebar-item.active .sidebar-shortcut { color: rgba(255,255,255,0.7); }
+
+.sidebar-count {
+  font-size: 11px;
+  background: var(--border);
+  padding: 1px 6px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+}
+
+.sidebar-item.active .sidebar-count {
+  background: rgba(255,255,255,0.2);
+  color: white;
+}
+
+/* User badge at bottom */
+.sidebar-user {
+  margin-top: auto;
+  padding: var(--s-3) var(--s-4);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.user-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #C9603A, #E88A5E);
+  display: grid; place-items: center;
+  color: white;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-role {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   Main content
+   ============================================================ */
+.main {
+  overflow-y: auto;
+  background: var(--bg-base);
+  padding: var(--s-7) var(--s-7) var(--s-8);
+}
+
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: var(--s-7);
+}
+
+.greeting {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  line-height: 1.1;
+}
+
+.greeting-sub {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin-top: var(--s-2);
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.search-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  background: var(--bg-content);
+  border: 1px solid var(--border);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-lg);
+  color: var(--text-secondary);
+  font-size: 13px;
+  min-width: 240px;
+  box-shadow: var(--shadow-1);
+  transition: all 0.15s;
+}
+
+.search-btn:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-2);
+}
+
+.search-btn kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+  background: var(--bg-base);
+  color: var(--text-tertiary);
+  margin-left: auto;
+  border: 1px solid var(--border);
+}
+
+.theme-toggle {
+  width: 36px; height: 36px;
+  background: var(--bg-content);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow-1);
+  transition: all 0.15s;
+}
+
+.theme-toggle:hover {
+  box-shadow: var(--shadow-2);
+}
+
+/* Frequent row */
+.frequent {
+  margin-bottom: var(--s-7);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--s-4);
+}
+
+.section-title h2 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.section-title-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.frequent-row {
+  display: flex;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  background: var(--bg-content);
+  border: 1px solid var(--border);
+  padding: var(--s-2) var(--s-4);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: var(--shadow-1);
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.chip:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+  border-color: var(--border-strong);
+}
+
+.chip-icon {
+  width: 18px; height: 18px;
+  color: var(--accent);
+}
+
+.chip-badge {
+  background: var(--border);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+/* Workspace grid */
+.workspaces {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--s-4);
+  margin-bottom: var(--s-7);
+}
+
+.workspace-card {
+  background: var(--bg-content);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2xl);
+  padding: var(--s-5);
+  box-shadow: var(--shadow-1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.workspace-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 3px;
+  background: var(--ws-color, var(--accent));
+}
+
+.workspace-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+  border-color: var(--border-strong);
+}
+
+.ws-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+}
+
+.ws-icon {
+  width: 36px; height: 36px;
+  border-radius: var(--r-lg);
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--ws-color) 12%, transparent);
+  color: var(--ws-color);
+}
+
+.ws-name {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.ws-shortcut {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding: 2px 6px;
+  background: var(--border);
+  border-radius: var(--r-sm);
+}
+
+.ws-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--s-4);
+  min-height: 36px;
+}
+
+.ws-meta {
+  display: flex;
+  gap: var(--s-4);
+  font-size: 12px;
+  color: var(--text-tertiary);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--border);
+}
+
+.ws-meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.ws-meta-num {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+.ws-1 { --ws-color: #FF3B30; }
+.ws-2 { --ws-color: #FF9500; }
+.ws-3 { --ws-color: #AF52DE; }
+.ws-4 { --ws-color: #34C759; }
+.ws-5 { --ws-color: #007AFF; }
+
+/* Global tools section */
+.global-tools {
+  margin-bottom: var(--s-7);
+}
+
+.global-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--s-3);
+}
+
+.tool-card {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  background: var(--bg-content);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.tool-card:hover {
+  background: var(--bg-base);
+  border-color: var(--border-strong);
+}
+
+.tool-icon {
+  width: 32px; height: 32px;
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--tool-color, var(--accent)) 12%, transparent);
+  color: var(--tool-color, var(--accent));
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+
+.tool-info { min-width: 0; flex: 1; }
+.tool-name { font-size: 13px; font-weight: 500; }
+.tool-slash { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono); margin-top: 2px; }
+
+/* ============================================================
+   Right Inspector
+   ============================================================ */
+.inspector {
+  background: var(--bg-sidebar);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border-left: 1px solid var(--border);
+  padding: var(--s-5);
+  overflow-y: auto;
+}
+
+.insp-section { margin-bottom: var(--s-6); }
+
+.insp-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--s-3);
+}
+
+/* Usage meter */
+.usage-card {
+  background: var(--bg-content);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: var(--s-4);
+  box-shadow: var(--shadow-1);
+}
+
+.usage-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--s-2);
+}
+
+.usage-amt {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.usage-max {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.usage-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: var(--s-2) 0 var(--s-3);
+}
+
+.usage-fill {
+  height: 100%;
+  width: 68%;
+  background: linear-gradient(90deg, var(--green) 0%, var(--orange) 80%);
+  border-radius: 3px;
+}
+
+.usage-stats {
+  display: flex;
+  gap: var(--s-3);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.usage-stat b {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+/* Recent conversations */
+.recent-item {
+  display: flex;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-lg);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.recent-item:hover { background: var(--border); }
+
+.recent-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.recent-content { min-width: 0; flex: 1; }
+
+.recent-title {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-meta {
+  display: flex;
+  gap: var(--s-2);
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  align-items: center;
+}
+
+.recent-preset {
+  padding: 0 6px;
+  background: var(--border);
+  border-radius: 8px;
+  font-size: 10px;
+}
+
+/* Suggestions */
+.suggestion {
+  padding: var(--s-3);
+  background: var(--bg-content);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  margin-bottom: var(--s-2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.suggestion:hover { border-color: var(--accent); }
+
+.sug-icon { font-size: 16px; margin-bottom: var(--s-2); }
+.sug-title { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+.sug-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.4; }
+
+/* ============================================================
+   Command Palette(⌘K 浮動面板)
+   ============================================================ */
+.palette-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+  z-index: 100;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.palette {
+  width: 600px;
+  max-width: 90vw;
+  background: var(--bg-modal);
+  border-radius: var(--r-2xl);
+  box-shadow: var(--shadow-3);
+  overflow: hidden;
+  animation: slideDown 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.palette-input {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--border);
+}
+
+.palette-input input {
+  flex: 1;
+  border: none;
+  background: none;
+  outline: none;
+  font-family: var(--font-system);
+  font-size: 17px;
+  color: var(--text-primary);
+}
+
+.palette-input input::placeholder { color: var(--text-secondary); }
+
+.palette-results {
+  max-height: 420px;
+  overflow-y: auto;
+  padding: var(--s-2);
+}
+
+.palette-group {
+  padding: var(--s-3) var(--s-4) var(--s-1);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: background 0.08s;
+}
+
+.palette-item:hover,
+.palette-item.selected {
+  background: var(--accent);
+  color: white;
+}
+
+.palette-item:hover .palette-path,
+.palette-item.selected .palette-path,
+.palette-item:hover .palette-shortcut,
+.palette-item.selected .palette-shortcut {
+  color: rgba(255,255,255,0.8);
+}
+
+.palette-item-icon {
+  width: 32px; height: 32px;
+  border-radius: var(--r-md);
+  background: var(--bg-base);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.palette-item.selected .palette-item-icon {
+  background: rgba(255,255,255,0.15);
+}
+
+.palette-item-content { flex: 1; min-width: 0; }
+.palette-item-title { font-size: 14px; font-weight: 500; }
+.palette-path { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.palette-shortcut {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding: 2px 6px;
+  background: var(--border);
+  border-radius: var(--r-sm);
+}
+
+.palette-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-3) var(--s-5);
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.palette-footer-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.palette-footer kbd {
+  font-family: var(--font-mono);
+  padding: 1px 5px;
+  background: var(--border);
+  border-radius: var(--r-sm);
+  font-size: 10px;
+}
+
+/* ============================================================
+   Caption(最下方的說明)
+   ============================================================ */
+.caption {
+  position: fixed;
+  bottom: var(--s-4);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-float);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--border);
+  padding: var(--s-3) var(--s-5);
+  border-radius: 100px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-2);
+  display: flex;
+  gap: var(--s-4);
+  z-index: 50;
+}
+
+.caption kbd {
+  font-family: var(--font-mono);
+  padding: 2px 6px;
+  background: var(--bg-content);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+/* SVG icons */
+.icon {
+  display: inline-block;
+  vertical-align: middle;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ========== SIDEBAR ========== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand">
+        <div class="brand-logo">承</div>
+        <div>
+          <div class="brand-name">承富 AI</div>
+          <div class="brand-sub">10 人協作平台</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">首頁</div>
+      <div class="sidebar-item active">
+        <span class="sidebar-icon">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <path d="M3 12L12 3l9 9"/><path d="M5 10v10h14V10"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">Dashboard</span>
+        <span class="sidebar-shortcut">⌘0</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Workspace</div>
+      <div class="sidebar-item">
+        <span class="sidebar-icon" style="color: #FF3B30;">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">投標</span>
+        <span class="sidebar-count">5</span>
+        <span class="sidebar-shortcut">⌘1</span>
+      </div>
+      <div class="sidebar-item">
+        <span class="sidebar-icon" style="color: #FF9500;">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">活動執行</span>
+        <span class="sidebar-count">6</span>
+        <span class="sidebar-shortcut">⌘2</span>
+      </div>
+      <div class="sidebar-item">
+        <span class="sidebar-icon" style="color: #AF52DE;">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <circle cx="12" cy="12" r="10"/><circle cx="7" cy="10" r="1.5" fill="currentColor"/><circle cx="17" cy="10" r="1.5" fill="currentColor"/><circle cx="9.5" cy="15" r="1.5" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">設計協作</span>
+        <span class="sidebar-count">5</span>
+        <span class="sidebar-shortcut">⌘3</span>
+      </div>
+      <div class="sidebar-item">
+        <span class="sidebar-icon" style="color: #34C759;">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <path d="M3 11l18-5v12L3 13z"/><path d="M11.5 19.5L8 22v-6"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">公關溝通</span>
+        <span class="sidebar-count">5</span>
+        <span class="sidebar-shortcut">⌘4</span>
+      </div>
+      <div class="sidebar-item">
+        <span class="sidebar-icon" style="color: #007AFF;">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 12h4M7 8h10M7 16h7"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">營運後勤</span>
+        <span class="sidebar-count">8</span>
+        <span class="sidebar-shortcut">⌘5</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">工具</div>
+      <div class="sidebar-item">
+        <span class="sidebar-icon">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">知識庫</span>
+        <span class="sidebar-shortcut">/know</span>
+      </div>
+      <div class="sidebar-item">
+        <span class="sidebar-icon">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <path d="M4 4h16c1 0 2 1 2 2v12c0 1-1 2-2 2H4c-1 0-2-1-2-2V6c0-1 1-2 2-2z"/><path d="M22 6l-10 7L2 6"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">Email 草稿</span>
+        <span class="sidebar-shortcut">/email</span>
+      </div>
+      <div class="sidebar-item">
+        <span class="sidebar-icon">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <rect x="6" y="4" width="12" height="16" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">會議速記</span>
+      </div>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar">S</div>
+      <div class="user-info">
+        <div class="user-name">Sterio</div>
+        <div class="user-role">管理員</div>
+      </div>
+      <button class="theme-toggle" style="width:28px;height:28px;" onclick="toggleTheme()">
+        <svg class="icon" width="14" height="14" viewBox="0 0 24 24" stroke="currentColor">
+          <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+        </svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ========== MAIN ========== -->
+  <main class="main">
+    <!-- Header -->
+    <div class="main-header">
+      <div>
+        <div class="greeting">早安,Sterio 👋</div>
+        <div class="greeting-sub">2026 年 4 月 18 日 · 週六 · 今天天氣晴,適合出門拜訪客戶</div>
+      </div>
+      <div class="header-actions">
+        <button class="search-btn" onclick="openPalette()">
+          <svg class="icon" width="14" height="14" viewBox="0 0 24 24" stroke="currentColor">
+            <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <span>搜尋功能、對話、知識…</span>
+          <kbd>⌘K</kbd>
+        </button>
+        <button class="theme-toggle" onclick="toggleTheme()">
+          <svg class="icon" width="18" height="18" viewBox="0 0 24 24" stroke="currentColor">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Frequent -->
+    <section class="frequent">
+      <div class="section-title">
+        <h2>📌 常用</h2>
+        <div class="section-title-hint">根據您最近 7 天使用</div>
+      </div>
+      <div class="frequent-row">
+        <button class="chip">
+          <svg class="icon chip-icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+          招標須知解析器
+          <span class="chip-badge">12 次</span>
+        </button>
+        <button class="chip">
+          <svg class="icon chip-icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/>
+          </svg>
+          服務建議書助手
+          <span class="chip-badge">9 次</span>
+        </button>
+        <button class="chip">
+          <svg class="icon chip-icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+          </svg>
+          新聞稿生成器
+          <span class="chip-badge">8 次</span>
+        </button>
+        <button class="chip">
+          <svg class="icon chip-icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          會議速記
+          <span class="chip-badge">6 次</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Workspaces -->
+    <section>
+      <div class="section-title">
+        <h2>🗂️ Workspace</h2>
+        <div class="section-title-hint">按 ⌘1-5 快速切換</div>
+      </div>
+      <div class="workspaces">
+
+        <div class="workspace-card ws-1">
+          <div class="ws-head">
+            <div class="ws-icon">
+              <svg class="icon" width="20" height="20" viewBox="0 0 24 24" stroke="currentColor">
+                <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/>
+              </svg>
+            </div>
+            <div class="ws-name">投標</div>
+            <span class="ws-shortcut">⌘1</span>
+          </div>
+          <div class="ws-desc">從看到招標須知,到送件前最後一哩的完整流程。</div>
+          <div class="ws-meta">
+            <div class="ws-meta-item">🎯 <span class="ws-meta-num">5</span> Preset</div>
+            <div class="ws-meta-item">📅 本月 <span class="ws-meta-num">18</span> 次</div>
+            <div class="ws-meta-item">⭐ 勝率 <span class="ws-meta-num">62%</span></div>
+          </div>
+        </div>
+
+        <div class="workspace-card ws-2">
+          <div class="ws-head">
+            <div class="ws-icon">
+              <svg class="icon" width="20" height="20" viewBox="0 0 24 24" stroke="currentColor">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/>
+              </svg>
+            </div>
+            <div class="ws-name">活動執行</div>
+            <span class="ws-shortcut">⌘2</span>
+          </div>
+          <div class="ws-desc">3D 場景模擬、舞台、動線、現場體驗、廠商合約一站到位。</div>
+          <div class="ws-meta">
+            <div class="ws-meta-item">🎪 <span class="ws-meta-num">6</span> Preset</div>
+            <div class="ws-meta-item">📅 本月 <span class="ws-meta-num">12</span> 次</div>
+            <div class="ws-meta-item">⏱ 省時 <span class="ws-meta-num">45hr</span></div>
+          </div>
+        </div>
+
+        <div class="workspace-card ws-3">
+          <div class="ws-head">
+            <div class="ws-icon">
+              <svg class="icon" width="20" height="20" viewBox="0 0 24 24" stroke="currentColor">
+                <circle cx="12" cy="12" r="10"/><circle cx="7" cy="10" r="1.5" fill="currentColor"/><circle cx="17" cy="10" r="1.5" fill="currentColor"/><circle cx="9.5" cy="15" r="1.5" fill="currentColor"/><circle cx="14.5" cy="15" r="1.5" fill="currentColor"/>
+              </svg>
+            </div>
+            <div class="ws-name">設計協作</div>
+            <span class="ws-shortcut">⌘3</span>
+          </div>
+          <div class="ws-desc">主視覺發想、設計 Brief、AI 圖像、多渠道適配。PM × 設計師無縫接棒。</div>
+          <div class="ws-meta">
+            <div class="ws-meta-item">🎨 <span class="ws-meta-num">5</span> Preset</div>
+            <div class="ws-meta-item">📅 本月 <span class="ws-meta-num">22</span> 次</div>
+            <div class="ws-meta-item">✨ 設計滿意 <span class="ws-meta-num">89%</span></div>
+          </div>
+        </div>
+
+        <div class="workspace-card ws-4">
+          <div class="ws-head">
+            <div class="ws-icon">
+              <svg class="icon" width="20" height="20" viewBox="0 0 24 24" stroke="currentColor">
+                <path d="M3 11l18-5v12L3 13z"/><path d="M11.5 19.5L8 22v-6"/>
+              </svg>
+            </div>
+            <div class="ws-name">公關溝通</div>
+            <span class="ws-shortcut">⌘4</span>
+          </div>
+          <div class="ws-desc">新聞稿、社群月企劃、Email、會議速記。對外發聲全部搞定。</div>
+          <div class="ws-meta">
+            <div class="ws-meta-item">📣 <span class="ws-meta-num">5</span> Preset</div>
+            <div class="ws-meta-item">📅 本月 <span class="ws-meta-num">34</span> 次</div>
+            <div class="ws-meta-item">📈 曝光 <span class="ws-meta-num">280K</span></div>
+          </div>
+        </div>
+
+        <div class="workspace-card ws-5">
+          <div class="ws-head">
+            <div class="ws-icon">
+              <svg class="icon" width="20" height="20" viewBox="0 0 24 24" stroke="currentColor">
+                <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 12h4M7 8h10M7 16h7"/>
+              </svg>
+            </div>
+            <div class="ws-name">營運後勤</div>
+            <span class="ws-shortcut">⌘5</span>
+          </div>
+          <div class="ws-desc">結案、報價、追蹤、CRM、合約、稅務、新人 onboarding。內部管理中樞。</div>
+          <div class="ws-meta">
+            <div class="ws-meta-item">📊 <span class="ws-meta-num">8</span> Preset</div>
+            <div class="ws-meta-item">📅 本月 <span class="ws-meta-num">28</span> 次</div>
+            <div class="ws-meta-item">💰 節省 <span class="ws-meta-num">NT$ 62K</span></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Global tools -->
+    <section class="global-tools">
+      <div class="section-title">
+        <h2>⚡ 全域工具</h2>
+        <div class="section-title-hint">在任何對話中用 / 指令快速呼叫</div>
+      </div>
+      <div class="global-tools-grid">
+        <div class="tool-card" style="--tool-color: #0F2340;">
+          <div class="tool-icon">
+            <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+              <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+            </svg>
+          </div>
+          <div class="tool-info">
+            <div class="tool-name">知識庫查詢</div>
+            <div class="tool-slash">/know</div>
+          </div>
+        </div>
+        <div class="tool-card" style="--tool-color: #C9603A;">
+          <div class="tool-icon">
+            <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+              <path d="M4 4h16c1 0 2 1 2 2v12c0 1-1 2-2 2H4c-1 0-2-1-2-2V6c0-1 1-2 2-2z"/><path d="M22 6l-10 7L2 6"/>
+            </svg>
+          </div>
+          <div class="tool-info">
+            <div class="tool-name">Email 草稿</div>
+            <div class="tool-slash">/email</div>
+          </div>
+        </div>
+        <div class="tool-card" style="--tool-color: #34C759;">
+          <div class="tool-icon">
+            <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+              <rect x="3" y="4" width="18" height="16" rx="2"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/>
+            </svg>
+          </div>
+          <div class="tool-info">
+            <div class="tool-name">廠商比價</div>
+            <div class="tool-slash">/vendor</div>
+          </div>
+        </div>
+        <div class="tool-card" style="--tool-color: #007AFF;">
+          <div class="tool-icon">
+            <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+              <path d="M3 3l18 18M7 7H4v10h10v-3"/><path d="M14 4h6v6"/>
+            </svg>
+          </div>
+          <div class="tool-info">
+            <div class="tool-name">稅務諮詢</div>
+            <div class="tool-slash">/tax</div>
+          </div>
+        </div>
+        <div class="tool-card" style="--tool-color: #AF52DE;">
+          <div class="tool-icon">
+            <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <div class="tool-info">
+            <div class="tool-name">會議速記</div>
+            <div class="tool-slash">/meet</div>
+          </div>
+        </div>
+        <div class="tool-card" style="--tool-color: #FF9500;">
+          <div class="tool-icon">
+            <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+              <path d="M20 7l-8 8-4-4"/><rect x="2" y="3" width="20" height="18" rx="2"/>
+            </svg>
+          </div>
+          <div class="tool-info">
+            <div class="tool-name">新人 Onboarding</div>
+            <div class="tool-slash">/help</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========== INSPECTOR ========== -->
+  <aside class="inspector">
+    <!-- Usage -->
+    <div class="insp-section">
+      <div class="insp-label">本月用量</div>
+      <div class="usage-card">
+        <div class="usage-row">
+          <span class="usage-amt">NT$ 5,440</span>
+          <span class="usage-max">/ NT$ 8,000</span>
+        </div>
+        <div class="usage-bar">
+          <div class="usage-fill"></div>
+        </div>
+        <div class="usage-stats">
+          <div class="usage-stat">已用 <b>68%</b></div>
+          <div class="usage-stat">Haiku <b>82%</b></div>
+          <div class="usage-stat">Sonnet <b>16%</b></div>
+          <div class="usage-stat">Opus <b>2%</b></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent -->
+    <div class="insp-section">
+      <div class="insp-label">最近對話</div>
+      <div class="recent-item">
+        <div class="recent-dot" style="background: #FF3B30;"></div>
+        <div class="recent-content">
+          <div class="recent-title">2024 環保局招標須知解析</div>
+          <div class="recent-meta">
+            <span class="recent-preset">招標解析</span>
+            <span>3 小時前</span>
+          </div>
+        </div>
+      </div>
+      <div class="recent-item">
+        <div class="recent-dot" style="background: #AF52DE;"></div>
+        <div class="recent-content">
+          <div class="recent-title">客戶 A 月度社群企劃 · 4月</div>
+          <div class="recent-meta">
+            <span class="recent-preset">月度社群</span>
+            <span>昨天</span>
+          </div>
+        </div>
+      </div>
+      <div class="recent-item">
+        <div class="recent-dot" style="background: #FF9500;"></div>
+        <div class="recent-content">
+          <div class="recent-title">新竹秋焰祭 3D 場景 Brief</div>
+          <div class="recent-meta">
+            <span class="recent-preset">3D Brief</span>
+            <span>昨天</span>
+          </div>
+        </div>
+      </div>
+      <div class="recent-item">
+        <div class="recent-dot" style="background: #34C759;"></div>
+        <div class="recent-content">
+          <div class="recent-title">環保局記者會新聞稿 v3</div>
+          <div class="recent-meta">
+            <span class="recent-preset">新聞稿</span>
+            <span>2 天前</span>
+          </div>
+        </div>
+      </div>
+      <div class="recent-item">
+        <div class="recent-dot" style="background: #007AFF;"></div>
+        <div class="recent-content">
+          <div class="recent-title">Q1 結案報告 · XX 專案</div>
+          <div class="recent-meta">
+            <span class="recent-preset">結案報告</span>
+            <span>3 天前</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Suggestions -->
+    <div class="insp-section">
+      <div class="insp-label">💡 智慧建議</div>
+      <div class="suggestion">
+        <div class="sug-icon">📅</div>
+        <div class="sug-title">5/15 有標案截止</div>
+        <div class="sug-desc">新竹市府環境議題宣導案,還沒解析。建議今日完成 Go/No-Go。</div>
+      </div>
+      <div class="suggestion">
+        <div class="sug-icon">📊</div>
+        <div class="sug-title">上週 4 場活動待結案</div>
+        <div class="sug-desc">批次產出結案報告初稿,預估節省 12 小時。</div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- ========== COMMAND PALETTE (⌘K) ========== -->
+<div class="palette-backdrop" id="palette" style="display:none;" onclick="if(event.target.id==='palette') closePalette()">
+  <div class="palette">
+    <div class="palette-input">
+      <svg class="icon" width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" style="color: var(--text-secondary);">
+        <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" placeholder="搜尋功能、對話、知識…" autofocus>
+    </div>
+
+    <div class="palette-results">
+      <div class="palette-group">功能</div>
+
+      <div class="palette-item selected">
+        <div class="palette-item-icon" style="background: #FF3B3020; color: #FF3B30;">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div class="palette-item-content">
+          <div class="palette-item-title">招標須知解析器</div>
+          <div class="palette-path">投標 › 核心產能</div>
+        </div>
+        <span class="palette-shortcut">⌘1</span>
+      </div>
+
+      <div class="palette-item">
+        <div class="palette-item-icon" style="background: #FF3B3020; color: #FF3B30;">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/>
+          </svg>
+        </div>
+        <div class="palette-item-content">
+          <div class="palette-item-title">服務建議書初稿助手</div>
+          <div class="palette-path">投標 › 核心產能</div>
+        </div>
+      </div>
+
+      <div class="palette-item">
+        <div class="palette-item-icon" style="background: #AF52DE20; color: #AF52DE;">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><polyline points="21 15 16 10 5 21"/>
+          </svg>
+        </div>
+        <div class="palette-item-content">
+          <div class="palette-item-title">主視覺概念發想</div>
+          <div class="palette-path">設計協作 › D1</div>
+        </div>
+      </div>
+
+      <div class="palette-group">近期對話</div>
+      <div class="palette-item">
+        <div class="palette-item-icon" style="background: var(--border);">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+          </svg>
+        </div>
+        <div class="palette-item-content">
+          <div class="palette-item-title">2024 環保局招標須知解析</div>
+          <div class="palette-path">3 小時前 · 32 則訊息</div>
+        </div>
+      </div>
+
+      <div class="palette-group">動作</div>
+      <div class="palette-item">
+        <div class="palette-item-icon" style="background: var(--border);">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
+        </div>
+        <div class="palette-item-content">
+          <div class="palette-item-title">系統設定</div>
+          <div class="palette-path">偏好設定、模型、主題</div>
+        </div>
+        <span class="palette-shortcut">⌘,</span>
+      </div>
+    </div>
+
+    <div class="palette-footer">
+      <div class="palette-footer-item">
+        <kbd>↑</kbd><kbd>↓</kbd> 移動
+      </div>
+      <div class="palette-footer-item">
+        <kbd>Enter</kbd> 開啟
+      </div>
+      <div class="palette-footer-item">
+        <kbd>esc</kbd> 關閉
+      </div>
+      <div class="palette-footer-item" style="margin-left: auto;">
+        Fuzzy search · 支援拼音、縮寫
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Caption -->
+<div class="caption">
+  <span>按 <kbd>⌘K</kbd> 試試指令面板</span>
+  <span>·</span>
+  <span>按 <kbd>⌘⇧L</kbd> 切換深 / 淺色</span>
+  <span>·</span>
+  <span>這是 mockup · 實作請參考 SYSTEM-DESIGN.md</span>
+</div>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  html.setAttribute('data-theme', current === 'light' ? 'dark' : 'light');
+}
+
+function openPalette() {
+  document.getElementById('palette').style.display = 'flex';
+  setTimeout(() => document.querySelector('.palette-input input').focus(), 10);
+}
+
+function closePalette() {
+  document.getElementById('palette').style.display = 'none';
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    openPalette();
+  }
+  if (e.key === 'Escape') {
+    closePalette();
+  }
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'L') {
+    e.preventDefault();
+    toggleTheme();
+  }
+});
+</script>
+
+</body>
+</html>

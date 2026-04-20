@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "承富 AI 快捷",
+  "version": "1.0.0",
+  "description": "從任何網頁一鍵把內容送到承富 AI · 自動路由到對的專家",
+  "author": "承富創意整合行銷",
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://localhost/*",
+    "http://承富-ai.local/*",
+    "https://ai.*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "commands": {
+    "send-to-chengfu": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+C",
+        "mac": "Command+Shift+C"
+      },
+      "description": "選取文字 → 送到承富 AI 主管家"
+    }
+  }
+}

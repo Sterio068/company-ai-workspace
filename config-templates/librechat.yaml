@@ -1,0 +1,138 @@
+# ========================================
+# 承富 AI 系統 · LibreChat 核心設定
+# 掛載到容器內 /app/librechat.yaml
+# ========================================
+#
+# 變更紀錄:
+#   2026-04-18 · 依 DESIGN-REVIEW T-1 從 Preset 遷移到 Agent 為主
+#   2026-04-18 · 依 DESIGN-REVIEW T-4 移除自發明的 key(ragConfig / search / adminSettings)
+#                這些功能實際由 .env 控制(SEARCH / MEILI_HOST / ADMIN_EMAIL)
+#   2026-04-18 · Anthropic 改用原生 endpoint(env: ANTHROPIC_API_KEY / ANTHROPIC_MODELS),
+#                不再用 endpoints.custom 繞路
+#
+# 參考文件:
+#   官方 schema: https://www.librechat.ai/docs/configuration/librechat_yaml
+#   官方範本:   https://www.librechat.ai/librechat.example.yaml
+
+version: 1.2.1
+cache: true
+
+# ==================== 介面客製化 ====================
+interface:
+  customWelcome: "讓 AI 成為承富的第 11 位同事"
+  privacyPolicy:
+    externalUrl: "https://<承富domain>.com/privacy"
+    openNewTab: true
+  termsOfService:
+    externalUrl: "https://<承富domain>.com/terms"
+    openNewTab: true
+  endpointsMenu: true
+  modelSelect: true
+  parameters: true
+  sidePanel: true
+  presets: false      # Preset 功能 v0.8+ 已退為次要,承富統一用 Agent
+  prompts: true       # 個人 prompt 模板(每位同仁可存自己的)
+  bookmarks: true
+  multiConvo: true
+  agents: true        # 啟用 Agent(承富 10 個專家的主要載體)
+  artifacts: true     # 開啟 Claude Artifacts(HTML/SVG/React 即時可視化)
+  webSearch: true     # 開啟 web search 工具
+
+# ==================== 註冊設定 ====================
+# 承富為封閉型 10 人環境,註冊完全關閉(ALLOW_REGISTRATION=false in .env)
+# 新同仁由管理員後台建立帳號
+registration:
+  socialLogins: []
+
+# ==================== 檔案上傳限制 ====================
+fileConfig:
+  endpoints:
+    default:
+      fileLimit: 10
+      fileSizeLimit: 50        # 單檔 50 MB
+      totalSizeLimit: 200      # 單對話總量 200 MB
+      supportedMimeTypes:
+        - "image/.*"
+        - "application/pdf"
+        - "text/.*"
+        - "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        - "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        - "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+  serverFileSizeLimit: 50
+
+# ==================== Endpoint 設定 ====================
+#
+# Anthropic:
+#   原生 endpoint,透過 .env 的 ANTHROPIC_API_KEY 自動啟用
+#   模型白名單透過 .env 的 ANTHROPIC_MODELS 控制
+#   → 不需在此檔宣告
+#
+# Agent:
+#   承富 29 個工作單位的載體,見下方 endpoints.agents 設定
+#
+endpoints:
+  agents:
+    # 允許所有使用者進 Agent Builder(但建 Agent 需 admin 審核,透過 UI 權限控制)
+    disableBuilder: false
+
+    # 承富 Agent 深度運用 Claude 全功能
+    # 注意:vision 與 extended_thinking 是 model-level(Claude 自動有),非 capability
+    capabilities:
+      - "execute_code"      # Code Interpreter(產 Word/PPT/Excel/圖表)
+      - "file_search"       # 原生 RAG(Company Memory + Skills + Claude Skills + 承富知識庫)
+      - "actions"           # 呼叫外部 API(Fal.ai 生圖、PCC 採購網、會計 API)
+      - "tools"             # 內建工具
+      - "web_search"        # 即時網路搜尋(競品、時事、法規)
+      - "artifacts"         # HTML/SVG/React 即時可視化(設計預覽、流程圖、儀表板)
+      - "ocr"               # 影像 / PDF 內文字識別(vision 相關)
+      - "context"           # 對話 context 管理
+      - "chain"             # 多步驟 reasoning 鏈
+
+    recursionLimit: 50      # 提高遞迴上限(複雜任務可能多次呼叫工具)
+
+# ==================== Agent modelSpecs(5 Workspace 快速入口)====================
+#
+# 用途:將 29 個 Agent 以 Workspace 分組,在 UI「Model Spec 選單」呈現快速入口
+# 命名慣例(Round 1 U-1 方案 A):每個 label 前加 emoji 代表 Workspace
+#   🎯 投標 · [Agent 名]
+#   🎪 活動 · [Agent 名]
+#   🎨 設計 · [Agent 名]
+#   📣 公關 · [Agent 名]
+#   📊 營運 · [Agent 名]
+#
+# agent_id 需先透過 Agent Builder UI 或 LibreChat API 建立 Agent 後取得。
+# v1.0 先不 enforce · 10 Agent 建立後可用 Launcher / UI 切換,modelSpecs 作為 v1.1 優化項
+#
+# 若未來要啟用,先執行 create-agents.py 取得 agent_id 後,取消下方註解並填入:
+# modelSpecs:
+#   enforce: false
+#   prioritize: true
+#   list:
+#     - name: "orchestrator"
+#       label: "✨ 主管家"
+#       preset:
+#         endpoint: "agents"
+#         agent_id: "agent_xxxxx"  # 從 create-agents.py 輸出取得
+#     # ... 其他 9 個
+
+# ==================== 速率限制(per user / per IP)====================
+rateLimits:
+  fileUploads:
+    ipMax: 100
+    ipWindowInMinutes: 60
+    userMax: 50
+    userWindowInMinutes: 60
+  conversationsImport:
+    ipMax: 100
+    ipWindowInMinutes: 60
+    userMax: 50
+    userWindowInMinutes: 60
+
+# ==================== 其他原生能力 ====================
+#
+# Meilisearch 對話搜尋:由 .env 的 SEARCH / MEILI_HOST / MEILI_MASTER_KEY 控制
+# Admin 用量監控:  由 .env 的 ADMIN_EMAIL 與 LibreChat 後台 UI 控制
+# 寄信(密碼重設):由 .env 的 EMAIL_* 控制
+#
+# 這些項目不需要在 librechat.yaml 宣告(T-4 指出原檔的 search / ragConfig /
+# adminSettings 都是自發明的 key,實際不會被讀取)

@@ -1,0 +1,37 @@
+# ============================================================
+# 承富 AI · 本機開發 override
+# ============================================================
+# 此檔在本機自動被 docker compose 讀取(配合 docker-compose.yml)
+# 讓本機啟動更簡單,不需 Cloudflare Tunnel、不需外部域名
+#
+# 用法:
+#   cd config-templates
+#   docker compose up -d              # 會自動 merge override
+#
+# 移除本檔若要測生產設定:
+#   mv docker-compose.override.yml /tmp/
+# ============================================================
+
+services:
+  # 本機 LibreChat 對外 expose 3080,方便直接除錯
+  librechat:
+    ports:
+      - "3080:3080"
+    environment:
+      - DOMAIN_CLIENT=http://localhost
+      - DOMAIN_SERVER=http://localhost
+      # 本機開發日誌多一點
+      - DEBUG_LOGGING=true
+      - LOG_LEVEL=debug
+    # 本機不限記憶體(方便除錯)
+    mem_limit: 8g
+
+  # 本機 nginx 只用 80,不綁 443(沒 SSL)
+  nginx:
+    ports:
+      - "80:80"
+
+  # MongoDB 本機 expose 27017,讓你可以用 MongoDB Compass 連
+  mongodb:
+    ports:
+      - "27017:27017"

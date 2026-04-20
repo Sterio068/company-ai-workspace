@@ -1,0 +1,177 @@
+/* ============================================================
+   承富 AI · LibreChat UI 客製化覆蓋
+   透過 nginx sub_filter 或 LibreChat customCSS 機制注入
+   ============================================================
+   目標:讓 LibreChat 介面
+   - 對 AI 小白友善(放大字體、隱藏進階選項)
+   - 視覺語言與 launcher 一致(macOS 風 + 承富藍)
+   - 中文化技術術語
+   ============================================================ */
+
+:root {
+  --chengfu-accent: #0F2340;
+  --chengfu-accent-hover: #1A3358;
+  --chengfu-radius: 10px;
+  --chengfu-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC", "Noto Sans TC", sans-serif;
+}
+
+/* ============================================================
+   1. 字型與整體
+   ============================================================ */
+html, body {
+  font-family: var(--chengfu-font) !important;
+  font-size: 16px !important;        /* 預設 15px → 16px 對資深同仁友善 */
+}
+
+/* 輸入框字體略大 */
+textarea, input[type="text"] {
+  font-size: 16px !important;
+  line-height: 1.6 !important;
+}
+
+/* 對話訊息字體放大 */
+.markdown, .message-content, [data-testid="message-text"] {
+  font-size: 16px !important;
+  line-height: 1.7 !important;
+}
+
+/* ============================================================
+   2. 承富藍色系覆蓋
+   ============================================================ */
+.bg-blue-500, .bg-primary, [class*="bg-blue-"] {
+  background-color: var(--chengfu-accent) !important;
+}
+.hover\:bg-blue-600:hover, .hover\:bg-primary-hover:hover {
+  background-color: var(--chengfu-accent-hover) !important;
+}
+.text-blue-500, .text-primary {
+  color: var(--chengfu-accent) !important;
+}
+
+/* ============================================================
+   3. 隱藏進階設定(對小白同仁過度複雜)
+   ============================================================ */
+
+/* 隱藏「Temperature / Top P / Max Tokens / Frequency / Presence」slider */
+[data-testid="parameter-temperature"],
+[data-testid="parameter-topP"],
+[data-testid="parameter-maxTokens"],
+[data-testid="parameter-frequencyPenalty"],
+[data-testid="parameter-presencePenalty"],
+[data-testid="parameter-stop"] {
+  display: none !important;
+}
+
+/* 僅管理員可見:html 加 data-role="admin" 後用此 selector 解封 */
+html[data-role="admin"] [data-testid="parameter-temperature"],
+html[data-role="admin"] [data-testid="parameter-topP"],
+html[data-role="admin"] [data-testid="parameter-maxTokens"] {
+  display: flex !important;
+}
+
+/* 隱藏 System Prompt 編輯(由管理員在 Agent Builder 統一管理) */
+[data-testid="system-prompt-textarea"] {
+  display: none !important;
+}
+html[data-role="admin"] [data-testid="system-prompt-textarea"] {
+  display: block !important;
+}
+
+/* ============================================================
+   4. 術語中文化(sub_filter 適用,CSS content 取代也可)
+   ============================================================ */
+/* 這些透過 JS/sub_filter 在 HTML 層取代比 CSS content 更好,
+   留在 librechat-relabel.js 處理 */
+
+/* ============================================================
+   5. 毛玻璃側邊欄(macOS 風)
+   ============================================================ */
+[class*="sidebar"], nav[class*="side"] {
+  background: rgba(246, 246, 246, 0.82) !important;
+  backdrop-filter: blur(30px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(180%) !important;
+  border-right: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  [class*="sidebar"], nav[class*="side"] {
+    background: rgba(30, 30, 32, 0.85) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+}
+
+/* ============================================================
+   6. 按鈕、圓角、陰影統一
+   ============================================================ */
+button, .btn, [role="button"] {
+  border-radius: var(--chengfu-radius) !important;
+  transition: all 0.15s !important;
+}
+
+.rounded-sm, .rounded-md { border-radius: 6px !important; }
+.rounded-lg { border-radius: var(--chengfu-radius) !important; }
+.rounded-xl, .rounded-2xl { border-radius: 14px !important; }
+
+/* Send 按鈕更明顯 */
+[data-testid="send-button"], button[aria-label*="Send"], button[aria-label*="傳送"] {
+  background: var(--chengfu-accent) !important;
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(15, 35, 64, 0.25) !important;
+}
+
+/* ============================================================
+   7. 附加「回首頁」按鈕(右上角)
+   ============================================================ */
+.chengfu-home-btn {
+  position: fixed;
+  top: 12px;
+  right: 18px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 100px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--chengfu-accent);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: all 0.15s;
+}
+.chengfu-home-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+@media (prefers-color-scheme: dark) {
+  .chengfu-home-btn {
+    background: rgba(44, 44, 46, 0.88);
+    color: #F5F5F7;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* ============================================================
+   8. 首次使用提示(空白對話框時)
+   ============================================================ */
+/* LibreChat 空白對話的 welcome 區塊 - 覆蓋文案 via JS,視覺強化 */
+[class*="landing"] h1, [class*="welcome"] h1 {
+  font-size: 28px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.4px !important;
+}
+
+/* ============================================================
+   9. 載入動畫改用承富藍
+   ============================================================ */
+[class*="spinner"], [class*="loading"] svg {
+  color: var(--chengfu-accent) !important;
+}
+
+/* ============================================================
+   10. 打字中動畫加柔和
+   ============================================================ */
+[data-testid="typing-indicator"] {
+  opacity: 0.6;
+}
