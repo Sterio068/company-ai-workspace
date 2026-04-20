@@ -237,85 +237,90 @@ uptime (3001) ──── 服務監控
 
 ---
 
-## 5. 審查範圍與要求
+## 5. 審查範圍與要求(v4.3 · 3 輪後剩下的未解題)
 
 請對以下 **6 個層面** 各自給出報告。每個層面輸出格式:
 
 ```
 層面:XXX
-完成度:[%]
+完成度:[%](程式碼/部署/教材 分別給)
 🔴 關鍵問題(必修): N 個
   1. [問題] · 影響:XX · 修法:YY · 預估工時:Z h
-  ...
 🟡 改善建議(建議修):N 個
-  1. ...
 🟢 做對的地方(保留):N 個
-  1. ...
 🚀 加分建議(v1.1/v1.2):N 個
-  1. ...
 ```
 
-### 5.1 前端優化
+⚠️ **前面「3 輪已修清單」列的問題請勿重複指出** · 直接跳到下面的未解題:
 
-- **代碼品質** — ES module 邊界、state 管理、listener 洩漏、async 錯誤處理
-- **效能** — 初次載入時間、動畫 jank、長列表 render、SSE 處理效率
-- **無障礙** — 鍵盤操作、螢幕閱讀器、focus 順序、對比度
-- **錯誤處理** — 後端離線、token 過期、網路中斷、ESM import 失敗
-- **構建** — 無 bundler 的路徑 ok 嗎?未來要不要加 Vite?
-- **狀態同步** — 多分頁同時開,projects/crm/會計狀態會打架嗎?
+### 5.1 前端(已穩 · 尋找盲點)
 
-### 5.2 後端優化(FastAPI)
+✅ 已做:ES modules 19 檔、`<template>+cloneNode`、SSE pop 修、auth retry/Web Locks、focus visible、3 步 onboarding、術語中文化。
 
-- **API 設計** — RESTful 貫徹度、錯誤格式統一、OpenAPI schema 完整度
-- **MongoDB 使用** — 有沒有 N+1、索引、aggregation pipeline 效率
-- **Auth** — FastAPI 跟 LibreChat 沒直接共用 JWT,共享 MongoDB 夠不夠?
-- **Observability** — 日誌格式、trace id、error 可追蹤性
-- **可測試性** — 單元測試覆蓋、mock 策略、fixture
-- **災難恢復** — 備份週期、RTO / RPO 定義、DR drill 流程
-- **安全** — 輸入驗證、SQL/NoSQL injection、CSRF、CORS、rate limit
+**你該問的:**
+- 長列表 render 效能 — CRM Kanban 100+ 張卡、標案監測 50+ 筆會 jank 嗎?
+- 多分頁同開 — localStorage 給 Projects fallback · 多分頁會髒 data 嗎?
+- 錯誤邊界 — `errors.js installGlobalErrorHandler` 只 toast · `unhandledrejection` 遮了實情嗎?
+- `onclick=` 在 HTML 還剩幾個?要不要繼續清?
+- `renderMarkdown` 手刻 regex 能處理中英混排 + code block + 巢狀 list 嗎?
+- i18n · 未來英文同仁加入時 · 現有寫死繁中的字串怎辦?
 
-### 5.3 LibreChat 整合
+### 5.2 後端(RBAC + CORS + Request-ID 已就位)
 
-- **v0.8.4 版本選** — 跟 v0.8.5+ 差距大嗎?升級阻礙?
-- **Agent 共享策略** — 現用 `projectIds: [instance._id]`,是不是最佳?
-- **Route A 實作** — nginx 302 /c/new → / + 注入 relabel.js 擋 SPA,夠穩?
-- **SSE 串流** — `/api/ask/agents` 的 payload 格式有沒有 breaking change 風險?
-- **uaParser 偽裝** — `scripts/create-agents.py` 送假 Chrome UA,這 workaround 合理嗎?
-- **成本控管** — per-user token 上限、模型預設 Haiku、能看到實際費用嗎?
+✅ 已做:13 /admin/* 全套 `require_admin`、CORS whitelist、`import json` 修、regex injection 修、Mongo 7 indexes、RequestID middleware 涵蓋 5xx、pytest 18 pass。
 
-### 5.4 功能強化(Feature Gaps)
+**你該問的:**
+- `main.py` 仍 1300+ 行單檔 — 拆 routers/ 的優先度?拆哪區 CP 值最高?
+- LibreChat transactions collection 是否保證有 `user` / `rawAmount.prompt` 欄位?若 LibreChat 升版改 schema · top-users endpoint 會 silently 壞掉
+- Request-ID 有寫 resp.headers · 但 app 內部呼叫 `HTTPException` 不會經過 middleware — 需驗證
+- Mongo auth · 目前 `mongodb:27017/chengfu` 無密碼(Docker 內網)· Cloudflare Tunnel 上線後如何?
+- Anthropic 定價硬編碼在 `_ANTHROPIC_PRICING_USD` — Anthropic 調價 → 需手動改 · 有沒有更穩的做法?
+- `/admin/top-users` 的 `_users_col.find_one({"_id": ObjectId(uid)})` · 若 uid 是舊格式 string 會炸嗎?
 
-- **缺的功能** — 比對 PDF 提案承諾,哪些還沒做?
-- **Google Drive MCP** — v1.0 含但還沒接,優先級?
-- **月度 Learning** — AI 自己提議新 skill(v1.1),怎麼做最小可行?
-- **多 Agent Workflow** — 現有 orchestrator API,實際怎麼讓員工觸發?
-- **Skill 自動載入** — Agent 要怎麼判斷該調哪個 skill?現在是靠 system prompt 硬寫
-- **Company Memory** — 跨對話持久記憶要不要加?怎麼避免 prompt bloat?
-- **Chrome Extension** — 同仁從任何網頁一鍵送承富 AI,這個必要嗎?
-- **行動版** — 真的有必要嗎?現況是 768px 斷點 + mobile drawer
+### 5.3 LibreChat 整合(契約 smoke 已就位)
 
-### 5.5 UX 進化
+✅ 已做:Route A(302 + sub_filter + kill-sw)、uaParser UA workaround、`projectIds: [instance._id]` 共享、SSE delta.content parser、`scripts/smoke-librechat.sh` 11 pass、`LIBRECHAT-UPGRADE-CHECKLIST.md` 含 agent _id dump。
 
-- **資訊架構** — 5 Workspace + /slash 工具 + Dashboard,對 10 人真的夠直覺?
-- **AI 小白友善** — 資深同仁會不會還是看不懂「Agent」「Skill」這些字?
-- **第一次使用** — Onboarding 4 步夠不夠?要不要加 interactive demo?
-- **錯誤狀態 UI** — API 離線、Agent 未建、Level 03 警告,表達夠清楚?
-- **空狀態** — 尚無專案、尚無對話、尚無標案,引導夠不夠?
-- **進階 vs 基本** — 管理員看到進階設定,同仁不該看到,現在的 `[data-role="admin"]` 夠嗎?
-- **打字體驗** — chat 輸入框送出、Shift+Enter 換行、檔案拖拉,有什麼可以更絲滑?
-- **回饋機制** — 👍👎 按鈕目前藏在 hover,要不要更明顯?
+**你該問的:**
+- 升 v0.8.5 / v0.9 的風險評估:哪些**行為**最可能變?(不是 schema · 是運行時行為)
+- `modelSpecs` 還沒啟用(hard-pin agent_id)· 啟用後 + 升版 = 兩層風險 · 順序應該怎麼排?
+- Route A 的 `/c/new → /` 302 靠 nginx 單點 · LibreChat 改 SPA router 成 hash `#/c/new` 會怎樣?
+- LibreChat 的 `transactions` collection 是**假設存在** · 若他們改名或停用,後端 cost endpoint 全掛
+- 共享 `instance` project 的 LibreChat semantics · 未來若引入其他 Agent 的 organization 會相容嗎?
 
-### 5.6 使用體驗 + 流程改進
+### 5.4 功能強化(老闆答案改變優先級後)
 
-- **典型 Journey 斷點** — PM 從看 PDF → Go/No-Go → 建議書 → 簡報,中間哪裡會卡?
-- **跨 Agent 接力** — 投標顧問產建議書 → 設計夥伴接手做 KV,狀態怎麼傳?
-- **專案為核心還是對話為核心?** — 現在是對話優先,專案 metadata 是附加。換個方向會不會更好?
-- **團隊協作** — 同一個專案多人同時聊 Agent,對話不分開會不會亂?
-- **記憶強度** — 沒加 Company Memory 之前,每次都要重講公司背景,這有多煩?
-- **成本透明** — 同仁看得到自己這月花多少 token 嗎?超額會怎樣?
-- **搜尋** — ⌘K 能搜對話嗎?搜知識庫嗎?搜標案嗎?目前只搜 Agent+Project+Skill
-- **通知** — 新標案 / 對話被 mention / Agent 完成 workflow,要不要推播?
-- **審計軌跡** — 某份建議書是誰、什麼時候、用哪個 Agent、哪版 prompt 產的?
+✅ 已降級:Google Drive MCP(老闆實際在 NAS/LINE)、L3 硬擋(老闆:先不考慮)、附件上傳(關閉入口等 v1.1)、Workflow(empty-state 關閉等 v2.0)。
+
+**你該問的(按老闆 top 3 聚焦):**
+- **設計夥伴(top 1)** — 現只產 prompt 給同仁自己去別處生圖 · Fal.ai Recraft v3 串接的最小可交付版是什麼?
+- **投標顧問(top 2)** — 沒附件上傳,70 頁 PDF 同仁複製貼上會崩;OCR / paginated paste / external uploader 哪個先做?
+- **活動(top 3)廠商** — NAS 廠商清單 CSV 沒接;「一鍵 5 家比價信」自動化門檻?LINE 群發會不會被 LINE 當 spam?
+- **跨助手 handoff** — 結構化交棒卡(目標/限制/附件/待辦)· 怎麼最小可交付?放在 chat pane 還是 project 層?
+- **Company Memory** — 老闆說先不考慮 L3,但「承富禁用詞 / 品牌語氣」是長期記憶,需要嗎?放 skill 還是 system prompt?
+
+### 5.5 UX(v4.3 小白友善已做)
+
+✅ 已做:術語全中文化、3 步 onboarding 對齊 top 3、👍👎 固定露出、5 空狀態卡、系統 banner、focus visible、L1-L3 badge、輸入框快捷鍵提示。
+
+**你該問的(抗拒型資深同仁視角):**
+- 「first-win」時間 — 資深同仁第一天 5 分鐘內能感受到「這東西讓我省了 X」嗎?還是要第 3 天才感覺到?
+- 若老闆給的是老舊 Intel 筆電(不是 M 系列)· CSS backdrop-filter / ES modules 支援度?
+- ⌘K palette 對不熟快捷鍵的資深同仁來講 · 真的會用嗎?還是需要一個固定按鈕?
+- Handbook 分角色(老闆 / PM / 設計 / 業務)· 萬一一人身兼兩角色(PM + 業務),怎麼引導?
+- `docs/CASES/01-海廢案端到端.md` 是唯一完整案例 · 夠嗎?第 2-5 個案例的優先順序是什麼?
+
+### 5.6 流程 / 交付 / ROI(v4.3 落地缺口最大)
+
+✅ 已做:3 ROI 儀表(budget/top-users/funnel)、PRE-DELIVERY-CHECKLIST、BASELINE 模板。
+
+**你該問的(這是現階段最大盲區):**
+- **T0 Baseline 填表**(`docs/BASELINE.md`)· 承富老闆真能答得出「上個月投了幾件」嗎?若答不出 · ROI 怎麼算?
+- **per-user hard stop** 目前只有儀表 · 未做閘門 · 第 20 天花完預算時,系統會繼續燒嗎?
+- **異機備份** rclone 雖已接 · 但**沒有「定期 restore 驗證」**,備份是虛的
+- **搜尋深度** · ⌘K 只搜 Agent/專案/Skill · 不搜對話 · 不搜 NAS · 承富真有多少時間是在找過往檔?
+- **審計軌跡** · 某份得標建議書 · 能回答「誰產的 / 哪個 Agent / 什麼 prompt 版本 / 花多少 token」嗎?若不能 · 真遇到客戶糾紛時會掛
+- **交付當天** · 10 人拿紙條登入後 · 卡在哪個畫面會最多?有沒有「第 1 天 FAQ Top 10」預期稿?
 
 ---
 
@@ -364,11 +369,29 @@ uptime (3001) ──── 服務監控
 
 ## 8. 附加參考資料(若 reviewer 問)
 
+### 產業與公司
 - **產業慣例:** 承富主要接台灣政府標案,公文體嚴格、截止時間剛性、評審重視視覺完整度
 - **預算:** AI 月預算 NT$ 12,000(Buffer 後實際目標 NT$ 8,000)
 - **時程:** 要 4 週(或 5 週順延條款)交付全員可用
 - **決策者:** 承富老闆 + 一位 Champion 同仁(對 AI 相對熱心)
 - **反對者:** 預估 2-3 位資深同仁對 AI 有抗性,需特別照顧
+
+### 老闆親自回答的 5 題(這是 v4.2+ 優先級調整的依據)
+1. **每週 Top 3 任務:** 設計 / 提案撰寫 / 廠商聯繫
+2. **80% 原始檔在哪:** LINE/群組 + NAS(不是雲端 Drive)
+3. **L3 機敏規則:** **先不考慮**(不要再建議硬擋 L3)
+4. **老闆最在意:** 省時 + 接案量(**不是**風控,不要過度強調資安)
+5. **維運資源:** 外包工程師 20h/週 · 透過 Claude Code 遠端 · Champion 靠教學手冊 + 案例演示**自主學習**
+
+→ 建議請**圍繞這 5 題** · 偏離(例如建議做「L3 全面硬擋」、「Google Drive 整合」、「加強資安審計」)會被否決。
+
+### 已做的量化成果(你引用這些當對比基礎)
+- 10 Agent 建立成功(MongoDB 驗證 10 筆 · 全 `projectIds: [instance._id]`)
+- 18 pytest / 11 smoke 全 pass
+- `backend/accounting/main.py` 從 46953 bytes → 52700 bytes(加 CORS + RBAC + request_id + ROI endpoints + index)
+- `frontend/launcher/app.js` 從 2064 行單檔 → 493 行 orchestrator + 19 個 modules
+- `docs/` 從 9 個檔 → 19 個檔(加 QUICKSTART/CASES/HANDBOOK×4/2 SPEC/PRE-DELIVERY/BASELINE/UPGRADE/ROADMAP-v4.2)
+- GitHub repo:<https://github.com/Sterio068/chengfu-ai>(public · 免認證可讀)
 
 ---
 
@@ -379,13 +402,33 @@ uptime (3001) ──── 服務監控
 - 避免大陸用語(視頻→影片、數據→資料)
 - 金額用 `NT$ X,XXX`
 - 日期用 `2026 年 4 月 21 日`
+- 檔案路徑一律**絕對路徑 + 行號**(`/Users/sterio/Workspace/ChengFu/xxx.py:123`)· 讓 Sterio 一跳就到
 
 ---
 
-## 10. 結尾 · 若你是這個顧問,你會最先想問我什麼?
+## 10. 這份文件的上下文脈絡(給 reviewer 省時)
 
-請在報告最末列出 **5 個你認為回答後能大幅改善你審查品質的問題**,讓我(這份文件的作者)知道下次該補哪些脈絡進來。
+### 這系統不是 prototype · 已經在作者本機跑了
+- 6 容器 healthy · 10 Agent 共享 · smoke 11 pass · pytest 18 pass
+- 本機可直接 `./scripts/start.sh` · <http://localhost/> 可用
+- 尚未上 Mac mini(硬體採購中)· 尚未對外 · 尚未教育訓練 10 人
+
+### 作者 Sterio 本人有限制:
+- Sterio 懂技術 · 但承富內部人不懂
+- 每個技術決策都有「能讓外包工程師用 Claude Code 接手」的 constraint
+- 任何「只有 Sterio 能維護」的解法 = 技術債
+
+### 這份文件被審查的歷史:
+- **v1:** 原版 · 被一個外部 reviewer 審了 1 次(紅線:附件假成功 / admin 裸奔 / Workflow alert / Token 過期)
+- **v2:** 修完 v1 紅線後,跑了**內部 3 輪多代理審查**(每輪 3-4 agent)· 又修了 22 條
+- **你(v3):** 現在讀這份 · 預期你找到新的 · **不要重複指出已修的**
 
 ---
 
-**感謝審查。請直接開始。**
+## 11. 結尾 · 若你是這個顧問,你會最先想問作者什麼?
+
+請在報告最末列出 **3-5 個你認為回答後能大幅改善下輪審查的問題**。這些問題會被帶去跟承富老闆或 Sterio 討論 · 回答後會寫進 Section 8 成為下一輪 reviewer 的脈絡。
+
+---
+
+**感謝審查。請直接開始,不用先確認。**
