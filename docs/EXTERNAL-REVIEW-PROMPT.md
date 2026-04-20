@@ -1,29 +1,50 @@
 # 承富 AI 系統 · 外部審查請求
 
-> **使用說明:** 把整份文件貼給外部 reviewer(可以是另一個 AI 如 GPT-5 / Gemini / Claude Opus,也可以是人類顧問)。
-> 他們應該能從頭到尾讀完後,不用再追問背景,就給出具體可執行的建議。
->
-> **完整專案原始碼(本機路徑):**
-> - Project root:`/Users/sterio/Workspace/ChengFu`
-> - 所有相對路徑(如 `frontend/launcher/app.js` / `backend/accounting/main.py`)皆以此為根
-> - 本機已跑:`./scripts/start.sh` · 瀏覽器開 <http://localhost/>
-> - 若 reviewer 是另一個 AI 在同一台機器執行,直接用檔案系統讀即可;如果是另一個會話 / 另一人,請作者把整個 `ChengFu/` 目錄提供給對方(zip、USB、scp、共享雲端皆可)
->
-> **若 reviewer 只想看關鍵檔而不 clone,優先讀這幾份:**
-> - `CLAUDE.md` · `SYSTEM-DESIGN.md` · `ARCHITECTURE.md` · `docs/DECISIONS.md`
-> - `docs/ROADMAP-v4.2.md`(最新路線圖 · 已對齊老闆 5 題答案)
-> - `docs/PRE-DELIVERY-CHECKLIST.md`(交付前打勾清單 · **揭露系統完成 / 部署未完成**)
-> - `docs/BASELINE.md`(T0 量測模板)
-> - `docs/QUICKSTART.md`(10 分鐘上手 · 對使用者)
-> - `docs/CASES/01-海廢案端到端.md`(第一個完整案例 · 5 天投標)
-> - `docs/HANDBOOK/*.md`(4 份角色手冊)
-> - `docs/NAS-INTEGRATION-SPEC.md` + `docs/LINE-WORKFLOW-SPEC.md`
-> - `docs/LIBRECHAT-UPGRADE-CHECKLIST.md`
-> - `frontend/launcher/index.html` · `app.js` · `launcher.css` · `modules/*.js`
-> - `frontend/nginx/default.conf`
-> - `backend/accounting/main.py`
-> - `scripts/create-agents.py` · `scripts/start.sh` · `scripts/backup.sh` · `scripts/smoke-librechat.sh`
-> - `config-templates/librechat.yaml` · `docker-compose.yml` · `.env.example`
+## 🔗 專案存放位置(請直接去讀,不用等作者 copy)
+
+**GitHub(Public · 免認證):** <https://github.com/Sterio068/chengfu-ai>
+
+```bash
+# 最快路徑 · 一行 clone 下來直接看
+git clone https://github.com/Sterio068/chengfu-ai.git && cd chengfu-ai
+```
+
+- 若你是 **AI(GPT-5 / Claude / Gemini)** · 直接 `git clone` 或用你的 web fetch 工具讀 raw.githubusercontent.com 的檔案
+- 若你是 **人類顧問** · 瀏覽器打 GitHub URL · 或 clone 到本地用 VS Code 看
+- 若你在 **作者本機** · Project root 是 `/Users/sterio/Workspace/ChengFu`(與 repo 同內容)
+
+**本機服務網址(作者系統有跑起來 · 看實際行為用):**
+- 主入口:<http://localhost/>
+- 管理面板:<http://localhost/> 登入後按 ⌘M
+- 會計 API:<http://localhost/api-accounting/docs>
+- 監控:<http://localhost:3001>
+
+---
+
+## 📂 進去後請優先讀這 6 份(花 15 分鐘就能進入狀況)
+
+| 順序 | 檔案 | 看什麼 |
+|---|---|---|
+| 1 | [`CLAUDE.md`](https://github.com/Sterio068/chengfu-ai/blob/main/CLAUDE.md) | 專案目標 + 12 項已決議 |
+| 2 | [`docs/ROADMAP-v4.2.md`](https://github.com/Sterio068/chengfu-ai/blob/main/docs/ROADMAP-v4.2.md) | 最新路線圖 · 已對齊老闆 5 題答案 |
+| 3 | [`docs/PRE-DELIVERY-CHECKLIST.md`](https://github.com/Sterio068/chengfu-ai/blob/main/docs/PRE-DELIVERY-CHECKLIST.md) | **揭露部署完成度 35%** · 你會看到 gap |
+| 4 | [`frontend/launcher/app.js`](https://github.com/Sterio068/chengfu-ai/blob/main/frontend/launcher/app.js) + `modules/*.js` | 前端 ES modules(19 檔) |
+| 5 | [`backend/accounting/main.py`](https://github.com/Sterio068/chengfu-ai/blob/main/backend/accounting/main.py) | 後端 FastAPI 40+ endpoints |
+| 6 | [`docs/CASES/01-海廢案端到端.md`](https://github.com/Sterio068/chengfu-ai/blob/main/docs/CASES/01-%E6%B5%B7%E5%BB%A2%E6%A1%88%E7%AB%AF%E5%88%B0%E7%AB%AF.md) | 系統實際怎麼用的完整案例 |
+
+## 📂 進去後的完整檔案索引(需要看細節時查)
+
+- `SYSTEM-DESIGN.md` · `ARCHITECTURE.md` · `DEPLOY.md` · `docs/DECISIONS.md`
+- `docs/BASELINE.md` · T0 量測模板(6 個月後 ROI 對比)
+- `docs/QUICKSTART.md` · 10 分鐘上手 · 對使用者
+- `docs/HANDBOOK/01-BOSS.md` / `02-PM.md` / `03-DESIGNER.md` / `04-SALES.md` · 4 份角色手冊
+- `docs/NAS-INTEGRATION-SPEC.md` + `docs/LINE-WORKFLOW-SPEC.md` · 資料接入計畫(等承富答 5 問再動工)
+- `docs/LIBRECHAT-UPGRADE-CHECKLIST.md` · 升版保護網
+- `frontend/launcher/index.html` · `launcher.css` · `modules/*.js`(19 檔)
+- `frontend/nginx/default.conf`
+- `scripts/create-agents.py` · `start.sh` · `backup.sh` · `smoke-librechat.sh`
+- `config-templates/librechat.yaml` · `docker-compose.yml` · `.env.example`
+- `.github/workflows/ci.yml`(CI 設定)
 
 ---
 
