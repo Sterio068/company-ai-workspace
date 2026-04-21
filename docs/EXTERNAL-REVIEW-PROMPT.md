@@ -1,490 +1,247 @@
-# 承富 AI 系統 · 外部審查請求
-
-## 🔗 專案存放位置(請直接去讀,不用等作者 copy)
-
-**GitHub(Public · 免認證):** <https://github.com/Sterio068/chengfu-ai>
-
-```bash
-# 最快路徑 · 一行 clone 下來直接看
-git clone https://github.com/Sterio068/chengfu-ai.git && cd chengfu-ai
-```
-
-- 若你是 **AI(GPT-5 / Claude / Gemini)** · 直接 `git clone` 或用你的 web fetch 工具讀 raw.githubusercontent.com 的檔案
-- 若你是 **人類顧問** · 瀏覽器打 GitHub URL · 或 clone 到本地用 VS Code 看
-- 若你在 **作者本機** · Project root 是 `/Users/sterio/Workspace/ChengFu`(與 repo 同內容)
-
-**本機服務網址(作者系統有跑起來 · 看實際行為用):**
-- 主入口:<http://localhost/>
-- 管理面板:<http://localhost/> 登入後按 ⌘M
-- 會計 API:<http://localhost/api-accounting/docs>
-- 監控:<http://localhost:3001>
+# 承富 AI 系統 · 外部審查請求 (v5.0)
 
 ---
 
-## 📂 進去後請優先讀這 6 份(花 15 分鐘就能進入狀況)
+## 🔗 0. 直接去讀(不用等作者 copy)
 
-| 順序 | 檔案 | 看什麼 |
+| 來源 | 位置 |
+|---|---|
+| **GitHub(public · 免認證)** | <https://github.com/Sterio068/chengfu-ai> |
+| **Clone 一行** | `git clone https://github.com/Sterio068/chengfu-ai.git && cd chengfu-ai` |
+| **作者本機路徑** | `/Users/sterio/Workspace/ChengFu` |
+| **本機跑起來的服務** | <http://localhost/>(主入口)· <http://localhost/api-accounting/docs>(API) |
+
+讀完這份 + 開原始碼,你應該能在 30 分鐘內進入狀況。
+
+### 必讀 6 份(15 分鐘消化專案)
+
+```
+1. CLAUDE.md                                    · 專案目標 + 12 項決議
+2. docs/ROADMAP-v4.2.md                         · 對齊老闆 5 題答案的最新路線圖
+3. docs/PRE-DELIVERY-CHECKLIST.md               · 揭露部署完成度 35%
+4. frontend/launcher/app.js + modules/*.js      · 前端 ES modules(20 檔)
+5. backend/accounting/main.py                   · 後端 FastAPI 40+ endpoints
+6. docs/CASES/01-海廢案端到端.md                 · 系統實際怎麼用
+```
+
+### 完整檔案地圖
+
+- **核心文件:** `CLAUDE.md` · `SYSTEM-DESIGN.md` · `ARCHITECTURE.md` · `DEPLOY.md` · `docs/DECISIONS.md`
+- **路線與量測:** `docs/ROADMAP-v4.2.md` · `docs/PRE-DELIVERY-CHECKLIST.md` · `docs/BASELINE.md`
+- **使用者教材:** `docs/QUICKSTART.md` · `docs/CASES/01~03` · `docs/HANDBOOK/01~04 + README`
+- **整合規格:** `docs/NAS-INTEGRATION-SPEC.md` · `docs/LINE-WORKFLOW-SPEC.md` · `docs/LIBRECHAT-UPGRADE-CHECKLIST.md`
+- **前端:** `frontend/launcher/{index.html, launcher.css, app.js, modules/*.js}` · `frontend/nginx/default.conf` · `frontend/custom/*`
+- **後端:** `backend/accounting/{main.py, orchestrator.py, test_main.py}` · `_unused_scaffold/`(已歸檔)
+- **腳本:** `scripts/{start.sh, backup.sh, create-agents.py, smoke-librechat.sh, create-users.py, upload-knowledge-base.py}`
+- **設定:** `config-templates/{librechat.yaml, docker-compose.yml, .env.example, presets/00~09.json, actions/*.json}`
+
+---
+
+## 1. 客戶與專案
+
+### 客戶
+- **承富創意整合行銷有限公司**(台灣 · 10 人公關行銷公司)
+- 主要業務:政府標案、公關活動、設計案
+- 同仁年齡偏大 · 預估 2-3 位資深者對 AI 抗拒
+
+### 老闆親口答的 5 題(這是優先級依據)
+1. **每週 Top 3 任務:** 設計 / 提案撰寫 / 廠商聯繫
+2. **80% 原始檔在哪:** LINE 群組 + NAS(**不是** Google Drive)
+3. **L3 機敏規則:** **先不考慮**(不要再建議硬擋 L3)
+4. **老闆最在意:** 省時 + 接案量(**不是**風控,別過度強調資安)
+5. **維運資源:** 外包工程師 20h/週 · 透過 Claude Code 遠端 · Champion 靠教學手冊**自主學習**
+
+→ **你的建議偏離這 5 題會被否決**(例如「全面 L3 硬擋」、「Google Drive 整合」、「強化資安審計」)。
+
+### 預算 / 時程
+- AI 月預算 NT$ 12,000(buffer 後實際 NT$ 8,000)
+- 4 週交付(可順延 1 週)· **目前 Mac mini 還沒上架**
+
+---
+
+## 2. 技術棧(不可替換)
+
+| 層 | 選擇 | 為什麼鎖死 |
 |---|---|---|
-| 1 | [`CLAUDE.md`](https://github.com/Sterio068/chengfu-ai/blob/main/CLAUDE.md) | 專案目標 + 12 項已決議 |
-| 2 | [`docs/ROADMAP-v4.2.md`](https://github.com/Sterio068/chengfu-ai/blob/main/docs/ROADMAP-v4.2.md) | 最新路線圖 · 已對齊老闆 5 題答案 |
-| 3 | [`docs/PRE-DELIVERY-CHECKLIST.md`](https://github.com/Sterio068/chengfu-ai/blob/main/docs/PRE-DELIVERY-CHECKLIST.md) | **揭露部署完成度 35%** · 你會看到 gap |
-| 4 | [`frontend/launcher/app.js`](https://github.com/Sterio068/chengfu-ai/blob/main/frontend/launcher/app.js) + `modules/*.js` | 前端 ES modules(19 檔) |
-| 5 | [`backend/accounting/main.py`](https://github.com/Sterio068/chengfu-ai/blob/main/backend/accounting/main.py) | 後端 FastAPI 40+ endpoints |
-| 6 | [`docs/CASES/01-海廢案端到端.md`](https://github.com/Sterio068/chengfu-ai/blob/main/docs/CASES/01-%E6%B5%B7%E5%BB%A2%E6%A1%88%E7%AB%AF%E5%88%B0%E7%AB%AF.md) | 系統實際怎麼用的完整案例 |
+| 硬體 | Mac mini M4 24GB | 已採購 · 本地部署 |
+| AI Platform | LibreChat **v0.8.4 pinned** | v0.8.5-rc1 截至 2026-04-21 仍 pre-release |
+| AI Model | Claude Opus 4.7 / Sonnet 4.6 / Haiku 4.5 | Anthropic Tier 2 |
+| 後端 | FastAPI 單檔(1700+ 行) | 10 人不需微服務 |
+| 前端 | 原生 ES Modules + 單 CSS · **無 build step** | 外包接手成本最低 |
+| 容器 | Docker Compose × 6(nginx / librechat / mongo / meili / accounting / uptime) | 已穩定 |
+| 對外 | Cloudflare Tunnel + Access(Email + 2FA) | 尚未架 |
+| 機密 | macOS Keychain | 已就位 |
 
-## 📂 進去後的完整檔案索引(需要看細節時查)
-
-- `SYSTEM-DESIGN.md` · `ARCHITECTURE.md` · `DEPLOY.md` · `docs/DECISIONS.md`
-- `docs/BASELINE.md` · T0 量測模板(6 個月後 ROI 對比)
-- `docs/QUICKSTART.md` · 10 分鐘上手 · 對使用者
-- `docs/HANDBOOK/01-BOSS.md` / `02-PM.md` / `03-DESIGNER.md` / `04-SALES.md` · 4 份角色手冊
-- `docs/NAS-INTEGRATION-SPEC.md` + `docs/LINE-WORKFLOW-SPEC.md` · 資料接入計畫(等承富答 5 問再動工)
-- `docs/LIBRECHAT-UPGRADE-CHECKLIST.md` · 升版保護網
-- `frontend/launcher/index.html` · `launcher.css` · `modules/*.js`(19 檔)
-- `frontend/nginx/default.conf`
-- `scripts/create-agents.py` · `start.sh` · `backup.sh` · `smoke-librechat.sh`
-- `config-templates/librechat.yaml` · `docker-compose.yml` · `.env.example`
-- `.github/workflows/ci.yml`(CI 設定)
+**不接受建議:** k8s / Redis / Kafka / GraphQL / 換框架 / SaaS 化 / 改 10 助手 / 改 5 工作區 / 改主色
 
 ---
 
-## 🧭 已做過的 4 輪外部/內部審查結論(reviewer 進來前先讀 · 避免重複指出)
+## 3. 當前狀態(三層完成度)
 
-> 每一輪都經過真實執行:18 pytest 全過、11 smoke pass、實際 commit 到 <https://github.com/Sterio068/chengfu-ai>
+### ✅ 程式碼:97%(已通過 3 輪內部 + 2 輪外部 AI 審查)
 
-### Round 1(技術正確性 · 內部 3 agent)· **已修 8 條紅線**
-- FE · chat.js SSE `pop() ?? ""`、chat.js `.chat-messages` → `#chat-messages`、auth.js 401 auto-refresh retry + Web Locks + SessionExpiredError
-- BE · `import json` 修 NameError、email regex injection 修掉、RequestIDMiddleware 500 也帶 header、刪 assert_not_l3 雙源
-- Ops · backup.sh 加 rclone off-site、start.sh CI 護欄 + accounting image stale guard、smoke-librechat 補 SSE/convos、LibreChat upgrade checklist 加 agent `_id` dump
+- 6 容器 healthy · 10 助手建好 + 共享 `instance` global project
+- 前端:ES Modules 20 檔 · `<template>+cloneNode` · 無 build step · 3 步 onboarding · 術語全中文化
+- 後端:13 個 /admin/* 全 RBAC · CORS whitelist · Request-ID + JSON log · 3 ROI endpoints · LibreChat schema adapter · 0 Pydantic deprecation
+- 測試:18 pytest pass · 11 smoke pass(`scripts/smoke-librechat.sh`)
+- 保護網:rclone off-site backup · accounting image stale guard · `LIBRECHAT-UPGRADE-CHECKLIST.md`
+- 教材:QUICKSTART + 3 完整案例(海廢/設計/廠商)+ 4 角色手冊 + 混合角色導覽
 
-### Round 2(產品 / UX / 業務 / 教材 · 內部 3 agent)· **已修 10 條**
-- Onboarding 從 10 步 → **3 步任務型**(對齊老闆 top 3:設計/投標/廠商)· L3 警語整段刪(老闆:先不考慮 L3)
-- 術語中文化 · Agent → 助手、Workspace → 工作區、Skill → 範本、Preset → 模板
-- 「找不到 Agent」文案友善化 · 技術指令只給 admin
-- 新增:QUICKSTART / CASES/01 / HANDBOOK×4 / NAS-SPEC / LINE-SPEC / README 第一屏改為使用者場景
+### 🔴 部署落地:35%(老闆感受到的價值,大部分還沒拿到)
 
-### Round 3(交付準備度 / 整合 regression / 財務 ROI · 內部 3 agent)· **已修 4 條**
-- **修掉** accounting image 未 rebuild 導致 RBAC 未生效(致命 · 在內網裸奔)
-- **修掉** onboarding tour-step-total 寫死 4 的破綻
-- **加** 3 個 ROI 儀表:`/admin/budget-status` / `/admin/top-users` / `/admin/tender-funnel`
-- **加** Dashboard ROI row(本月 AI 費用進度條 + 標案漏斗 + 本週完成任務)
-- **揭露 3 個部署紅線**(非程式碼問題 · 交付前手動落地 · 寫進 `docs/PRE-DELIVERY-CHECKLIST.md`)
-
-### Round 4(第一位外部 AI reviewer · 2026-04-21 凌晨 2:57 報告)· **已修全部 P0 + P1 關鍵**
-- **P0 對話續接斷鏈**(app.js / chat.js)· `?convo` 參數真的讀了、history modal 真的 reopen
-- **P0 UI overpromise**(6 處)· 專案文案、搜尋 placeholder、預算 email、直接 re-use 段落 — 全改誠實版 · 未做的寫「v1.1」
-- **P0 Day 0 驗收**改為「登入 + **至少 7 人完成角色 first-win 截圖**」硬條件
-- **P0 Backend split-brain**· `routers/` + `auth.py` + `rate_limit.py` + `errors.py` 歸檔到 `_unused_scaffold/`(main.py 為唯一真相)
-- **P1 errors.js**· 前台改可恢復話術 + request id · `SessionExpiredError` 不重複 toast
-- **P1 LibreChat 私有 schema adapter**· `_lc_tx_probe()` + `_lc_tx_normalize()` + `/admin/librechat-contract` endpoint
-- **P1 create-agents.py** 共享失敗 hard fail(原只 warn)
-- **P1 librechat.yaml** 註解「29 個 Agent」改「10 個助手」
-
-### Round 5(第二位外部 AI reviewer · 2026-04-21)· **與 Round 4 約 70% 重疊 · 30% 真新項全修**
-- **P1 Pydantic deprecation 全清** · `.dict()` → `.model_dump()`(7 處)· `@app.on_event("startup")` → `lifespan(asynccontextmanager)`
-- **P1 多分頁髒資料** · `Projects` 模組加 `BroadcastChannel`(舊 Safari 走 storage event fallback)· app.js 注入 `bindOnChange` callback re-render
-- **P1 教材覆蓋** · 新增 `docs/CASES/02-設計Brief端到端.md`(設計師 25 分鐘流程)+ `docs/CASES/03-廠商比價信端到端.md`(業務 8 分鐘流程)
-- **P1 混合角色導覽** · `docs/HANDBOOK/README.md` 加「PM+業務 / PM+設計 / 設計+行銷 / 老闆+PM / Champion」5 種混合配對表
-- **P1 密碼紙條銷毀 SOP** · 加進 `PRE-DELIVERY-CHECKLIST.md` Day -4(誰持有 / 何時銷毀 / 簽收存檔)
-- **P1 月度 restore dry-run** · 加進 `PRE-DELIVERY-CHECKLIST.md` Day +30(自動化指令 + 連 3 月 fail 觸發異機方案重評)
-- **18 pytest pass · 0 deprecation warnings**(原 11 → 0)
-
-### 因此 · reviewer 請**不要再審以下項**(已在 5 輪處理)
-- FE:SSE pop 邊界、tenders listener 疊加、auth 401 retry、chat.js `.chat-messages` selector、對話續接 `?convo`、history modal reopen、onboarding 步數、L3 警語、術語中文化、errors toast 曝內部、**多分頁同步 BroadcastChannel**
-- BE:CORS whitelist、13 個 /admin/* 全 RBAC、email regex injection、`import json`、Request-ID 500、Mongo index、LibreChat transactions schema probe、**Pydantic .dict() / on_event deprecation**
-- Ops:異機備份腳本 (rclone 已接)、LibreChat 升版 checklist、accounting image stale guard、CI 護欄、SSE smoke、**月度 restore dry-run 制度**、**密碼紙條銷毀 SOP**
-- UI:overpromise 文案(專案跟對話 / ⌘K 搜對話 / 超預算自動 email / PM 直接 re-use 段落)
-- UX:onboarding 10→3 步、Day 0 first-win 驗收硬條件
-- 文件:docs/HANDBOOK 4 份 + **混合角色導覽**、docs/CASES **3 個完整案例**(海廢/設計/廠商)、docs/QUICKSTART、NAS + LINE SPEC、PRE-DELIVERY-CHECKLIST、BASELINE、LIBRECHAT-UPGRADE-CHECKLIST
-- 架構:backend split-brain(已歸檔 scaffold)、ROI 3 儀表、PRICE_VERSION 標示、lifespan + model_dump
-
-### 建議 reviewer 本輪**新聚焦的問題**(Round 5 之後仍未解):
-1. **Fal.ai Recraft v3 真生圖** · 老闆 top 1 是設計 · 但設計夥伴目前只產 prompt · 何時補上?
-2. **PDF 文字抽取**(取代 70 頁複製貼上痛)· born-digital first / OCR fallback · 規格?
-3. **預算 hard stop 真做**(目前只儀表 · 文件已誠實揭露但業務上仍想要)· FastAPI 最小可行版本?
-4. **跨助手 handoff 摘要卡** · 4 格(目標 / 限制 / 附件 / 待辦)· 放 project 層還是 chat 層?
-5. **上線第 2 週的死法 + 急救** · 你的判斷哪個風險最高?(usage 崩 / 同仁放棄 / 老闆不付錢)
-6. **承富老闆 Round 4 的 5 題答案** · 是否該重新做一次質性訪談 · 確認 v4.5 仍對齊?
-
----
-
-## 0. 審查者角色定位
-
-你是一位**同時精通前端工程、後端架構、UX 設計、產品策略、AI 系統落地**的資深顧問。你的客戶是一間**10 人的台灣公關行銷公司**,不是 startup 也不是 SaaS 團隊,所以:
-- 過度工程化的建議(例如 k8s / microservices / GraphQL federation)請**直接否決**
-- 「業界最佳實踐」要對應到 10 人團隊的現實(一個 PM 兼產品 + 一個外包工程師維運)
-- 任何建議都要評估 **CP 值**:做了之後能省幾小時 / 多接幾個案 / 少犯幾個錯?
-
----
-
-## 1. 客戶與使用情境
-
-- **公司名:** 承富創意整合行銷有限公司(台灣)
-- **業務:** 公關行銷、活動規劃、政府標案(估計標案佔比 50%+)
-- **規模:** 10 位同仁(老闆 + PM + 設計 + 企劃 + 業務,平均年資偏長,有資深同仁對 AI 較抗拒)
-- **語言:** 繁中為主,公文體
-- **資料敏感度分 3 級:**
-  - Level 01(公開) — 行銷文案、通案研究 → 雲端 Claude API
-  - Level 02(一般) — 招標須知、服務建議書(去識別化後) → 雲端 Claude
-  - Level 03(機敏) — 選情、客戶機敏、未公告標案內情 → **絕不上雲** · 只能本地處理
-- **使用情境典型例子:**
-  - A 看到 60 頁招標 PDF → 10 分鐘 Go/No-Go 判斷 → 產服務建議書初稿
-  - B 活動執行 → 3D 場景 Brief + 舞台動線 + 廠商比價 + 現場 checklist
-  - C PM 交辦 → 設計師收到結構化設計 Brief → AI 生圖 → 多渠道素材適配
-  - D 新聞稿 3 分鐘產出 · 社群月計劃批次產 · Email 公文體草稿
-  - E 結案 3 小時→30 分 · 客戶 CRM 用聊天記錄
-
----
-
-## 2. 技術棧(**不可替換**)
-
-| 層 | 選擇 | 版本鎖 |
-|---|---|---|
-| 硬體 | Mac mini M4 24GB / 512GB(本地部署) | — |
-| OS | macOS Sequoia | — |
-| 容器 | Docker Desktop for Mac | — |
-| AI Platform | LibreChat | `v0.8.4`(pinned) |
-| AI Model | Claude (Opus 4.7 / Sonnet 4.6 / Haiku 4.5) | Anthropic Tier 2 |
-| DB | MongoDB 7 | — |
-| Search | Meilisearch 1.12 | — |
-| Reverse Proxy | Nginx 1.27 | — |
-| Backend | FastAPI (Python 3.12) | 統一會計 + 專案 + CRM + Orchestrator + Safety |
-| 遠端連線 | Cloudflare Tunnel + Access(Email 白名單 + 2FA) | — |
-| 監控 | Uptime Kuma | — |
-| 前端 | 無框架 · 原生 ES Modules + `<template>` + 單 CSS 檔 | 無 build step |
-| 語音 | Web Speech API(瀏覽器內建,zh-TW) | — |
-| 外部工具 | Fal.ai(Recraft v3 繁中生圖)、g0v PCC API(標案監測) | — |
-
-**不接受的技術提案:**
-- 換前端框架(React/Vue/Svelte) — 10 人不值得
-- 換 AI 平台(Open WebUI / LobeChat) — 已決定 LibreChat
-- 換雲端 AI(OpenAI / Gemini) — 已決定 Anthropic
-- 引入 k8s / service mesh / message queue
-- 建 CI/CD 過度流程(GitHub Actions 簡單 lint+test 可接受)
-
----
-
-## 3. 架構現況(2026-04-21)
-
-### 3.1 容器佈局(6 個)
-
-```
-nginx (80) ──── / 與 /static/*  → frontend/launcher (靜態)
-             ├─ /chat /c/*     → librechat (但 Route A 會 302 轉回 /)
-             ├─ /api/*          → librechat:3080 (SSE 代理)
-             ├─ /api-accounting → accounting:8000 (FastAPI)
-             └─ /chengfu-custom → 注入 LibreChat 的客製 CSS/JS
-
-librechat (3080) ─── MongoDB + Meili + Claude API
-accounting (8000) ── 同 MongoDB · 40+ endpoints
-mongo (27017) ──── LibreChat + accounting 共用 DB=chengfu
-meili (7700) ──── 對話全文搜尋
-uptime (3001) ──── 服務監控
-```
-
-### 3.2 前端(路線 A:Launcher 接管,LibreChat 只當後端 API)
-
-- `frontend/launcher/index.html` · 7 個 view(Dashboard / Projects / Skills / Accounting / Tenders / CRM / Workflows / Admin)
-- `frontend/launcher/app.js`(493 行 · ES module entry)
-- `frontend/launcher/launcher.css`(2063 行,合併後單檔)
-- `frontend/launcher/modules/`
-  - 基礎:`config.js` / `util.js` / `auth.js` / `tpl.js`
-  - UI:`modal.js` / `toast.js` / `palette.js` / `shortcuts.js` / `health.js` / `mobile.js`
-  - 功能:`chat.js`(SSE 串流) / `voice.js`
-  - Views:`accounting.js` / `admin.js` / `crm.js` / `tenders.js` / `workflows.js`
-  - Store:`projects.js`(API + localStorage fallback)
-  - `errors.js`(global error handler)
-- 設計:macOS 設計語言(SF Pro / PingFang TC、毛玻璃、5 Workspace 彩色分組)
-- 快捷鍵:⌘K palette、⌘1-5 Workspace、⌘6-9 進階 Agent、⌘0 首頁
-
-### 3.3 後端(`backend/accounting/main.py`)
-
-統一 FastAPI,40+ endpoints 分六大區:
-- **Accounting** — 科目、交易、發票、報價、P&L、Aging
-- **Projects** — CRUD + 全公司共享
-- **Feedback** — 👍👎 收 LibreChat message 滿意度
-- **Admin** — Dashboard(成本/品質/用量) + CSV 匯出
-- **CRM** — Leads + 8 階段 Kanban + 從標案匯入
-- **Safety** — L3 classifier(審訊息前預檢機敏資料)
-- **Tenders** — g0v PCC cron 每日抓新標案
-- **Memory** — `/memory/summarize-conversation`(壓縮對話節 token)
-- **Orchestrator** — Multi-Agent workflow presets(投標/活動/新聞發布)
-- **Safety classifier** · L3 關鍵字 + 格式比對
-
-### 3.4 10 個 Agent(已在 LibreChat 建好 · 全公司可見)
-
-| # | 名 | 模型 | Workspace |
-|---|---|---|---|
-| 00 | ✨ 主管家(Router) | Opus | 入口 |
-| 01 | 🎯 投標顧問 | Sonnet | ⌘1 |
-| 02 | 🎪 活動規劃師 | Sonnet | ⌘2 |
-| 03 | 🎨 設計夥伴 | Sonnet | ⌘3 |
-| 04 | 📣 公關寫手 | Sonnet | ⌘4 |
-| 05 | 🎙️ 會議速記 | Haiku | /meet |
-| 06 | 📚 知識庫查詢 | Sonnet | /know |
-| 07 | 💰 財務試算 | Sonnet | ⌘5 支線 |
-| 08 | ⚖️ 合約法務 | Sonnet | /tax |
-| 09 | 📊 結案營運 | Sonnet | ⌘5 主線 |
-
-每個 Agent 的 system prompt 在 `config-templates/presets/*.json`,被 `scripts/create-agents.py` 讀入並 POST 到 `/api/agents`。
-
-### 3.5 知識體系
-
-- `knowledge-base/company/` — Company Memory(品牌、禁用詞、格式)
-- `knowledge-base/skills/` — 承富 12 Skills(招標解析、新聞稿 AP Style、毛利框架...)
-- `knowledge-base/claude-skills/` — Anthropic 官方 17 Skills
-- `knowledge-base/openclaw-reference/` — OpenClaw 生態參考
-- `SKILL-AGENT-MATRIX.md` — 主管家路由表
-
----
-
-## 4. 當前狀態(DoD 視角 · v4.5 · 2026-04-21)
-
-### ✅ 程式碼完成度:**97%**(已通過 3 輪內部審查 + 2 輪外部 AI 審查)
-- 6 容器全 healthy · 10 Agent 全建立 + 共享 `instance` global project
-- 前端 v4.3 · ES Modules · 無 build step · 單檔 CSS · Path A 內建 chat
-- UX:3 步 onboarding(對齊老闆 top 3)· 術語全中文化 · 5 狀態卡 · banner · focus visible
-- 快捷鍵:⌘K / ⌘1-5 工作區 / ⌘6-9 進階助手 / ⌘0 首頁
-- Dashboard ROI 三儀表:本月預算進度條 + 標案漏斗 + 本週完成數
-- 後端:13 個 /admin/* endpoint 全 RBAC / CORS whitelist / Request-ID + JSON log / Mongo 7 indexes
-- 契約測試:`smoke-librechat.sh` 11 pass · `pytest` 18 pass
-- 保護網:`backup.sh` 已接 rclone off-site、`start.sh` 有 CI 護欄 + image stale guard、`LIBRECHAT-UPGRADE-CHECKLIST.md`
-
-### 📚 教材完成度:**85%**
-- `QUICKSTART.md`(10 分鐘 3 任務)· `CASES/01-海廢案端到端.md`(5 天投標完整走一遍)
-- `HANDBOOK/` 4 份角色手冊(老闆 / PM / 設計 / 業務)
-- `NAS-INTEGRATION-SPEC.md` + `LINE-WORKFLOW-SPEC.md` · 等承富答 5 問再動工
-- `PRE-DELIVERY-CHECKLIST.md` · 交付週逐日打勾
-- `BASELINE.md` · T0 量測模板
-
-### 🔴 部署落地完成度:**35%**(= 老闆感受到的交付價值)
-- [ ] Mac mini 未上架、Cloudflare Tunnel 未接 · 同仁目前只有作者本機能用
-- [ ] `knowledge-base/samples/` 空目錄 · **承富真實建議書 / 結案報告 0 份已灌**
+- [ ] Mac mini 未上架、Cloudflare Tunnel 未接
+- [ ] `knowledge-base/samples/` 空目錄 · **承富真實建議書 0 份已灌**
 - [ ] 10 同仁帳號未建 · 密碼 reset SOP 未寫
 - [ ] 2 場教育訓練未辦
-- [ ] 異機備份 rclone 未設 remote
-- [ ] T0 baseline 未填(ROI 無對比基準)
+- [ ] T0 baseline 未填(沒對比基準)
 
-**= 系統已經寫完 · 但沒人能用 · 6 個月後無法證明 ROI。**
-**這是交付經理(Sterio)要在交付前 1 週手動落地的事,不是再改程式碼。**
+→ **這是 Sterio 在 Mac mini 到貨那週手動落地的事 · 不是再改程式碼。**
+→ 詳見 `docs/PRE-DELIVERY-CHECKLIST.md` 逐日打勾。
 
-### 📅 Round 4 reviewer 給的路線圖(2 週 + v1.1/v1.2)
+### 📚 教材:88%
 
-| 階段 | 目標 | 關鍵行動 | 預估工時 | 已做? |
-|---|---|---|---|---|
-| **P0 本週** | 消除承諾落差 | `?convo` 續接 + history reopen + 文案誠實化 + Day 0 first-win 驗收 + split-brain 收束 | 12-18h | ✅ **全做完** |
-| **P1 2 週內** | 補最有感閉環 | 預算 80% alert job · 2 個角色案例 · PDF 文字抽取 MVP · main.py/routers 唯一真相 | 20-30h | 🟡 部分(split-brain ✅ · adapter ✅ · 案例 ⏳ · alert ⏳) |
-| **P2 v1.1** | 強化 top 3 任務 | Fal.ai Recraft v3 最小串 · CSV 廠商比價信 · 交棒卡 · spend snapshot adapter | 24-36h | ⏳ v1.1 排程 |
-| **P3 v1.2+** | 穩定擴張 | conversations/NAS 搜尋 · Company Memory · 每月 restore 驗證 | 20-28h | ⏳ |
-
-### ⚠️ 明確延後到 v1.1 的項目
-- Google Drive MCP(老闆實際在 NAS + LINE · 優先級降)
-- Fal.ai Recraft v3 真生圖(設計夥伴目前只產 prompt 給同仁自己去生)
-- 附件 PDF 真實上傳(目前 UI 關閉 · 靠複製貼上)
-- Multi-agent workflow 自動串接(目前是關閉的 empty-state)
-- 跨助手 handoff 結構化交棒
-- Company Memory(跨對話記憶)
-- per-user token hard stop(現在只有儀表,未做閘門)
-- L3 硬擋(老闆:先不考慮)
+3 個完整案例 + 4 + 1 角色手冊 + QUICKSTART + Pre-Delivery + Baseline + Upgrade Checklist。
+**還缺:** Champion 自己跑過所有案例的真實截圖 · Day 1 FAQ 累積。
 
 ---
 
-## 5. 審查範圍與要求(v4.3 · 3 輪後剩下的未解題)
+## 4. 已知限制(請不要再審以下範圍 · 已在 5 輪審查處理)
 
-請對以下 **6 個層面** 各自給出報告。每個層面輸出格式:
-
-```
-層面:XXX
-完成度:[%](程式碼/部署/教材 分別給)
-🔴 關鍵問題(必修): N 個
-  1. [問題] · 影響:XX · 修法:YY · 預估工時:Z h
-🟡 改善建議(建議修):N 個
-🟢 做對的地方(保留):N 個
-🚀 加分建議(v1.1/v1.2):N 個
-```
-
-⚠️ **前面「3 輪已修清單」列的問題請勿重複指出** · 直接跳到下面的未解題:
-
-### 5.1 前端(已穩 · 尋找盲點)
-
-✅ 已做:ES modules 19 檔、`<template>+cloneNode`、SSE pop 修、auth retry/Web Locks、focus visible、3 步 onboarding、術語中文化。
-
-**你該問的:**
-- 長列表 render 效能 — CRM Kanban 100+ 張卡、標案監測 50+ 筆會 jank 嗎?
-- 多分頁同開 — localStorage 給 Projects fallback · 多分頁會髒 data 嗎?
-- 錯誤邊界 — `errors.js installGlobalErrorHandler` 只 toast · `unhandledrejection` 遮了實情嗎?
-- `onclick=` 在 HTML 還剩幾個?要不要繼續清?
-- `renderMarkdown` 手刻 regex 能處理中英混排 + code block + 巢狀 list 嗎?
-- i18n · 未來英文同仁加入時 · 現有寫死繁中的字串怎辦?
-
-### 5.2 後端(RBAC + CORS + Request-ID 已就位)
-
-✅ 已做:13 /admin/* 全套 `require_admin`、CORS whitelist、`import json` 修、regex injection 修、Mongo 7 indexes、RequestID middleware 涵蓋 5xx、pytest 18 pass。
-
-**你該問的:**
-- `main.py` 仍 1300+ 行單檔 — 拆 routers/ 的優先度?拆哪區 CP 值最高?
-- LibreChat transactions collection 是否保證有 `user` / `rawAmount.prompt` 欄位?若 LibreChat 升版改 schema · top-users endpoint 會 silently 壞掉
-- Request-ID 有寫 resp.headers · 但 app 內部呼叫 `HTTPException` 不會經過 middleware — 需驗證
-- Mongo auth · 目前 `mongodb:27017/chengfu` 無密碼(Docker 內網)· Cloudflare Tunnel 上線後如何?
-- Anthropic 定價硬編碼在 `_ANTHROPIC_PRICING_USD` — Anthropic 調價 → 需手動改 · 有沒有更穩的做法?
-- `/admin/top-users` 的 `_users_col.find_one({"_id": ObjectId(uid)})` · 若 uid 是舊格式 string 會炸嗎?
-
-### 5.3 LibreChat 整合(契約 smoke 已就位)
-
-✅ 已做:Route A(302 + sub_filter + kill-sw)、uaParser UA workaround、`projectIds: [instance._id]` 共享、SSE delta.content parser、`scripts/smoke-librechat.sh` 11 pass、`LIBRECHAT-UPGRADE-CHECKLIST.md` 含 agent _id dump。
-
-**你該問的:**
-- 升 v0.8.5 / v0.9 的風險評估:哪些**行為**最可能變?(不是 schema · 是運行時行為)
-- `modelSpecs` 還沒啟用(hard-pin agent_id)· 啟用後 + 升版 = 兩層風險 · 順序應該怎麼排?
-- Route A 的 `/c/new → /` 302 靠 nginx 單點 · LibreChat 改 SPA router 成 hash `#/c/new` 會怎樣?
-- LibreChat 的 `transactions` collection 是**假設存在** · 若他們改名或停用,後端 cost endpoint 全掛
-- 共享 `instance` project 的 LibreChat semantics · 未來若引入其他 Agent 的 organization 會相容嗎?
-
-### 5.4 功能強化(老闆答案改變優先級後)
-
-✅ 已降級:Google Drive MCP(老闆實際在 NAS/LINE)、L3 硬擋(老闆:先不考慮)、附件上傳(關閉入口等 v1.1)、Workflow(empty-state 關閉等 v2.0)。
-
-**你該問的(按老闆 top 3 聚焦):**
-- **設計夥伴(top 1)** — 現只產 prompt 給同仁自己去別處生圖 · Fal.ai Recraft v3 串接的最小可交付版是什麼?
-- **投標顧問(top 2)** — 沒附件上傳,70 頁 PDF 同仁複製貼上會崩;OCR / paginated paste / external uploader 哪個先做?
-- **活動(top 3)廠商** — NAS 廠商清單 CSV 沒接;「一鍵 5 家比價信」自動化門檻?LINE 群發會不會被 LINE 當 spam?
-- **跨助手 handoff** — 結構化交棒卡(目標/限制/附件/待辦)· 怎麼最小可交付?放在 chat pane 還是 project 層?
-- **Company Memory** — 老闆說先不考慮 L3,但「承富禁用詞 / 品牌語氣」是長期記憶,需要嗎?放 skill 還是 system prompt?
-
-### 5.5 UX(v4.3 小白友善已做)
-
-✅ 已做:術語全中文化、3 步 onboarding 對齊 top 3、👍👎 固定露出、5 空狀態卡、系統 banner、focus visible、L1-L3 badge、輸入框快捷鍵提示。
-
-**你該問的(抗拒型資深同仁視角):**
-- 「first-win」時間 — 資深同仁第一天 5 分鐘內能感受到「這東西讓我省了 X」嗎?還是要第 3 天才感覺到?
-- 若老闆給的是老舊 Intel 筆電(不是 M 系列)· CSS backdrop-filter / ES modules 支援度?
-- ⌘K palette 對不熟快捷鍵的資深同仁來講 · 真的會用嗎?還是需要一個固定按鈕?
-- Handbook 分角色(老闆 / PM / 設計 / 業務)· 萬一一人身兼兩角色(PM + 業務),怎麼引導?
-- `docs/CASES/01-海廢案端到端.md` 是唯一完整案例 · 夠嗎?第 2-5 個案例的優先順序是什麼?
-
-### 5.6 流程 / 交付 / ROI(v4.3 落地缺口最大)
-
-✅ 已做:3 ROI 儀表(budget/top-users/funnel)、PRE-DELIVERY-CHECKLIST、BASELINE 模板。
-
-**你該問的(這是現階段最大盲區):**
-- **T0 Baseline 填表**(`docs/BASELINE.md`)· 承富老闆真能答得出「上個月投了幾件」嗎?若答不出 · ROI 怎麼算?
-- **per-user hard stop** 目前只有儀表 · 未做閘門 · 第 20 天花完預算時,系統會繼續燒嗎?
-- **異機備份** rclone 雖已接 · 但**沒有「定期 restore 驗證」**,備份是虛的
-- **搜尋深度** · ⌘K 只搜 Agent/專案/Skill · 不搜對話 · 不搜 NAS · 承富真有多少時間是在找過往檔?
-- **審計軌跡** · 某份得標建議書 · 能回答「誰產的 / 哪個 Agent / 什麼 prompt 版本 / 花多少 token」嗎?若不能 · 真遇到客戶糾紛時會掛
-- **交付當天** · 10 人拿紙條登入後 · 卡在哪個畫面會最多?有沒有「第 1 天 FAQ Top 10」預期稿?
+| 類別 | 已處理 |
+|---|---|
+| 前端 bug | SSE pop / `.chat-messages` selector / auth 401 retry / tenders listener 疊加 / `?convo` 續接 / history modal reopen / errors toast 曝內部 / 多分頁 BroadcastChannel |
+| 前端 UX | onboarding 10→3 步 / 術語中文化(Agent→助手 / Workspace→工作區 / Skill→範本) / L3 警語移除 / focus visible / 5 狀態卡 / banner |
+| 後端 | CORS whitelist / 13 個 /admin/* 全 RBAC / `import json` / regex injection / Request-ID 500 / Mongo indexes / Pydantic .dict()→model_dump() / on_event→lifespan |
+| 整合 | LibreChat 升版 checklist / agent `_id` dump / `/admin/librechat-contract` schema probe / create-agents UA workaround / 共享 hard fail |
+| Ops | rclone off-site backup / start.sh CI 護欄 / accounting image stale guard / smoke-librechat 11 pass / 月度 restore dry-run 制度 / 密碼紙條銷毀 SOP |
+| Backend 架構 | `_unused_scaffold/` 歸檔(routers/auth/rate_limit) · main.py 為單一真相 |
+| ROI 儀表 | `/admin/budget-status` 預算進度 + `/admin/top-users` 用量排行 + `/admin/tender-funnel` 標案漏斗 + Dashboard 3 卡片 |
+| 文案誠實化 | 「對話跟專案走」「⌘K 搜對話」「超預算自動 email/暫停」「PM 直接 re-use 段落」全改誠實版,未做的標 v1.1 |
 
 ---
 
-## 6. 決策限制
+## 5. 還沒做的(請聚焦在這些)
 
-**請不要建議以下事項:**
-- 換 LibreChat / Claude / Mac mini / Python / FastAPI
-- 改 Agent 數量(就是 10 個)
-- 加/減 Workspace(就是 5 個)
-- 改主色(就是 `#0F2340` 承富藍)
-- 引入 GraphQL / gRPC / WebSocket(SSE 已夠)
-- 引入 Redis / RabbitMQ / Kafka(10 人不需要)
-- SaaS 化 / 多租戶(單租戶,10 人封閉環境)
+### 🔴 v1.1 必做 · 老闆 top 3 真正的痛點
+- **設計師 happy path** · Fal.ai Recraft v3 真生圖(目前只產 prompt)· `config-templates/actions/fal-ai-image-gen.json` schema 已寫
+- **PDF 文字抽取** · 取代 70 頁招標 PDF 複製貼上(born-digital 優先 / OCR fallback)
+- **廠商 CSV 匯入** · 一鍵 5 家比價信群發(目前要手動 5 次)
+- **跨助手 handoff 4 格摘要卡** · 投標顧問 → 設計夥伴 → 結案的結構化交棒
+- **NAS 接入** · `docs/NAS-INTEGRATION-SPEC.md` 等承富答 5 個前置問題
 
-**請積極建議以下事項:**
-- 任何能**省時間**的自動化
-- 任何能**防錯**的流程(Level 03 誤送、Agent 選錯、預算超支)
-- 任何能**讓資深同仁少抗拒**的 UX 改善
-- **成本監控與控管**(尖峰不會爆預算)
-- **失敗復原**(Mac mini 壞掉、網路斷、Claude API 掛掉怎麼繼續營運)
+### 🟡 v1.1 該做 · 防錯 + 控費
+- **預算 hard stop** · 目前只儀表(文件已誠實揭露)· FastAPI cron 加 80% email + 100% 擋送
+- **per-user quota** · top-users endpoint 已知數字 · 但無人為閘門
+- **conversation 進 ⌘K 搜尋** · 目前只搜助手/工作區/專案/範本
+- **更多 LINE 工作流** · `docs/LINE-WORKFLOW-SPEC.md` 方案 C(貼上偵測)2-3h 可立即做
+
+### ⚠️ 部署紅線(非程式碼問題 · Sterio 交付週手動落地)
+- Mac mini 上架 + Cloudflare Tunnel + 2FA · 0%
+- `knowledge-base/samples/` 灌真實建議書 5-10 份 · 0%
+- 10 帳號建好 + 密碼紙條銷毀流程 · 0%
+- 2 場教育訓練 + Day 0 first-win 驗收(7/10 人完成截圖) · 0%
+- T0 baseline 訪談老闆填表 · 0%
+
+---
+
+## 6. 我要你審什麼(6 個層面 · 每層只列 2-3 個未解問題)
+
+### 6.1 前端
+- 長列表(CRM 100+ 卡 / 標案 50+ 筆)在舊 Intel 機會 jank 嗎?最小修法?
+- `renderMarkdown` 手刻 regex 處理巢狀 list / code block / 中英混排穩嗎?換 marked 該怎麼塞進無 build step 架構?
+- `i18n` 未來英文同仁加入時,寫死繁中字串怎辦?
+
+### 6.2 後端
+- `main.py` 1700+ 行單檔 · 還能撐多久才該真拆 routers?拆哪 1 區 CP 值最高?
+- LibreChat `transactions` collection 是私有 schema · adapter 已抽 · 但若 LibreChat 升版改名怎麼預警?
+- Mongo 在 Cloudflare Tunnel 上線後 · 內網 27017 無密碼還能接受嗎?
+
+### 6.3 LibreChat 整合
+- Route A 靠 nginx 302 + relabel.js monkey-patch · v0.8.5+ 改 SPA hash router 會怎樣?
+- `modelSpecs` 啟用順序:升版前還是升版後?
+- 升版 sandbox 怎麼搭(別動 production)?
+
+### 6.4 功能(對齊老闆 top 3)
+- 設計夥伴 Fal.ai 最小可交付:1 模型 + 2 尺寸 + 人工確認重生 · 工時估?
+- PDF 文字抽取:`pdfplumber` vs `pymupdf` vs OCR · 哪個最少坑?
+- 跨助手 handoff 4 格卡:放 chat pane 還是 project 層?
+
+### 6.5 UX(抗拒型資深同仁視角)
+- Day 0 當天 10 人坐下來用,**最可能卡在哪 3 個畫面**?
+- 設計師第一次拿 Launcher · 5 分鐘內能感受到「省了 X」嗎?
+- ⌘K palette 對不熟快捷鍵的資深同仁 · 真會用嗎?要不要加固定按鈕替代?
+
+### 6.6 流程 / 交付 / ROI
+- T0 Baseline 老闆答不出來時 fallback(抽 5 案 + 1 週工時日誌) · Champion 收齊要多久?
+- per-user hard stop 的最小 FastAPI 實作?(背景 cron 還是 request-time 擋送?)
+- **上線第 2 週最可能的死法**:usage 崩 / 同仁放棄 / 老闆不付錢 · 你最擔心哪個?
 
 ---
 
 ## 7. 輸出要求
 
-### 7.1 總論(一段)
-不超過 150 字,你對這系統的**一句話評價** + **最該做的 3 件事**(按優先序)。
+### 7.1 總論(150 字內)
+你的一句話評價 + **最該做的 3 件事**(按優先序 · 每件含預估工時)
 
 ### 7.2 6 個層面各一份報告
-按 5.1-5.6 格式,每份 400-600 字。
 
-### 7.3 路線圖
-把所有建議 consolidate 成一個**依序執行**的路線圖:
+每層格式:
+```
+層面:XXX
+完成度:[%](程式碼 / 部署 / 教材 各給)
+🔴 必修(會壞掉 / 違背老闆優先級):N 個
+  · [問題] · 影響 · 修法(具體) · 工時(h)· 檔案路徑+行號
+🟡 該修(技術債或 UX 細節):N 個
+🟢 做對了(保留):N 個
+🚀 加分(v1.1/v1.2):N 個
+```
 
-| 階段 | 目標 | 關鍵行動 | 預估工時 | CP 值 |
+### 7.3 路線圖(統合所有建議)
+
+| 階段 | 目標 | 關鍵行動 | 工時 | CP 值 |
 |---|---|---|---|---|
-| P0(本週必做) | ... | ... | ... | 🔴🔴🔴 |
-| P1(2 週內) | ... | ... | ... | 🔴🔴 |
-| P2(v1.1) | ... | ... | ... | 🔴 |
-| P3(v1.2+) | ... | ... | ... | 🟡 |
+| P0 本週 | ... | ... | ... h | 🔴🔴🔴 |
+| P1 2 週內 | ... | ... | ... h | 🔴🔴 |
+| P2 v1.1 | ... | ... | ... h | 🔴 |
+| P3 v1.2+ | ... | ... | ... h | 🟡 |
 
 ### 7.4 紅線清單
-列出你審查時發現的 **絕對不能留到交付** 的項目(會讓系統不可用、造成資安事故、或讓 10 人直接放棄使用的東西)。
+
+絕對不能留到交付的事(會讓 10 人放棄使用 / 資安事故 / 老闆不付錢)。
+
+### 7.5 結尾 · 給作者的 3-5 個問題
+
+下輪審查能更精準的話,你會想知道什麼?
 
 ---
 
-## 8. 附加參考資料(若 reviewer 問)
+## 8. 格式要求
 
-### 產業與公司
-- **產業慣例:** 承富主要接台灣政府標案,公文體嚴格、截止時間剛性、評審重視視覺完整度
-- **預算:** AI 月預算 NT$ 12,000(Buffer 後實際目標 NT$ 8,000)
-- **時程:** 要 4 週(或 5 週順延條款)交付全員可用
-- **決策者:** 承富老闆 + 一位 Champion 同仁(對 AI 相對熱心)
-- **反對者:** 預估 2-3 位資深同仁對 AI 有抗性,需特別照顧
-
-### 老闆親自回答的 5 題(這是 v4.2+ 優先級調整的依據)
-1. **每週 Top 3 任務:** 設計 / 提案撰寫 / 廠商聯繫
-2. **80% 原始檔在哪:** LINE/群組 + NAS(不是雲端 Drive)
-3. **L3 機敏規則:** **先不考慮**(不要再建議硬擋 L3)
-4. **老闆最在意:** 省時 + 接案量(**不是**風控,不要過度強調資安)
-5. **維運資源:** 外包工程師 20h/週 · 透過 Claude Code 遠端 · Champion 靠教學手冊 + 案例演示**自主學習**
-
-→ 建議請**圍繞這 5 題** · 偏離(例如建議做「L3 全面硬擋」、「Google Drive 整合」、「加強資安審計」)會被否決。
-
-### 已做的量化成果(你引用這些當對比基礎)
-- 10 Agent 建立成功(MongoDB 驗證 10 筆 · 全 `projectIds: [instance._id]`)
-- **18 pytest / 11 smoke 全 pass**(每輪審查後再驗一次)
-- `backend/accounting/main.py` 從 46953 bytes → 55480 bytes(CORS + RBAC + request_id + ROI 3 endpoints + LibreChat schema adapter + Mongo index)
-- `frontend/launcher/app.js` 從 2064 行單檔 → 539 行 orchestrator + 20 個 modules
-- `backend/accounting/_unused_scaffold/` 把未掛載的 routers/auth/rate_limit/errors 歸檔(避免 split-brain 接手者修錯檔)
-- `docs/` 從 9 個檔 → 21 個檔(加 QUICKSTART/CASES/HANDBOOK×4/2 SPEC/PRE-DELIVERY/BASELINE/UPGRADE/ROADMAP-v4.2/EXTERNAL-REVIEW-PROMPT/Day1-FAQ template)
-- 6 commit 已 push:`bedf413` Round1 → `7451def` Round2 → `57c6c57` Round3 → `cb421aa` 提示詞 → `0bfc359` 路徑 → `5b5859c` Round4
-- GitHub repo:<https://github.com/Sterio068/chengfu-ai>(public · 免認證可讀)
-
----
-
-## 9. 格式要求
-
-- 繁體中文
-- 技術詞彙可保留英文(API / JWT / SSE / RAG)
+- **繁體中文**(技術詞 API/JWT/SSE/RAG 保留英文)
 - 避免大陸用語(視頻→影片、數據→資料)
-- 金額用 `NT$ X,XXX`
-- 日期用 `2026 年 4 月 21 日`
-- 檔案路徑一律**絕對路徑 + 行號**(`/Users/sterio/Workspace/ChengFu/xxx.py:123`)· 讓 Sterio 一跳就到
+- 金額:`NT$ X,XXX`
+- 日期:`2026 年 4 月 21 日`
+- **檔案位置給絕對路徑 + 行號**(`/Users/sterio/Workspace/ChengFu/xxx.py:123`)· 讓 Sterio 一跳就到
 
 ---
 
-## 10. 這份文件的上下文脈絡(給 reviewer 省時)
+## 9. 量化基準(供你寫報告對比)
 
-### 這系統不是 prototype · 已經在作者本機跑了
-- 6 容器 healthy · 10 Agent 共享 · smoke 11 pass · pytest 18 pass
-- 本機可直接 `./scripts/start.sh` · <http://localhost/> 可用
-- 尚未上 Mac mini(硬體採購中)· 尚未對外 · 尚未教育訓練 10 人
-
-### 作者 Sterio 本人有限制:
-- Sterio 懂技術 · 但承富內部人不懂
-- 每個技術決策都有「能讓外包工程師用 Claude Code 接手」的 constraint
-- 任何「只有 Sterio 能維護」的解法 = 技術債
-
-### 這份文件被審查的歷史:
-- **v1:** 原版 · 被一個外部 reviewer 審了 1 次(紅線:附件假成功 / admin 裸奔 / Workflow alert / Token 過期)
-- **v2:** 修完 v1 紅線後,跑了**內部 3 輪多代理審查**(每輪 3-4 agent)· 又修了 22 條
-- **v3:** 第一位**外部 AI reviewer**(Round 4 · 2026-04-21 凌晨 2:57)· P0+P1 紅線全修
-- **v4:** 第二位**外部 AI reviewer**(Round 5 · 2026-04-21)· 與 v3 報告 70% 重疊(他沒看到 v3 修完狀態)· 30% 真新項全修(Pydantic deprecation 清零、BroadcastChannel 多分頁同步、設計+廠商 2 個新案例、混合角色導覽、密碼銷毀 SOP、月度 restore 制度)
-- **你(v5):** 現在讀這份 · 預期你找新視角(設計師 first-win / PDF 痛 / 預算 hard stop / handoff 卡 / 上線第 2 週死法)· **不要重複指出已修的**
+- **GitHub:** <https://github.com/Sterio068/chengfu-ai>(8 commit · 5 輪審查全紀錄)
+- **MongoDB:** 10 agents 全建 · 全 `projectIds: [instance._id]` · 共享 OK
+- **測試:** 18 pytest / 11 smoke / 0 deprecation warnings
+- **後端:** `main.py` 從 46953 → 56000+ bytes(加 RBAC + CORS + Request-ID + 3 ROI endpoints + adapter + indexes + lifespan)
+- **前端:** `app.js` 從 2064 行單檔 → 545 行 orchestrator + 20 個 modules
+- **架構:** `_unused_scaffold/` 歸檔 routers/auth/rate_limit 避免 split-brain
+- **文件:** `docs/` 9 → 21 個檔(QUICKSTART + 3 案例 + 4+1 手冊 + 2 SPEC + Pre-Delivery + Baseline + Upgrade)
 
 ---
 
-## 11. 結尾 · 若你是這個顧問,你會最先想問作者什麼?
+## 10. 給 reviewer 的最後提醒
 
-請在報告最末列出 **3-5 個你認為回答後能大幅改善下輪審查的問題**。這些問題會被帶去跟承富老闆或 Sterio 討論 · 回答後會寫進 Section 8 成為下一輪 reviewer 的脈絡。
+- 這系統**已在作者本機跑了**(不是 prototype)· `./scripts/start.sh` 一行起來
+- Sterio 懂技術,但**承富內部人不懂** · 任何「只有 Sterio 能維護」= 技術債
+- 已經被 5 輪審查過 · **重複指出已修項會降低你的審查價值** · 請對齊 Section 4 已知限制
+- 老闆要的是**省時 + 接案量** · 不是工程藝術
 
----
-
-**感謝審查。請直接開始,不用先確認。**
+**直接開始,不用先確認。**
