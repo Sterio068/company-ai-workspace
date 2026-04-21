@@ -701,6 +701,59 @@ def test_healthz_includes_ocr_status(client):
     assert "available" in body["ocr"]
 
 
+# ============================================================
+# Codex Round 10.5 · 私人目錄移出白名單 + realpath 防 symlink
+# ============================================================
+def test_source_reject_users_not_in_whitelist_by_default(client):
+    """/Users 不再是預設白名單 · 建 source 指 /Users/... 應該 400"""
+    # 注意:CI 環境 env 可能不同 · 這邊只驗「非白名單回 400」的行為
+    r = client.post("/admin/sources",
+        json={"name": "private", "path": "/etc/hostname-dir-xyz"},
+        headers=ADMIN_HEADERS)
+    assert r.status_code == 400
+
+
+def test_source_realpath_resolves_symlink_before_whitelist_check(client, tmp_source_dir):
+    """建 symlink 從 allowed root 指到 allowed root · 應該 allow
+    驗證 realpath 解析後仍在白名單內就放行"""
+    import os as _os
+    # tmp_source_dir 在 /tmp/chengfu-test-sources · 是白名單內
+    link = tmp_source_dir + "-link"
+    try:
+        _os.symlink(tmp_source_dir, link)
+        r = client.post("/admin/sources",
+            json={"name": "link test", "path": link},
+            headers=ADMIN_HEADERS)
+        # 應該通過 · 因為 symlink 解析後仍在白名單
+        assert r.status_code == 200
+    finally:
+        if _os.path.islink(link):
+            _os.unlink(link)
+
+
+# ============================================================
+# Codex Round 10.5 · audit fail-closed
+# ============================================================
+def test_knowledge_read_fails_closed_when_audit_broken(client, tmp_source_dir, monkeypatch):
+    """Audit log 寫不進去時 · 讀取必須 503 · 不能留無痕讀取"""
+    r = client.post("/admin/sources",
+        json={"name": "audit test", "path": tmp_source_dir},
+        headers=ADMIN_HEADERS)
+    sid = r.json()["id"]
+
+    # Monkeypatch audit collection 的 insert_one 丟例外
+    import main as main_mod
+    orig_insert = main_mod.knowledge_audit_col.insert_one
+    def broken_insert(*a, **kw):
+        raise ConnectionError("audit Mongo down")
+    monkeypatch.setattr(main_mod.knowledge_audit_col, "insert_one", broken_insert)
+
+    r = client.get(f"/knowledge/read?source_id={sid}&rel_path=readme.md")
+    # 之前是 200 回檔案 + warning log · 現在必須 503
+    assert r.status_code == 503
+    assert "PDPA" in r.json()["detail"] or "Audit" in r.json()["detail"]
+
+
 def test_design_recraft_moderation_rejected(client, monkeypatch):
     """Mock 422 · 驗 moderation 路徑回 rejected + 人話"""
     import main as main_mod

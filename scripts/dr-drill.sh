@@ -68,16 +68,27 @@ echo -e "${BLUE}[4/6]${NC} 重啟容器(MongoDB 會 init 空資料庫)..."
 "$PROJECT_DIR/scripts/start.sh"
 sleep 10
 
-# ---------- Step 5: 還原 ----------
+# ---------- Step 5: 還原(Mongo + Meili · Codex Round 10.5)----------
 echo ""
-echo -e "${BLUE}[5/6]${NC} 從備份還原..."
+echo -e "${BLUE}[5/6]${NC} 從備份還原 Mongo..."
 if [[ "$LATEST" == *.gpg ]]; then
     echo "   (GPG 加密 · 需輸入 passphrase)"
     gpg --decrypt "$LATEST" | gunzip -c | docker exec -i chengfu-mongo mongorestore --archive --drop
 else
     gunzip -c "$LATEST" | docker exec -i chengfu-mongo mongorestore --archive --drop
 fi
-echo -e "   ${GREEN}✅${NC} 還原完成"
+echo -e "   ${GREEN}✅${NC} Mongo 還原完成"
+
+# Codex fix · 同日 Meili dump 也要還原 · 否則「備份」只救對話不救搜尋索引
+MEILI_LATEST=$(ls -t "$BACKUP_DIR"/chengfu-meili-*.tar.gz* 2>/dev/null | head -1 || echo "")
+if [[ -n "$MEILI_LATEST" ]]; then
+    echo "   同步還原 Meili:$(basename "$MEILI_LATEST")..."
+    "$PROJECT_DIR/scripts/restore-meili.sh" "$MEILI_LATEST" || {
+        echo -e "   ${YELLOW}⚠${NC} Meili 還原失敗 · 但 Mongo OK · 搜尋可重建"
+    }
+else
+    echo -e "   ${YELLOW}⚠${NC} 無 Meili 備份 · 只還原 Mongo(搜尋索引需重建 · 跑 reindex_all)"
+fi
 
 # ---------- Step 6: 驗證 ----------
 echo ""

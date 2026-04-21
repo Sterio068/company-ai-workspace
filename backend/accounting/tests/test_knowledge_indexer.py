@@ -329,18 +329,26 @@ def test_indexer_meili_recovery_after_failure(tmp_src):
     # 這驗證「Meili 恢復後下次 cron 自動補」的行為
     # (實際 cron 會帶 meili client · 這裡 meili=None 只驗邏輯)
 
-    # 第三輪 · 帶正常 meili(用 None 代替 · 但驗 search_progress 前進邏輯)
-    # 為測試方便 · 用 mongomock + patch 記錄 add_documents 有被叫
+    # 第三輪 · 帶正常 meili(模擬 task 成功)
+    # Codex Round 10.5 fix · 現在 indexer 會 wait_for_task · 測試必須 fake 回 task uid + succeeded
     called = {"n": 0}
+    class FakeTaskInfo:
+        def __init__(self, uid): self.task_uid = uid
+    class FakeTaskResult:
+        def __init__(self, status): self.status = status
     class FakeIndex:
         def update_settings(self, *a): pass
-        def add_documents(self, docs): called["n"] += len(docs)
+        def add_documents(self, docs):
+            called["n"] += len(docs)
+            return FakeTaskInfo(called["n"])  # 回 task uid
         def delete_documents(self, **kw): pass
     class FakeMeili:
         def index(self, uid):
             return FakeIndex()
         def create_index(self, *a, **kw): pass
         def delete_index(self, *a): pass
+        def wait_for_task(self, uid, timeout_in_ms=60000):
+            return FakeTaskResult("succeeded")
 
     # 先模擬 fetch_info 時 index 不存在 · 需 create
     # 簡化:直接 patch _ensure_index 回 FakeIndex
@@ -378,3 +386,77 @@ def test_indexer_no_meili_advances_legacy_timestamp(tmp_src):
     # 相容舊 Admin UI · legacy 欄位還是要更新
     assert doc["last_indexed_at"] is not None
     assert doc["last_scanned_at"] is not None
+
+
+# Codex Round 10.5 · Q4 真修 · Meili task 失敗時 last_search_indexed_at 不能前進
+def test_indexer_meili_task_failed_keeps_search_behind(tmp_src):
+    """add_documents enqueue 了但 task 本身 failed(例如 schema 衝突)
+    這時 last_search_indexed_at 不應前進 · 否則下次 cron 不會補跑"""
+    class FakeTaskInfo:
+        def __init__(self, uid): self.task_uid = uid
+    class FakeTaskResult:
+        def __init__(self, status, err=None):
+            self.status = status
+            self.error = err
+    class FakeIndex:
+        def update_settings(self, *a): pass
+        def add_documents(self, docs): return FakeTaskInfo(99)
+        def delete_documents(self, **kw): pass
+    class FakeMeili:
+        def index(self, uid):
+            # Patch _ensure_index 時回這個 · 表 Meili 有起來
+            return FakeIndex()
+        def create_index(self, *a, **kw): pass
+        def delete_index(self, *a): pass
+        def wait_for_task(self, uid, timeout_in_ms=60000):
+            # task 失敗
+            return FakeTaskResult("failed", {"message": "schema mismatch"})
+
+    import services.knowledge_indexer as ki
+    orig = ki._ensure_index
+    ki._ensure_index = lambda c: FakeIndex()
+    try:
+        stats = knowledge_indexer.reindex_source(
+            tmp_src["id"], tmp_src["col"], meili_client=FakeMeili(),
+        )
+    finally:
+        ki._ensure_index = orig
+
+    # 抽字應該成功 · file_count 仍有值
+    assert stats["file_count"] >= 3
+    # 但 Meili 寫入全失敗 · errors = file_count · search 不能前進
+    assert stats["errors"] == stats["file_count"]
+    assert stats["search_progress_advanced"] is False
+    doc = tmp_src["col"].find_one(
+        {"_id": __import__("bson").ObjectId(tmp_src["id"])}
+    )
+    # 這是關鍵:search 進度沒動 · 下次 cron 會重跑
+    assert doc.get("last_search_indexed_at") is None
+
+
+def test_indexer_meili_task_no_uid_returns_true_with_warning(tmp_src, caplog):
+    """舊 Meili client 不回 task_uid · indexer 應該假成功 + log warning"""
+    class NoUidTaskInfo:
+        pass  # 沒 task_uid / taskUid 屬性
+    class FakeIndex:
+        def update_settings(self, *a): pass
+        def add_documents(self, docs): return NoUidTaskInfo()
+    class FakeMeili:
+        def index(self, uid): return FakeIndex()
+        def create_index(self, *a, **kw): pass
+        def wait_for_task(self, uid, timeout_in_ms=60000):
+            raise AssertionError("不該被叫到 · 因為沒 uid")
+
+    import services.knowledge_indexer as ki
+    orig = ki._ensure_index
+    ki._ensure_index = lambda c: FakeIndex()
+    try:
+        stats = knowledge_indexer.reindex_source(
+            tmp_src["id"], tmp_src["col"], meili_client=FakeMeili(),
+        )
+    finally:
+        ki._ensure_index = orig
+
+    # 假成功 · 沒任何 error
+    assert stats["errors"] == 0
+    assert stats["search_progress_advanced"] is True

@@ -76,7 +76,11 @@ services:
       - ./librechat.yaml:/app/librechat.yaml:ro
       - ./data-sandbox/uploads:/app/uploads
     networks:
-      - chengfu-sandbox-network
+      chengfu-sandbox-network:
+        # Codex Round 10.5 fix · nginx conf 寫死 upstream `librechat:3080`
+        # 加 alias · 共用 production 的 default.conf 不用改
+        aliases:
+          - librechat
     mem_limit: 4g  # sandbox 比 production 小一點 · 避免占滿 Mac mini
 
   # ==================== Mongo sandbox · 對外 27018 ====================
@@ -118,7 +122,7 @@ services:
       - meilisearch-sandbox
     environment:
       - MONGO_URI=mongodb://mongodb-sandbox:27017/chengfu_sandbox
-      - LIBRECHAT_INTERNAL_URL=http://librechat-sandbox:3080
+      - LIBRECHAT_INTERNAL_URL=http://librechat:3080  # network alias
       - TZ=Asia/Taipei
       - MEILI_HOST=http://meilisearch-sandbox:7700
       - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-ci-placeholder-insecure-do-not-use}
@@ -127,7 +131,10 @@ services:
     ports:
       - "8081:8000"  # 對外 8081 · 直接 curl /admin/* 不用 nginx
     networks:
-      - chengfu-sandbox-network
+      chengfu-sandbox-network:
+        # 讓 nginx conf 的 `accounting:8000` 能解析
+        aliases:
+          - accounting
     mem_limit: 512m
 
 networks:

@@ -54,6 +54,51 @@ def _doc_id_for(source_id: str, rel_path: str) -> str:
     return hashlib.md5(f"{source_id}::{rel_path}".encode()).hexdigest()
 
 
+def _submit_and_wait(index, docs: list, meili_client, timeout_s: int = 60) -> bool:
+    """Codex Round 10.5 fix · 真的等 Meili indexing 成功才算成功
+
+    add_documents 只是 enqueue · 回 task uid · 之後可能 failed(例如 schema 衝突)
+    我們要 poll 該 task 直到 succeeded/failed · 才能決定 search 進度是否前進
+
+    Returns
+    -------
+    True  · task succeeded · 可前進 last_search_indexed_at
+    False · 任一錯 · 下次 cron 會重試(因為 last_search_indexed_at 不動)
+    """
+    if not index or not docs:
+        return True  # 空批 · 視為成功
+    try:
+        task_info = index.add_documents(docs)
+    except Exception as e:
+        logger.error("[indexer] Meili add_documents fail: %s", e)
+        return False
+    # task_info 可能是 TaskInfo object or dict · 取 uid
+    task_uid = getattr(task_info, "task_uid", None) or getattr(task_info, "taskUid", None)
+    if task_uid is None and isinstance(task_info, dict):
+        task_uid = task_info.get("taskUid") or task_info.get("task_uid")
+    if task_uid is None:
+        # 舊 Meili client 不回 task · 只能賭 · log 警告
+        logger.warning("[indexer] add_documents 未回 task_uid · 無法確認 · 假成功")
+        return True
+    # Poll task status
+    try:
+        result = meili_client.wait_for_task(task_uid, timeout_in_ms=timeout_s * 1000)
+        status = getattr(result, "status", None) or (
+            result.get("status") if isinstance(result, dict) else None
+        )
+        if status == "succeeded":
+            return True
+        logger.error(
+            "[indexer] Meili task %s status=%s · error=%s",
+            task_uid, status,
+            getattr(result, "error", None) or (result.get("error") if isinstance(result, dict) else None),
+        )
+        return False
+    except Exception as e:
+        logger.error("[indexer] wait_for_task %s fail: %s", task_uid, e)
+        return False
+
+
 def _ensure_index(meili_client):
     """確保 index 存在、primaryKey 正確、settings 套用 · idempotent
 
@@ -230,20 +275,17 @@ def reindex_source(source_id: str, knowledge_sources_col, meili_client=None) -> 
             file_count += 1
 
             # 批次送 Meili · 避免單次 payload 太大
+            # Codex Round 10.5 fix · add_documents 只是 enqueue · 要 wait_for_task 才算真入
             if index and len(docs_batch) >= 200:
-                try:
-                    index.add_documents(docs_batch)
-                except Exception as e:
-                    logger.error("[indexer] Meili add_documents fail: %s", e)
+                task_ok = _submit_and_wait(index, docs_batch, meili_client)
+                if not task_ok:
                     errors += len(docs_batch)
                 docs_batch = []
 
     # flush 最後一批
     if index and docs_batch:
-        try:
-            index.add_documents(docs_batch)
-        except Exception as e:
-            logger.error("[indexer] Meili final add_documents fail: %s", e)
+        task_ok = _submit_and_wait(index, docs_batch, meili_client)
+        if not task_ok:
             errors += len(docs_batch)
 
     # Q4 · 三種情境:

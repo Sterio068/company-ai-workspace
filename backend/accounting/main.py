@@ -1748,29 +1748,41 @@ def _get_meili_client():
         return None
 
 
-# 允許掛載的 source root 白名單(防呆)· 不在清單上的絕對路徑建不起來
+# 允許掛載的 source root 白名單(Codex Round 10.5 · 收緊到公司域)
+# /Users 過寬 · 離職員工桌面會被索引 · 預設只開 /Volumes(NAS)+ /data(容器 bind mount)
+# /Users + /mnt 要用請透過 env 明確打開 · 強迫老闆或 Sterio 知情同意
 _ALLOWED_SOURCE_ROOTS = [
     p.strip() for p in os.getenv(
         "KNOWLEDGE_ALLOWED_ROOTS",
-        "/Volumes,/Users,/mnt,/data,/tmp/chengfu-test-sources"
+        "/Volumes,/data,/tmp/chengfu-test-sources"  # 預設不含 /Users · /mnt
     ).split(",") if p.strip()
 ]
 
 
 def _validate_source_path(abs_path: str):
-    """路徑必須在允許 root 之下 · 防止意外把 /etc 或 /root 索引進去"""
-    abs_path = os.path.abspath(abs_path)
+    """路徑必須在允許 root 之下 · 防止意外把 /etc 或 /root 索引進去
+
+    Codex Round 10.5 fix · 用 realpath 解 symlink
+    否則使用者可建 /data/my-link → /Users/other-user/secrets · 繞過白名單
+    """
+    # 先 realpath(解 symlink)· 再 abspath(去掉 ../)
+    try:
+        resolved = os.path.realpath(abs_path)
+    except Exception as e:
+        raise HTTPException(400, f"路徑解析失敗:{e}")
+    resolved = os.path.abspath(resolved)
     allowed = any(
-        abs_path == root or abs_path.startswith(root.rstrip("/") + "/")
+        resolved == os.path.realpath(root) or
+        resolved.startswith(os.path.realpath(root).rstrip("/") + "/")
         for root in _ALLOWED_SOURCE_ROOTS
     )
     if not allowed:
         raise HTTPException(
             400,
-            f"路徑 {abs_path} 不在允許清單:{_ALLOWED_SOURCE_ROOTS} · "
-            "請改環境變數 KNOWLEDGE_ALLOWED_ROOTS",
+            f"路徑 {resolved}(原 {abs_path}) 不在允許清單 {_ALLOWED_SOURCE_ROOTS} · "
+            "請改環境變數 KNOWLEDGE_ALLOWED_ROOTS(但先確認為公司擁有的資料夾)",
         )
-    return abs_path
+    return resolved
 
 
 class KnowledgeSource(BaseModel):
@@ -2146,7 +2158,9 @@ def knowledge_read(
     if size > max_size:
         raise HTTPException(413, f"檔案超過 {src.get('max_size_mb', 50)}MB 上限")
 
-    # Audit log(誰讀了什麼檔 · 配合 PDPA)
+    # Audit log · fail-closed(Codex Round 10.5 紅)
+    # PDPA 要求:讀 = 可追蹤 · 若 audit 寫不進去 · 不能讓讀取發生
+    # 否則「寫失敗警告 + 回檔案」等於讀取無痕 · 違反資料最小原則
     user_email = (request.headers.get("X-User-Email") or "").strip().lower() or None
     try:
         knowledge_audit_col.insert_one({
@@ -2158,7 +2172,11 @@ def knowledge_read(
             "created_at": datetime.utcnow(),
         })
     except Exception as e:
-        logger.warning("[knowledge] audit log fail: %s", e)
+        logger.error("[knowledge] audit log fail · 擋讀取(fail-closed): %s", e)
+        raise HTTPException(
+            503,
+            "Audit log 服務暫時不可用 · 為 PDPA 合規暫停讀取 · 請找 Champion 或 Sterio",
+        )
 
     # E-2 · extract() 按副檔名路由到 PDF/DOCX/PPTX/XLSX/image/text 抽字器
     extracted = extract_file(abs_path)
