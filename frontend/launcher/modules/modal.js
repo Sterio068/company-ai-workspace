@@ -60,6 +60,38 @@ function show({ title, body, icon, buttons, autofocus }) {
 }
 
 export const modal = {
+  /**
+   * 直接顯示 · 給需要自訂 HTML body 的 view 用(E-3 知識庫)
+   * @param opts.title / bodyHTML / primary / icon
+   * @param opts.onSubmit · async fn 回 true 則關閉 modal
+   */
+  show(opts) {
+    const { title, bodyHTML, primary = "確定", cancel = "關閉", icon = "", onSubmit } = opts;
+    return new Promise((resolve) => {
+      show({
+        title, body: bodyHTML, icon,
+        buttons: [
+          { text: cancel, variant: "ghost", handler: () => { resolve(false); return true; } },
+          { text: primary, variant: "primary", handler: async () => {
+            if (!onSubmit) { resolve(true); return true; }
+            const ok = await onSubmit();
+            if (ok) resolve(true);
+            return ok !== false;
+          }},
+        ],
+      });
+    });
+  },
+
+  /**
+   * 表單 modal · 用於 create/edit 場景
+   * opts.bodyHTML 裡放 <form id="..."> 自己處理 reportValidity + values
+   * opts.onSubmit 回 true 關 modal · 回 false 不關(驗證失敗)
+   */
+  openForm(opts) {
+    return this.show(opts);
+  },
+
   alert(body, { title = "提示", primary = "知道了", icon = "ℹ️" } = {}) {
     return new Promise(resolve => show({
       title, body, icon,

@@ -39,6 +39,7 @@ import { chat } from "./modules/chat.js";
 import { voice } from "./modules/voice.js";
 import { accounting } from "./modules/accounting.js";
 import { admin } from "./modules/admin.js";
+import { knowledge } from "./modules/knowledge.js";
 import { tenders } from "./modules/tenders.js";
 import { workflows } from "./modules/workflows.js";
 import { crm } from "./modules/crm.js";
@@ -77,6 +78,8 @@ export const app = {
     chat.bind({ agents: () => this.agents, user: () => this.user });
     crm.setUser(this.user?.email);
     palette.bind(() => this._paletteItems());
+    // V1.1 §E-3 · 知識庫全文搜尋加入 palette(async · debounced)
+    palette.addAsyncSource((q) => knowledge.paletteSearch(q));
     // 多分頁同步:其他分頁改了專案,本分頁自動 re-render(避免髒清單)
     Projects.bindOnChange(() => {
       this.renderProjects();
@@ -128,14 +131,15 @@ export const app = {
 
   handleHashChange() {
     const hash = window.location.hash.replace("#", "");
-    const views = ["projects", "skills", "dashboard", "accounting", "admin", "tenders", "workflows", "crm"];
+    const views = ["projects", "skills", "dashboard", "accounting", "admin", "tenders", "workflows", "crm", "knowledge"];
     if (views.includes(hash)) {
       this.showView(hash);
       if (hash === "accounting") accounting.load();
-      if (hash === "admin")      admin.load();
+      if (hash === "admin")    { admin.load(); knowledge.loadAdmin(); }
       if (hash === "tenders")    tenders.load();
       if (hash === "workflows")  workflows.load();
       if (hash === "crm")        crm.load();
+      if (hash === "knowledge")  knowledge.loadBrowser();
     }
   },
 
@@ -207,7 +211,12 @@ export const app = {
     });
     if (view !== "dashboard") window.location.hash = view;
     else history.pushState("", document.title, window.location.pathname);
+    // V1.1 §E-3 · 切到 knowledge 自動載入
+    if (view === "knowledge") knowledge.loadBrowser();
+    if (view === "admin") knowledge.loadAdmin();
   },
+
+  openCreateSource() { knowledge.openCreateModal(); },
 
   // ---------- Data loading ----------
   async loadAgents() {
@@ -772,6 +781,7 @@ export const app = {
      ["tenders", "📢 標案", "⌘T"],
      ["crm", "💼 商機", "⌘I"],
      ["workflows", "⚡ 流程", "⌘W"],
+     ["knowledge", "📚 知識庫", ""],
      ["admin", "📊 Admin", "⌘M"]].forEach(([v, label, hint]) => {
       items.push({ icon: "", label, hint, action: () => this.showView(v) });
     });

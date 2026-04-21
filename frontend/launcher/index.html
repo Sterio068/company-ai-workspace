@@ -140,6 +140,15 @@
         </span>
         <span class="sidebar-label">自動化流程</span>
       </a>
+      <a class="sidebar-item nav-item" data-view="knowledge">
+        <span class="sidebar-icon">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+          </svg>
+        </span>
+        <span class="sidebar-label">知識庫</span>
+      </a>
       <a class="sidebar-item nav-item" data-view="admin" id="admin-nav" style="display:none">
         <span class="sidebar-icon">
           <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -725,8 +734,31 @@
         </div>
       </section>
 
+      <!-- V1.1 §E-3 · 知識庫資料源管理 -->
+      <section class="block">
+        <div class="block-title">
+          <h2>📚 知識庫資料源</h2>
+          <div class="block-hint">多來源 · NAS / 本機 / USB · 老闆 Q3 擴充</div>
+          <button class="btn-primary btn-sm" onclick="app.openCreateSource()">+ 新增資料源</button>
+        </div>
+        <div id="admin-sources-list" class="sources-list">
+          <div class="chip-empty">載入中…</div>
+        </div>
+      </section>
+
       <div class="v10-notice">
         ℹ️ 若 FastAPI /api-accounting 未就緒 · 此頁面顯示離線狀態。異常告警將在 v1.2 加入(Slack/Email)。
+      </div>
+    </div>
+
+    <!-- V1.1 §E-3 · 知識庫瀏覽 view -->
+    <div class="view view-knowledge" data-view="knowledge">
+      <div class="view-header">
+        <h1>📚 知識庫</h1>
+        <p>多來源全文搜尋 · NAS / 本機資料夾 · 設計圖 metadata</p>
+      </div>
+      <div id="kb-browser" class="kb-root">
+        <div class="chip-empty">載入中…</div>
       </div>
     </div>
 
