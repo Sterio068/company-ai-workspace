@@ -3,6 +3,14 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# Round 9 implicit · OCR 系統依賴(承富政府 PDF 高比例掃描 · 老闆 Q1)
+# tesseract-ocr-chi-tra · 繁中 · ~50MB · 沒裝 PDF OCR fallback 會 silent skip
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tesseract-ocr \
+    tesseract-ocr-chi-tra \
+    tesseract-ocr-eng \
+    && rm -rf /var/lib/apt/lists/*
+
 # 安裝依賴
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

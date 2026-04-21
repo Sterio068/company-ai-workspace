@@ -627,6 +627,80 @@ def test_knowledge_list_empty_agent_access_visible_to_all(client, tmp_source_dir
     assert "公開資料" in names
 
 
+# ============================================================
+# Round 9 implicit · source health + design history
+# ============================================================
+def test_source_health_ok(client, tmp_source_dir):
+    """健康檢查正常路徑 · 回 status=ok"""
+    r = client.post("/admin/sources",
+        json={"name": "h test", "path": tmp_source_dir},
+        headers=ADMIN_HEADERS)
+    sid = r.json()["id"]
+    r = client.get(f"/admin/sources/{sid}/health", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "ok"
+    assert body["path_exists"] is True
+    assert body["readable"] is True
+
+
+def test_source_health_unreachable(client):
+    """路徑被刪 / NAS 斷線 · 回 unreachable + 友善 issue"""
+    # 建一個臨時 source · 然後刪掉路徑
+    import tempfile, shutil, os as _os
+    _os.makedirs("/tmp/chengfu-test-sources", exist_ok=True)
+    d = tempfile.mkdtemp(dir="/tmp/chengfu-test-sources")
+    r = client.post("/admin/sources",
+        json={"name": "unreach", "path": d},
+        headers=ADMIN_HEADERS)
+    sid = r.json()["id"]
+    shutil.rmtree(d)  # 模擬 NAS 斷線
+    r = client.get(f"/admin/sources/{sid}/health", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "unreachable"
+    assert "NAS" in body["issue"] or "路徑" in body["issue"]
+
+
+def test_all_sources_health_summary(client, tmp_source_dir):
+    """巡檢端點 · 回 summary + 每個 source 結果"""
+    client.post("/admin/sources",
+        json={"name": "all-h test", "path": tmp_source_dir},
+        headers=ADMIN_HEADERS)
+    r = client.get("/admin/sources/health", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    body = r.json()
+    assert "summary" in body
+    assert "sources" in body
+    assert body["summary"]["ok"] >= 1
+
+
+def test_design_history_empty(client):
+    """無使用者歷史 · 回空 list 不 crash"""
+    r = client.get("/design/history", headers={"X-User-Email": "noone@x.com"})
+    assert r.status_code == 200
+    assert r.json()["history"] == []
+    assert r.json()["count"] == 0
+
+
+def test_design_history_after_failed_call(client):
+    """先呼叫一次 design/recraft (無 key 503)· 不會留 log
+    確認 history 仍為空 · 真實 API call 才會記
+    """
+    r = client.get("/design/history")
+    assert r.status_code == 200
+    assert isinstance(r.json()["history"], list)
+
+
+def test_healthz_includes_ocr_status(client):
+    """healthz 應該帶 OCR 狀態 · 維運可監控 tesseract 是否裝"""
+    r = client.get("/healthz")
+    assert r.status_code == 200
+    body = r.json()
+    assert "ocr" in body
+    assert "available" in body["ocr"]
+
+
 def test_design_recraft_moderation_rejected(client, monkeypatch):
     """Mock 422 · 驗 moderation 路徑回 rejected + 人話"""
     import main as main_mod

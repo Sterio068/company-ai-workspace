@@ -64,6 +64,7 @@ export const knowledge = {
           <div class="source-path"><code>${escapeHtml(s.path)}</code></div>
           <div class="source-meta">${escapeHtml(last)}</div>
           <div class="source-actions">
+            <button class="btn-ghost" data-act="health" data-id="${s.id}">🩺 健康</button>
             <button class="btn-ghost" data-act="reindex" data-id="${s.id}">🔄 重索引</button>
             <button class="btn-ghost" data-act="toggle" data-id="${s.id}">
               ${s.enabled ? "暫停" : "啟用"}
@@ -81,6 +82,7 @@ export const knowledge = {
         if (act === "reindex") this.reindex(id);
         else if (act === "toggle") this.toggle(id);
         else if (act === "delete") this.remove(id);
+        else if (act === "health") this.checkHealth(id);
       });
     });
   },
@@ -168,7 +170,23 @@ export const knowledge = {
 
   async reindex(id, opts = {}) {
     const btn = document.querySelector(`[data-act="reindex"][data-id="${id}"]`);
-    if (btn) { btn.disabled = true; btn.textContent = "索引中…"; }
+    // Round 9 implicit · 同步索引可能 30s+ 卡前端
+    // 從現有 last_index_stats.file_count 預估 · > 500 檔給警告
+    const src = this._sources.find(s => s.id === id);
+    const lastCount = (src?.last_index_stats || {}).file_count || 0;
+    if (lastCount > 500 && !opts.silent && !opts.confirmed) {
+      const ok = await modal.confirm(
+        `這個資料源上次有 ${lastCount} 個檔 · 重索引可能要 1-3 分鐘 · 期間視窗會卡住。<br>` +
+        `<small style='color:var(--text-secondary)'>大 source 建議改用每日 02:00 cron 自動跑,不用手動。</small>`,
+        { title: "重索引耗時警告", icon: "⏳", primary: "我知道,繼續", cancel: "取消" }
+      );
+      if (!ok) return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = lastCount > 500 ? "索引中(可能 1-3 分鐘)…" : "索引中…";
+    }
     try {
       const r = await authFetch(`${BASE}/admin/sources/${id}/reindex`, { method: "POST" });
       if (!r.ok) {
@@ -179,14 +197,37 @@ export const knowledge = {
       const stats = await r.json();
       if (!opts.silent) {
         const meili = stats.meili === "indexed" ? "已進全文索引"
-                    : stats.meili === "unavailable" ? "已抽字但搜尋暫未啟用" : "已抽字";
-        toast.success(`索引完成 · ${stats.file_count} 檔 · ${stats.errors} 錯 · ${meili}`);
+                    : stats.meili === "unavailable" ? "已抽字但搜尋暫未啟用 · 下次 cron 補" : "已抽字";
+        const took = stats.index_seconds ? ` · ${stats.index_seconds}s` : "";
+        toast.success(`索引完成 · ${stats.file_count} 檔 · ${stats.errors} 錯${took} · ${meili}`);
       }
       await this.loadAdmin();
     } catch (e) {
       toast.error("索引失敗:" + e.message);
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = "🔄 重索引"; }
+    }
+  },
+
+  async checkHealth(id) {
+    const btn = document.querySelector(`[data-act="health"][data-id="${id}"]`);
+    if (btn) { btn.disabled = true; btn.textContent = "檢查中…"; }
+    try {
+      const r = await authFetch(`${BASE}/admin/sources/${id}/health`);
+      if (!r.ok) {
+        toast.error("健康檢查失敗:HTTP " + r.status);
+        return;
+      }
+      const h = await r.json();
+      if (h.status === "ok") {
+        toast.success(`✓ 路徑正常 · ${h.entry_count} 個 top-level 項`);
+      } else {
+        toast.error(`⚠ ${h.status} · ${h.issue || ""}`);
+      }
+    } catch (e) {
+      toast.error("健康檢查失敗:" + e.message);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = "🩺 健康"; }
     }
   },
 

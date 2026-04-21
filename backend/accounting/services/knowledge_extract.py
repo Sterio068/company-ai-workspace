@@ -68,32 +68,65 @@ def _lazy_image():
 # ------------------------------------------------------------
 # Extractor · 每格式一個函式 · 失敗交由外層 extract() catch
 # ------------------------------------------------------------
+# Round 9 · OCR 環境探測 · 第一次 fail 後 cache · 之後 metric 看得到
+_OCR_AVAILABLE = None
+_OCR_LAST_ERROR = None
+
+
+def ocr_status() -> dict:
+    """給 health endpoint 用 · 報告 OCR 是否可用"""
+    return {
+        "available": _OCR_AVAILABLE,
+        "last_error": _OCR_LAST_ERROR,
+        "note": "False = tesseract 未裝 · OCR fallback 不會跑 · 掃描 PDF 內容會空"
+                if _OCR_AVAILABLE is False else None,
+    }
+
+
 def _extract_pdf(path: str) -> dict:
+    global _OCR_AVAILABLE, _OCR_LAST_ERROR
     fitz = _lazy_fitz()
     doc = fitz.open(path)
     pages = []
     ocr_triggered = 0
+    ocr_skipped_no_engine = 0
     try:
         for page in doc:
             text = page.get_text("text").strip()
             # 若文字太少而頁面有圖片 · 嘗試 OCR 降級
             if len(text) < 120 and page.get_images():
-                try:
-                    tp = page.get_textpage_ocr(language="chi_tra+eng")
-                    text = page.get_text(textpage=tp).strip()
-                    ocr_triggered += 1
-                except Exception:
-                    # OCR 未安裝 tesseract 或其他錯 · 維持原 text
-                    pass
+                if _OCR_AVAILABLE is False:
+                    # 已知 OCR 不可用 · 跳過不再試 · 但記計數
+                    ocr_skipped_no_engine += 1
+                else:
+                    try:
+                        tp = page.get_textpage_ocr(language="chi_tra+eng")
+                        text = page.get_text(textpage=tp).strip()
+                        ocr_triggered += 1
+                        _OCR_AVAILABLE = True
+                    except Exception as e:
+                        # OCR 未安裝 tesseract 或其他錯 · 記下來 metric 看
+                        if _OCR_AVAILABLE is None:
+                            _OCR_AVAILABLE = False
+                            _OCR_LAST_ERROR = f"{type(e).__name__}: {str(e)[:120]}"
+                            logger.warning(
+                                "[ocr] 第一次 fallback 失敗 · 後續 PDF OCR 不再嘗試 · 錯誤=%s · "
+                                "檢查 Dockerfile 是否裝 tesseract-ocr-chi-tra",
+                                _OCR_LAST_ERROR,
+                            )
+                        ocr_skipped_no_engine += 1
             pages.append(text)
     finally:
         doc.close()
-    return {
+    result = {
         "type": "pdf",
         "page_count": len(pages),
         "ocr_pages": ocr_triggered,
         "content_preview": ("\n\n".join(pages))[:2000],
     }
+    if ocr_skipped_no_engine:
+        result["ocr_skipped_no_engine"] = ocr_skipped_no_engine
+    return result
 
 
 def _extract_docx(path: str) -> dict:

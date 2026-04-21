@@ -34,6 +34,39 @@ docker exec chengfu-mongo mongodump \
     --archive --db chengfu --quiet \
     2>/dev/null | gzip -9 > "$ARCHIVE"
 
+# ------------------ 備份 Meilisearch 索引(Round 9 暗示風險)------------------
+# 沒備份的話 · Mac mini 損毀 = 全文搜尋整個重建(50k 檔可能要跑 1-2h)
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] 備份 Meilisearch 索引..."
+MEILI_DUMP="${DAILY_DIR}/chengfu-meili-${DATE}.tar.gz"
+# Meili dump API 需要 master key · 從容器 env 取
+MEILI_KEY=$(docker exec chengfu-accounting printenv MEILI_MASTER_KEY 2>/dev/null || echo "")
+if [[ -n "$MEILI_KEY" ]]; then
+    # Trigger dump 任務 · 等完成 · 把產生的 dump 檔打包
+    DUMP_RESP=$(docker exec chengfu-meili wget -qO- \
+        --header="Authorization: Bearer ${MEILI_KEY}" \
+        --post-data='' http://localhost:7700/dumps 2>/dev/null || echo "")
+    if [[ -n "$DUMP_RESP" ]]; then
+        # 等 5 秒讓 dump 寫完(50k 檔約需 30 秒 · 大量資料時要拉長)
+        sleep 5
+        # Meili dump 預設寫到 /meili_data/dumps/
+        # data/meili 是 host bind mount · tar 整個 dumps/ 即可
+        if [[ -d "${PROJECT_DIR}/config-templates/data/meili/dumps" ]]; then
+            tar czf "$MEILI_DUMP" -C "${PROJECT_DIR}/config-templates/data/meili" dumps/ 2>/dev/null
+            MEILI_SIZE=$(du -h "$MEILI_DUMP" 2>/dev/null | cut -f1)
+            echo "  ✅ Meili dump: $MEILI_DUMP ($MEILI_SIZE)"
+            # dumps/ 累積會吃硬碟 · 只留最近 7 個
+            find "${PROJECT_DIR}/config-templates/data/meili/dumps" \
+                -name "*.dump" -mtime +7 -delete 2>/dev/null || true
+        else
+            echo "  ⚠ Meili dumps 目錄不存在 · skip"
+        fi
+    else
+        echo "  ⚠ Meili dump 觸發失敗(可能未啟動或 key 錯)· 留意 cron log"
+    fi
+else
+    echo "  ⚠ MEILI_MASTER_KEY 未設 · skip(知識庫搜尋未啟用 · 不影響資料)"
+fi
+
 # ------------------ 備份 knowledge-base + config + frontend ------------------
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] 備份 knowledge-base + config..."
 KB_ARCHIVE="${DAILY_DIR}/chengfu-kb-${DATE}.tar.gz"
@@ -90,6 +123,9 @@ if command -v rclone > /dev/null 2>&1 && rclone listremotes 2>/dev/null | grep -
         rclone copy "$ARCHIVE"       "${OFFSITE_REMOTE}/daily/"  --quiet 2>&1 || echo "  ⚠ rclone daily 失敗"
         rclone copy "$KB_ARCHIVE"    "${OFFSITE_REMOTE}/kb/"     --quiet 2>&1 || echo "  ⚠ rclone kb 失敗"
         rclone copy "$KEYCHAIN_LIST" "${OFFSITE_REMOTE}/inventory/" --quiet 2>&1 || echo "  ⚠ rclone inv 失敗"
+        if [[ -f "$MEILI_DUMP" ]]; then
+            rclone copy "$MEILI_DUMP" "${OFFSITE_REMOTE}/meili/" --quiet 2>&1 || echo "  ⚠ rclone meili 失敗"
+        fi
         echo "  ☁  已異機備份到 ${OFFSITE_REMOTE}"
     else
         echo "  ⚠ 未 GPG 加密 · 不上傳異機 · 先設 'chengfu' GPG key"

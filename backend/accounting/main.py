@@ -73,6 +73,26 @@ async def lifespan(app: FastAPI):
     knowledge_sources_col.create_index([("path", 1)], unique=True)
     knowledge_audit_col.create_index([("created_at", -1)])
     knowledge_audit_col.create_index([("user", 1), ("source_id", 1)])
+    # Round 9 implicit · log TTL 防無限長(估 10 人 × 50 read/day × 365 ≈ 182k doc/年)
+    # PDPA 留 90 天 audit 已綽綽有餘 · admin 想看歷史另存 export
+    try:
+        knowledge_audit_col.create_index(
+            [("created_at", 1)],
+            expireAfterSeconds=90 * 24 * 3600,
+            name="ttl_90d",
+        )
+    except Exception as e:
+        # 如果 index 已存在 + TTL 不同 · 不擋啟動
+        logger.warning("[ttl] knowledge_audit TTL index: %s", e)
+    # design_jobs 同樣加 TTL · 圖檔留 Fal CDN · log 純查詢 ROI 用 · 留 180 天
+    try:
+        db.design_jobs.create_index(
+            [("created_at", 1)],
+            expireAfterSeconds=180 * 24 * 3600,
+            name="ttl_180d",
+        )
+    except Exception as e:
+        logger.warning("[ttl] design_jobs TTL index: %s", e)
     try:
         db.conversations.create_index([("chengfu_summarized_at", -1)])
     except Exception:
@@ -1185,6 +1205,23 @@ async def design_recraft(req: RecraftRequest, request: Request):
         "style": req.style,
         "num_images": 3,  # 老闆 Q2 · 一次 3 張挑方向
     }
+    # Round 9 implicit · regenerate_of 從 dead code 變實作
+    # 若使用者按「重生」· 帶上次 job_id · 我們從歷史撈 prompt 補強 + 給 Fal 種子提示
+    if req.regenerate_of:
+        prev = db.design_jobs.find_one(
+            {"request_id": req.regenerate_of},
+            {"prompt": 1, "image_size": 1, "style": 1},
+        )
+        if prev:
+            # Fal Recraft v3 不直接吃 seed · 但可在 prompt 加 nuance 提示「換構圖」
+            # 同時把 image_size / style 沿用上次(若使用者沒覆蓋)
+            payload["prompt"] = (
+                f"{req.prompt}\n[Variation of previous concept · "
+                f"keep brand spirit but try a different composition · seed change]"
+            )
+            # 不覆蓋使用者明確指定的 size/style
+            if req.image_size == "square_hd" and prev.get("image_size"):
+                payload["image_size"] = prev["image_size"]
 
     async with httpx.AsyncClient(timeout=15.0) as client:
         # 1. 送任務到 Fal queue
@@ -1279,6 +1316,27 @@ async def design_recraft_status(job_id: str):
                     "friendly_message": "仍在生成中 · 再等幾秒"}
         except httpx.TimeoutException:
             raise HTTPException(502, "查詢逾時")
+
+
+@app.get("/design/history")
+def design_history(request: Request, limit: int = 20):
+    """設計助手歷史 · 給前端列「我最近 5 張可以重生」的 dropdown
+    Round 9 implicit · regenerate_of 不再 dead code · 配合 history 給 UI 用
+    """
+    email = (request.headers.get("X-User-Email") or "").strip().lower() or None
+    q = {"user": email} if email else {}
+    docs = list(db.design_jobs.find(
+        q,
+        {"_id": 0, "request_id": 1, "prompt": 1, "status": 1,
+         "image_size": 1, "style": 1, "n_images": 1, "created_at": 1},
+    ).sort("created_at", -1).limit(min(100, max(1, limit))))
+    for d in docs:
+        if isinstance(d.get("created_at"), datetime):
+            d["created_at"] = d["created_at"].isoformat()
+        # 截短 prompt 給 dropdown 用
+        if d.get("prompt"):
+            d["prompt_short"] = d["prompt"][:60] + ("…" if len(d["prompt"]) > 60 else "")
+    return {"history": docs, "count": len(docs)}
 
 
 # ============================================================
@@ -1834,6 +1892,102 @@ def delete_source(source_id: str, _admin: str = Depends(require_admin)):
     return {"ok": True, "name": doc.get("name"), "meili_cleanup": cleanup}
 
 
+@app.get("/admin/sources/{source_id}/health")
+def source_health(source_id: str, _admin: str = Depends(require_admin)):
+    """Round 9 暗示風險 · NAS SMB 睡眠斷線偵測
+
+    macOS SMB autofs 在 sleep 後常掛失效 · 索引 cron 跑時看似空 source
+    這個 endpoint 主動檢查 mount 狀態 + 路徑可讀 + 大致檔案數
+    Admin UI / Uptime Kuma 可定期 ping
+    """
+    try:
+        _id = ObjectId(source_id)
+    except Exception:
+        raise HTTPException(400, "source_id 格式錯誤")
+    src = knowledge_sources_col.find_one({"_id": _id})
+    if not src:
+        raise HTTPException(404, "資料源不存在")
+
+    path = src["path"]
+    health = {
+        "source_id": source_id,
+        "name": src.get("name"),
+        "path": path,
+        "enabled": src.get("enabled", True),
+        "checked_at": datetime.utcnow().isoformat(),
+    }
+
+    # 1. 路徑存在?
+    health["path_exists"] = os.path.exists(path)
+    if not health["path_exists"]:
+        health["status"] = "unreachable"
+        health["issue"] = (
+            f"路徑無法到達 · {path} · "
+            "若是 SMB/NAS · 可能 Mac sleep 後 mount 失效 · "
+            "請手動跑 mount -t smbfs ... 重掛"
+        )
+        return health
+
+    # 2. 可讀?
+    health["readable"] = os.access(path, os.R_OK)
+    if not health["readable"]:
+        health["status"] = "permission_denied"
+        health["issue"] = "路徑存在但 accounting 容器沒讀權限 · 檢查 NAS 帳號權限"
+        return health
+
+    # 3. 是不是空目錄(掛壞了會看似空)
+    try:
+        entries = os.listdir(path)
+        health["entry_count"] = len(entries)
+    except Exception as e:
+        health["status"] = "list_error"
+        health["issue"] = f"列目錄失敗:{type(e).__name__}: {e}"
+        return health
+
+    # 4. 與上次索引的檔案數對比 · 落差太大 = 警告(可能 mount 壞但 path 仍 exist)
+    last_stats = src.get("last_index_stats") or {}
+    last_count = last_stats.get("file_count", 0)
+    if last_count >= 50 and health["entry_count"] == 0:
+        health["status"] = "suspicious_empty"
+        health["issue"] = (
+            f"上次索引 {last_count} 檔 · 目前 top-level 為空 · "
+            "強烈懷疑 NAS mount 失效"
+        )
+        return health
+
+    health["status"] = "ok"
+    return health
+
+
+@app.get("/admin/sources/health")
+def all_sources_health(_admin: str = Depends(require_admin)):
+    """所有 enabled sources 一鍵巡檢 · 給 Uptime Kuma / Admin dashboard 用"""
+    results = []
+    summary = {"ok": 0, "unreachable": 0, "suspicious": 0, "other": 0}
+    for src in knowledge_sources_col.find({"enabled": True}):
+        sid = str(src["_id"])
+        try:
+            h = source_health(sid, _admin=_admin)
+        except HTTPException as e:
+            h = {"source_id": sid, "name": src.get("name"),
+                 "status": "error", "issue": str(e.detail)}
+        results.append(h)
+        s = h.get("status", "other")
+        if s == "ok":
+            summary["ok"] += 1
+        elif s == "unreachable":
+            summary["unreachable"] += 1
+        elif s == "suspicious_empty":
+            summary["suspicious"] += 1
+        else:
+            summary["other"] += 1
+    return {
+        "checked_at": datetime.utcnow().isoformat(),
+        "summary": summary,
+        "sources": results,
+    }
+
+
 @app.post("/admin/sources/{source_id}/reindex")
 def reindex_source_endpoint(source_id: str, _admin: str = Depends(require_admin)):
     """手動觸發 reindex · 同步執行(source 不大時可以接受)。
@@ -2073,6 +2227,7 @@ def knowledge_search(
 # ============================================================
 @app.get("/healthz")
 def health():
+    from services.knowledge_extract import ocr_status
     return {
         "status": "ok",
         "mongo": db.name,
@@ -2080,6 +2235,7 @@ def health():
         "projects": projects_col.count_documents({}),
         "feedback": feedback_col.count_documents({}),
         "knowledge_sources": knowledge_sources_col.count_documents({"enabled": True}),
+        "ocr": ocr_status(),  # Round 9 implicit · OCR tesseract 缺失曝光
     }
 
 

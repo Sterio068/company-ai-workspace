@@ -202,3 +202,50 @@ Week 11+ · v2.0(長遠)
 2. **Workflow v2 要哪 3 條?** — 投標閉環 / 新聞發布閉環 / 活動企劃閉環?
 3. **遠端開發權限範圍** — 外包工程師只能改 `ChengFu/` 還是整個 Mac mini?
 4. **教學手冊驗收標準** — 由 Champion 試做 1 週再回饋?或老闆自己讀過決定?
+
+---
+
+## 9. v1.2+ 待決議的設計問題(Round 9 reviewer 暗示)
+
+> 不影響 v1.0/v1.1 上線 · 但日後規模成長會撞到 · 列出來等 ROI 數據後再決定
+
+### 9.1 Meilisearch index 拆分策略
+- **問題:** 目前所有 source 共用一個 `chengfu_knowledge` index · 用 `source_id` filter 區隔
+- **臨界:** 5 萬+ 文件後 search latency 預估會從 < 50ms 退化到 200ms+
+- **選項 A:** 維持單 index · 加 sortableAttributes + 分頁
+- **選項 B:** per-source index · 搜尋時並行查多個再 merge
+- **建議:** v1.0/v1.1 先 A 觀察 · 若承富實際 NAS > 5 萬檔再評估 B
+
+### 9.2 增量 detector · mtime vs hash
+- **問題:** 目前用 `mtime` 比對 · NAS 上 `touch` 不改內容也會 reindex
+- **建議:** 加 `size + mtime` 雙條件 · 只有兩者都變才 reindex(成本低 · 抓 90% case)
+- **未來:** 大檔加 SHA1 預存 doc · 比對 hash 才真 reindex(抓 100% · 但每檔多 200ms)
+
+### 9.3 Agent 編號識別策略
+- **現:** `agent_access: ["01", "03"]` 用編號 · 對應 `config-templates/presets/` 命名
+- **脆點:** LibreChat 真實 agent_id 是 UUID · 編號是我們約定俗成 · agent 重建會脫鉤
+- **建議:** v1.2 加 `_id` mapping table · admin 建 source 時用 dropdown 選 Agent
+- **過渡:** 維持編號相容 · `create-agents.py` 寫 `metadata.number` 給 audit 用
+
+### 9.4 知識庫 view 開放範圍
+- **現:** 所有登入使用者都可見「知識庫」view · 個別 source 才看 agent_access
+- **問題:** 同仁直接瀏覽就能看到所有 source 名稱(已透過 X-Agent-Num 修)
+- **建議:** v1.2 加 user-level RBAC(group → sources mapping) · 不光 Agent 等級
+- **過渡:** 目前 PR 公司 10 人 · 各 source 加 `agent_access` 已可控大部分風險
+
+### 9.5 design_jobs 月度成本儀表
+- **缺:** Admin 看不到「Fal.ai 本月花多少」(只看得到 Anthropic)
+- **建議:** v1.1 加 `/admin/design-cost` · 用 design_jobs.count × 0.04 USD × num_images = 月成本
+- **預設警報:** 月超過 NT$ 1000(≈ 80 次) email Champion
+
+### 9.6 NAS SMB autofs 自動重掛
+- **現:** /admin/sources/{id}/health 可手動偵測 · Admin 看到才重掛
+- **建議:** v1.2 加自動重掛 cron · 偵測到 unreachable 就跑 mount -t smbfs
+- **風險:** 帳密變動時無人值守會重複 fail · 要配 Slack 通知
+
+### 9.7 Drawer / Handoff adoption 量測
+- **問題:** 4 格卡會被當行政表單忽略
+- **建議:** v1.1 加 `handoff` 填寫率到 admin dashboard
+  · 每月新建 N 個專案 · 其中有填 handoff 的 X 個 → X/N
+  · 若 < 30% · 觸發 Champion 主動 reach out
+
