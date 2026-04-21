@@ -299,17 +299,24 @@ export const chat = {
       try {
         const m = await import("./vendor-marked.js");
         this._marked = m.marked;
-        // GFM + breaks(\n 直接變 <br>)· 適合對話內文
+        // Codex R4.3 · 關閉 raw HTML + 全 escape(防 AI 回傳惡意 <img onerror=...>)
+        // marked 7+ 預設會保留 raw HTML · 必須明示 renderer.html=() => '' 擋
+        this._marked.use({
+          renderer: {
+            // 來源 text 內的 <tag> 整段丟 · 不進 DOM
+            html() { return ""; },
+          },
+        });
         this._marked.setOptions({ gfm: true, breaks: true });
       } catch (e) {
-        // 若 vendor 載入失敗 · fallback 到原 regex(降級不死)
         console.warn("marked.js 載入失敗 · 降級到 regex parser", e);
         return this._renderMarkdownLegacy(el, text);
       }
     }
     try {
-      // marked 自己會 escape HTML(設 sanitize 在新版已 deprecated · 但 marked 預設不執行 raw HTML)
-      el.innerHTML = this._marked.parse(text || "");
+      const html = this._marked.parse(text || "");
+      // Codex R4.3 · 二道防線 · DOMParser 掃過清 event handler 與 script
+      el.innerHTML = _sanitizeRenderedHtml(html);
     } catch (e) {
       console.warn("markdown parse error", e);
       el.textContent = text;
@@ -471,6 +478,76 @@ export const chat = {
     });
   },
 };
+
+// Codex R4.3 · 第二道 XSS 防線 · 用 DOMParser 白名單過濾
+// 即使 marked renderer.html 已擋 block-level raw HTML · inline event handler 仍可能從其他路徑進來
+// 白名單 tag + 禁 on* 屬性 + 禁 script/iframe/object/embed
+const _ALLOWED_TAGS = new Set([
+  "p", "br", "hr", "strong", "em", "code", "pre", "blockquote",
+  "ul", "ol", "li", "a", "img",
+  "h1", "h2", "h3", "h4", "h5", "h6",
+  "table", "thead", "tbody", "tr", "th", "td",
+  "span", "div",
+  "del", "ins", "sub", "sup",
+]);
+const _ALLOWED_ATTRS = new Set(["href", "src", "alt", "title", "colspan", "rowspan", "class"]);
+
+function _sanitizeRenderedHtml(html) {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(`<body>${html}</body>`, "text/html");
+    _cleanNode(doc.body);
+    return doc.body.innerHTML;
+  } catch {
+    // DOMParser 壞的話 · fallback 回 text(safer)
+    return html.replace(/<[^>]*>/g, "");
+  }
+}
+
+function _cleanNode(node) {
+  // 先複製 childNodes 再遍歷(避免變動時迭代錯)
+  const children = Array.from(node.childNodes);
+  for (const child of children) {
+    if (child.nodeType === 3) continue;  // text node · keep
+    if (child.nodeType !== 1) { child.remove(); continue; }  // 只留 Element 與 Text
+
+    const tag = child.tagName.toLowerCase();
+    if (!_ALLOWED_TAGS.has(tag)) {
+      // 不在白名單 · 但保留內文
+      const frag = document.createDocumentFragment();
+      while (child.firstChild) frag.appendChild(child.firstChild);
+      child.replaceWith(frag);
+      continue;
+    }
+    // 清 attributes · 只留白名單
+    for (const attr of Array.from(child.attributes)) {
+      const name = attr.name.toLowerCase();
+      if (name.startsWith("on")) {
+        child.removeAttribute(attr.name);  // onclick / onerror / onload
+        continue;
+      }
+      if (!_ALLOWED_ATTRS.has(name)) {
+        child.removeAttribute(attr.name);
+        continue;
+      }
+      // href/src 禁 javascript: / data: (除了 image)
+      if ((name === "href" || name === "src")) {
+        const val = attr.value.trim().toLowerCase();
+        if (val.startsWith("javascript:") || val.startsWith("vbscript:")) {
+          child.removeAttribute(attr.name);
+          continue;
+        }
+        if (name === "src" && val.startsWith("data:") && !val.startsWith("data:image/")) {
+          child.removeAttribute(attr.name);
+          continue;
+        }
+      }
+    }
+    // 遞歸
+    _cleanNode(child);
+  }
+}
+
 
 function setText(id, val) {
   const el = document.getElementById(id);

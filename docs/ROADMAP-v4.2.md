@@ -249,3 +249,42 @@ Week 11+ · v2.0(長遠)
   · 每月新建 N 個專案 · 其中有填 handoff 的 X 個 → X/N
   · 若 < 30% · 觸發 Champion 主動 reach out
 
+---
+
+## 10. 🔴 v1.2 必修(Codex Round 4 抓到的架構級漏洞)
+
+> **這 3 項不是 Day 0 擋路項 · 但 v1.2 前必修** · 寫進合約驗收項
+
+### 10.1 LibreChat /api/ask/agents 真 quota gate
+- **問題:** 目前 quota 只在 launcher 前端 chat.js 檢查 · curl 可直打 `/api/ask/agents` 繞過
+- **影響:** 同仁知道後可無限消耗預算 · 月底爆 NT$ 12,000
+- **修法:**
+  - (a) nginx `auth_request` 指向 accounting `/quota/preflight` · 擋在代理層
+  - (b) 或寫 LibreChat plugin · 在 `/api/ask/agents` 入口先打 accounting
+- **工時:** 1-2 天
+- **緩解:** 短期靠 Cloudflare Access 擋外部 + 內網信任 + 每週 `/admin/cost` 監控
+
+### 10.2 accounting 多數 endpoint 無 auth
+- **問題:** `/projects` `/crm` `/users/*/preferences` 等無 auth · curl 可任意讀寫
+- **影響:** 內網員工可偽造、讀他人資料
+- **修法:**
+  - 所有非 health endpoint 加 `Depends(require_user)` 驗 cookie
+  - 移除 production X-User-Email 信任 · 只保留測試環境
+  - 寫入類 endpoint 加 audit log
+- **工時:** 1-2 天
+- **緩解:** 短期靠「內網 + Cloudflare Access 限 10 人」· Codex R3.2 已做 admin 嚴格化
+
+### 10.3 X-Agent-Num 瀏覽器可偽造
+- **問題:** 知識庫 ACL 靠 `X-Agent-Num` header · 同仁可 curl 偽造任意 agent 讀機敏
+- **影響:** 公關助手可讀「只給投標助手」的源
+- **修法:**
+  - Agent 身分由 accounting server-side session 推(chat context → agent_id → agent_num)
+  - nginx strip inbound `X-Agent-Num`
+- **工時:** 1 天
+- **緩解:** 短期靠「LibreChat UI 不讓使用者自選 agent_num 寫入 header」· Codex R3.3 已擋無 header 的情況
+
+### 10.4(可選)Markdown XSS 加 DOMPurify 專業防線
+- **問題:** Codex R4.3 已用白名單 + renderer.html='' 擋 · 但非 DOMPurify 等級
+- **建議:** v1.2 vendor DOMPurify(20KB)· 取代自刻 `_sanitizeRenderedHtml`
+- **工時:** 2h
+

@@ -71,16 +71,43 @@ echo -e "${BLUE}[4/6]${NC} 重啟容器(MongoDB 會 init 空資料庫)..."
 "$PROJECT_DIR/scripts/start.sh"
 sleep 10
 
-# ---------- Step 5: 還原(Mongo + Meili · Codex Round 10.5)----------
+# ---------- Step 5: 還原 Mongo(Codex R4.6 · 先還原 tmp · 驗過再 swap)----------
 echo ""
-echo -e "${BLUE}[5/6]${NC} 從備份還原 Mongo..."
+echo -e "${BLUE}[5/6]${NC} 從備份還原 Mongo(tmp DB swap 模式)..."
+# Codex R4.6 · 不直接 --drop 目標 DB · 先 restore 到 chengfu_restore_tmp
+# 完整驗證(count / index)後才 renameCollection · 中途 kill 不會留半壞狀態
+TMP_DB="chengfu_restore_tmp"
 if [[ "$LATEST" == *.gpg ]]; then
     echo "   (GPG 加密 · 需輸入 passphrase)"
-    gpg --decrypt "$LATEST" | gunzip -c | docker exec -i chengfu-mongo mongorestore --archive --drop
+    gpg --decrypt "$LATEST" | gunzip -c | docker exec -i chengfu-mongo \
+        mongorestore --drop --nsFrom 'chengfu.*' --nsTo "${TMP_DB}.*" --archive
 else
-    gunzip -c "$LATEST" | docker exec -i chengfu-mongo mongorestore --archive --drop
+    gunzip -c "$LATEST" | docker exec -i chengfu-mongo \
+        mongorestore --drop --nsFrom 'chengfu.*' --nsTo "${TMP_DB}.*" --archive
 fi
-echo -e "   ${GREEN}✅${NC} Mongo 還原完成"
+
+# 驗 tmp DB 有合理資料(Codex R4.6)
+TMP_USERS=$(docker exec chengfu-mongo mongosh --quiet "$TMP_DB" \
+    --eval "db.users.countDocuments()" 2>/dev/null || echo "0")
+if [[ "$TMP_USERS" -lt 1 ]]; then
+    echo -e "   ${RED}❌${NC} TMP DB users.count=$TMP_USERS · 異常 · 不 swap"
+    exit 1
+fi
+echo -e "   ${GREEN}✅${NC} TMP DB 驗證通過 · users=$TMP_USERS"
+
+# Atomic swap · drop 舊 chengfu · rename tmp → chengfu
+docker exec chengfu-mongo mongosh --quiet --eval "
+    db.getSiblingDB('chengfu').dropDatabase();
+    db.adminCommand({copydb: 1, fromdb: '$TMP_DB', todb: 'chengfu'});
+    db.getSiblingDB('$TMP_DB').dropDatabase();
+" 2>/dev/null || {
+    # copydb deprecated in 4.2+ · use mongorestore trick
+    echo "   copydb 不可用 · 用 mongorestore export+import swap..."
+    docker exec chengfu-mongo mongodump --db "$TMP_DB" --archive | \
+        docker exec -i chengfu-mongo mongorestore --drop --nsFrom "${TMP_DB}.*" --nsTo "chengfu.*" --archive
+    docker exec chengfu-mongo mongosh --quiet --eval "db.getSiblingDB('$TMP_DB').dropDatabase()"
+}
+echo -e "   ${GREEN}✅${NC} Mongo swap 完成 · 原始 DB 已替換"
 
 # Codex fix · 同日 Meili dump 也要還原 · 否則「備份」只救對話不救搜尋索引
 MEILI_LATEST=$(ls -t "$BACKUP_DIR"/chengfu-meili-*.tar.gz* 2>/dev/null | head -1 || echo "")

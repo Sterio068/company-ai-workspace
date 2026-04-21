@@ -26,7 +26,8 @@ services:
   # - /chat, /api/*, 其他 → LibreChat
   # - 注入客製 CSS/JS 到 LibreChat 回應(sub_filter)
   nginx:
-    image: nginx:1.27-alpine
+    # Codex R4.5 · pin @sha256 避免上游 tag 被污染
+    image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
     container_name: chengfu-nginx
     restart: unless-stopped
     depends_on:
@@ -50,7 +51,8 @@ services:
   # - web_search(內建)
   # - speech_to_text(內建,不需 whisper 容器)
   librechat:
-    image: ghcr.io/danny-avila/librechat:v0.8.4  # 2026-03-20 釋出的穩定版(2026-04-19 驗證)
+    # Codex R4.5 · pin @sha256 · 2026-04-21 驗證 digest
+    image: ghcr.io/danny-avila/librechat:v0.8.4@sha256:89b0008e610e1dad635d866c09e007e308a145ce764d1eba7c8c6de7414d934b
     container_name: chengfu-librechat
     restart: unless-stopped
     depends_on:
@@ -90,7 +92,7 @@ services:
   # ==================== MongoDB 資料庫 ====================
   # 儲存對話紀錄、使用者、Agent 定義、檔案中繼資料
   mongodb:
-    image: mongo:7.0
+    image: mongo:7.0@sha256:43fddee7e532a920f3dfdee9e8f4834398c155c26bcb92d790cc1cd3c630fc40
     container_name: chengfu-mongo
     restart: unless-stopped
     command: mongod --quiet --logpath /dev/null
@@ -110,7 +112,7 @@ services:
   # ==================== Meilisearch 全文檢索 ====================
   # 對話歷史搜尋(不是 RAG,是 UI 層的歷史對話搜尋)
   meilisearch:
-    image: getmeili/meilisearch:v1.12.0
+    image: getmeili/meilisearch:v1.12.0@sha256:27f831c41cb735a9c2314b61a33a14552367af6b3e4bcf840f21fd0e64e37a8a
     container_name: chengfu-meili
     restart: unless-stopped
     environment:
