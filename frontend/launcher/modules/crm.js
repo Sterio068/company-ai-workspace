@@ -71,7 +71,7 @@ export const crm = {
   render() {
     const root = document.getElementById("kanban-board");
     if (!root) return;
-    // 建 column skeleton(static HTML · 只有 class / label 固定)· 再 append 卡片 nodes
+    // 建 column skeleton · column-level event delegation(避免每卡綁 listener)
     root.innerHTML = STAGES.map(stage => `
       <div class="kanban-col" data-stage="${stage.key}">
         <div class="kanban-col-head">
@@ -80,11 +80,21 @@ export const crm = {
         </div>
       </div>
     `).join("");
-    // 每 column 塞 lead-card nodes
-    STAGES.forEach(stage => {
-      const col = root.querySelector(`[data-stage="${stage.key}"]`);
-      const stageLeads = this.leads.filter(l => l.stage === stage.key);
-      stageLeads.forEach(lead => col.appendChild(this.renderCard(lead)));
+    // v4.6 · 分批 render · 先塞前 20 卡(每 column)立刻可見
+    // 剩下用 requestIdleCallback 在閒置時補上 · 舊 Intel 機不卡
+    const FIRST_BATCH = 20;
+    const stageGroups = STAGES.map(stage => ({
+      stage, col: root.querySelector(`[data-stage="${stage.key}"]`),
+      leads: this.leads.filter(l => l.stage === stage.key),
+    }));
+    stageGroups.forEach(({ col, leads }) => {
+      leads.slice(0, FIRST_BATCH).forEach(lead => col.appendChild(this.renderCard(lead)));
+      if (leads.length > FIRST_BATCH) {
+        const ric = window.requestIdleCallback || ((cb) => setTimeout(cb, 16));
+        ric(() => {
+          leads.slice(FIRST_BATCH).forEach(lead => col.appendChild(this.renderCard(lead)));
+        });
+      }
     });
     this.bindDnD(root);
   },

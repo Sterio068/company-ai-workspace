@@ -31,7 +31,11 @@ services:
     ports:
       - "80:80"
 
-  # MongoDB 本機 expose 27017,讓你可以用 MongoDB Compass 連
-  mongodb:
-    ports:
-      - "27017:27017"
+  # MongoDB 預設只在 docker network 內可達(accounting / librechat 內部走 mongodb:27017)
+  # 若你要用 Compass 從 host 連 · 暫時手動加(看 PRE-DELIVERY-CHECKLIST Day -7 邊界檢查):
+  #
+  # mongodb:
+  #   ports:
+  #     - "27017:27017"
+  #
+  # ⚠️ production 上 Cloudflare Tunnel 後 · 一定要把這段註解掉

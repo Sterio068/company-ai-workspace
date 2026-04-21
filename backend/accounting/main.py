@@ -1027,6 +1027,8 @@ def cost_summary(days: int = 30, _admin: str = Depends(require_admin)):
 # Anthropic 定價(USD per 1M tokens · 2026-04 · 需定期更新)
 # v4.4:加 PRICE_VERSION 讓 admin 看得到「這是哪版定價 · 何時該 refresh」
 _PRICE_VERSION = "2026-04-21"  # 更新時請改日期 · Admin 儀表可查
+_PRICE_SOURCE = "https://www.anthropic.com/pricing"
+_PRICE_NOTE = "USD per 1M tokens · 半年內請定期確認 Anthropic 是否調價"
 _ANTHROPIC_PRICING_USD = {
     "claude-opus-4-7":    {"input": 15.0,  "output": 75.0},
     "claude-sonnet-4-6":  {"input":  3.0,  "output": 15.0},
@@ -1085,12 +1087,33 @@ def _lc_tx_normalize(doc: dict) -> dict:
 
 @app.get("/admin/librechat-contract")
 def librechat_contract(_admin: str = Depends(require_admin)):
-    """升版後第一件事 · 驗 LibreChat 私有 schema 是否還相容"""
+    """升版後第一件事 · 驗 LibreChat 私有 schema 是否還相容
+    v4.6 · 加 fingerprint(最近 10 筆 transactions 的欄位簽名)
+    若 schema 變了 · ROI 卡會在前端顯示「黃色降級」而非默默回 0
+    """
     probe = _lc_tx_probe()
+    # Fingerprint 最近 10 筆
+    fingerprint = []
+    try:
+        for doc in db.transactions.find({}).sort("createdAt", -1).limit(10):
+            keys = set(doc.keys())
+            raw = doc.get("rawAmount") or {}
+            fingerprint.append({
+                "has_rawAmount": isinstance(doc.get("rawAmount"), dict),
+                "rawAmount_keys": sorted(list(raw.keys())) if isinstance(raw, dict) else [],
+                "has_user": "user" in keys,
+                "has_model": "model" in keys,
+                "has_createdAt": "createdAt" in keys,
+            })
+    except Exception:
+        pass
     return {
         "price_version": _PRICE_VERSION,
+        "price_source": _PRICE_SOURCE,
+        "price_note": _PRICE_NOTE,
         "transactions_schema_ok": probe["ok"],
         "transactions_issue": probe["issue"],
+        "transactions_fingerprint_last10": fingerprint,
         "pricing_models": list(_ANTHROPIC_PRICING_USD.keys()),
     }
 _USD_TO_NTD = float(os.getenv("USD_TO_NTD", "32.5"))
@@ -1134,12 +1157,17 @@ def budget_status(_admin: str = Depends(require_admin)):
         spent = 0.0
     pct = (spent / _MONTHLY_BUDGET_NTD * 100) if _MONTHLY_BUDGET_NTD else 0
     level = "ok" if pct < 80 else "warn" if pct < 100 else "over"
+    # 若 schema 有問題 · 數字可能歪 · 給前端黃牌降級
+    schema = _lc_tx_probe()
     return {
         "spent_ntd": round(spent, 0),
         "budget_ntd": _MONTHLY_BUDGET_NTD,
         "pct": round(pct, 1),
         "alert_level": level,
         "month": now.strftime("%Y-%m"),
+        "pricing_version": _PRICE_VERSION,
+        "data_source_ok": schema["ok"],
+        "data_source_issue": schema["issue"] if not schema["ok"] else None,
     }
 
 
@@ -1187,6 +1215,80 @@ def top_users(days: int = 30, limit: int = 10, _admin: str = Depends(require_adm
         return {"period_days": days, "user_soft_cap_ntd": _USER_SOFT_CAP_DEFAULT, "top": ranked}
     except Exception as e:
         return {"error": str(e)}
+
+
+# ============================================================
+# v4.6 · Quota check · request-time hard stop(Round 6 reviewer 紅線)
+# Launcher 送對話前先打這個 endpoint · 超 100% 直接擋送
+# 老闆可選 hard_stop / soft_warn 兩種 mode(env QUOTA_MODE)
+# ============================================================
+QUOTA_MODE = os.getenv("QUOTA_MODE", "soft_warn")  # hard_stop | soft_warn | off
+QUOTA_OVERRIDE_EMAILS = {e.strip().lower() for e in os.getenv("QUOTA_OVERRIDE_EMAILS", "").split(",") if e.strip()}
+
+
+def _user_month_spend_ntd(email: str) -> float:
+    """算某個 user 本月已花 NT$ · 與 /admin/top-users 共用邏輯"""
+    if not email:
+        return 0.0
+    try:
+        u = _users_col.find_one({"email": email}, {"_id": 1})
+        if not u:
+            return 0.0
+        uid = u["_id"]
+        now = datetime.utcnow()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        pipeline = [
+            {"$match": {"createdAt": {"$gte": month_start}, "user": uid}},
+            {"$group": {
+                "_id": "$model",
+                "tin":  {"$sum": "$rawAmount.prompt"},
+                "tout": {"$sum": "$rawAmount.completion"},
+            }},
+        ]
+        stats = list(db.transactions.aggregate(pipeline))
+        return sum(_price_ntd(s["_id"] or "", s.get("tin", 0) or 0, s.get("tout", 0) or 0) for s in stats)
+    except Exception:
+        return 0.0
+
+
+@app.get("/quota/check")
+def quota_check(email: Optional[str] = Depends(current_user_email)):
+    """Launcher 送對話前先打 · 回傳當前使用量 + 是否該擋
+    Mode 三種(env QUOTA_MODE):
+      - hard_stop · pct >= 100 直接 allowed=False · 前端 toast 阻擋
+      - soft_warn · 仍 allowed=True · 但回傳 warning 字串(前端可顯示)
+      - off       · 不檢查
+    管理員白名單(QUOTA_OVERRIDE_EMAILS env)永遠 allowed=True
+    """
+    if QUOTA_MODE == "off":
+        return {"allowed": True, "mode": "off"}
+    if not email:
+        # 沒 email · 給過(避免擋住 anonymous endpoint)
+        return {"allowed": True, "mode": QUOTA_MODE, "warning": "未識別使用者"}
+    # 白名單(老闆 / Champion)永遠通過
+    if email in QUOTA_OVERRIDE_EMAILS or email in _admin_allowlist:
+        return {"allowed": True, "mode": QUOTA_MODE, "override": True}
+
+    spent = _user_month_spend_ntd(email)
+    cap = _USER_SOFT_CAP_DEFAULT
+    pct = (spent / cap * 100) if cap else 0
+    out = {
+        "allowed": True,
+        "mode": QUOTA_MODE,
+        "email": email,
+        "spent_ntd": round(spent, 0),
+        "cap_ntd": cap,
+        "pct": round(pct, 1),
+    }
+    if pct >= 100:
+        if QUOTA_MODE == "hard_stop":
+            out["allowed"] = False
+            out["reason"] = f"本月已用 NT$ {round(spent)} / 上限 NT$ {round(cap)} · 請找 Champion 放行或等下個月"
+        else:
+            out["warning"] = f"⚠ 本月已超預算 ({round(pct)}%) · Champion 將收到通知"
+    elif pct >= 80:
+        out["warning"] = f"已用本月預算 {round(pct)}% · 接近上限"
+    return out
 
 
 @app.get("/admin/tender-funnel")

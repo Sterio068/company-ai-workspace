@@ -164,6 +164,22 @@ export const chat = {
     const text = input.value.trim();
     if (!text) return;
 
+    // v4.6 · request-time quota check(Round 6 reviewer 紅線)
+    // 送對話前先打 /api-accounting/quota/check · hard_stop 模式且超 100% 直接擋
+    try {
+      const qr = await authFetch("/api-accounting/quota/check");
+      if (qr.ok) {
+        const q = await qr.json();
+        if (q.allowed === false) {
+          toast.error(`❌ ${q.reason || "本月用量已達上限 · 請找 Champion 放行"}`);
+          return;
+        }
+        if (q.warning) {
+          toast.warn(q.warning);
+        }
+      }
+    } catch { /* quota service 離線不擋 · 後端 cron 仍會收 */ }
+
     document.querySelector("#chat-messages .chat-welcome")?.remove();
     this.appendMessage("user", text);
     input.value = "";
@@ -260,7 +276,34 @@ export const chat = {
     return body;
   },
 
-  renderMarkdown(el, text) {
+  // v4.6 · 改用 marked.js(vendor 進 modules/vendor-marked.js · 無 build step)
+  // 原 regex parser 對巢狀 list / code block / 中英混排 / PDF 條列 都會有 corner case
+  // marked 是 GFM 標準實作 · ~28 KB · 比手刻 regex 多但每年省一堆 bug
+  async renderMarkdown(el, text) {
+    if (!this._marked) {
+      try {
+        const m = await import("./vendor-marked.js");
+        this._marked = m.marked;
+        // GFM + breaks(\n 直接變 <br>)· 適合對話內文
+        this._marked.setOptions({ gfm: true, breaks: true });
+      } catch (e) {
+        // 若 vendor 載入失敗 · fallback 到原 regex(降級不死)
+        console.warn("marked.js 載入失敗 · 降級到 regex parser", e);
+        return this._renderMarkdownLegacy(el, text);
+      }
+    }
+    try {
+      // marked 自己會 escape HTML(設 sanitize 在新版已 deprecated · 但 marked 預設不執行 raw HTML)
+      el.innerHTML = this._marked.parse(text || "");
+    } catch (e) {
+      console.warn("markdown parse error", e);
+      el.textContent = text;
+    }
+    const msgs = document.getElementById("chat-messages");
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+  },
+
+  _renderMarkdownLegacy(el, text) {
     let html = escapeHtml(text);
     html = html
       .replace(/```([^`]*?)```/gs, (_, code) => `<pre><code>${code.trim()}</code></pre>`)
@@ -276,7 +319,6 @@ export const chat = {
       .replace(/\n\n+/g, "</p><p>")
       .replace(/\n/g, "<br>");
     el.innerHTML = `<p>${html}</p>`;
-    // `#chat-messages` 是 id 不是 class · 原 `.chat-messages` 選不到 · 修正
     const msgs = document.getElementById("chat-messages");
     if (msgs) msgs.scrollTop = msgs.scrollHeight;
   },

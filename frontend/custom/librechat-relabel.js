@@ -15,14 +15,24 @@
   // 路線 A · 所有 /c/* 或 /chat/* URL 都強制彈回承富 Launcher
   // 含:初次載入 + React SPA 導航(監聽 history 變化)
   // ============================================================
+  // v4.6 · 同時抓 pathname 與 hash · 防 LibreChat 升版改成 hash router
+  function _matchChatPath(pathOrHash) {
+    if (!pathOrHash) return null;
+    // pathname 形式 · /c/new · /c/<id> · /chat · /chat/...
+    const m = pathOrHash.match(/^\/?c\/([^\/?#]+)$/);
+    if (m) return m[1] === "new" ? "/" : `/?convo=${m[1]}`;
+    if (pathOrHash === "/chat" || pathOrHash.startsWith("/chat/") ||
+        pathOrHash === "chat"  || pathOrHash.startsWith("chat/")) return "/";
+    return null;
+  }
+
   function redirectIfChatPath() {
     const path = window.location.pathname;
-    if (path === "/c/new" || path.startsWith("/c/") || path === "/chat" || path.startsWith("/chat/")) {
-      const convoMatch = path.match(/^\/c\/([^\/]+)$/);
-      const target = convoMatch && convoMatch[1] !== "new"
-        ? `/?convo=${convoMatch[1]}`
-        : "/";
-      console.info("[ChengFu] 重導到承富 Launcher:", target);
+    // hash 也檢查 · 移掉開頭 # 後判斷
+    const hashRaw = (window.location.hash || "").replace(/^#/, "");
+    const target = _matchChatPath(path) || _matchChatPath(hashRaw);
+    if (target) {
+      console.info("[ChengFu] 重導到承富 Launcher:", target, "from", path, hashRaw);
       window.location.replace(target);
       return true;
     }
@@ -32,7 +42,7 @@
   // 初次載入立刻檢查
   if (redirectIfChatPath()) return;
 
-  // React SPA 導航:monkey-patch pushState / replaceState + popstate
+  // React SPA 導航:monkey-patch pushState / replaceState + popstate + hashchange
   const origPush = history.pushState;
   const origReplace = history.replaceState;
   history.pushState = function () {
@@ -44,13 +54,17 @@
     redirectIfChatPath();
   };
   window.addEventListener("popstate", redirectIfChatPath);
+  // v4.6 · LibreChat 若改 hash router(#/c/new)· hashchange 接到
+  window.addEventListener("hashchange", redirectIfChatPath);
 
   // 登入頁登入成功後,LibreChat 的 navigate('/c/new')
-  // 我們透過 URL 監聽每 300ms 檢查(最保險)
+  // 我們透過 URL 監聽每 300ms 檢查(最保險 · 同時看 path + hash)
   let lastPath = window.location.pathname;
+  let lastHash = window.location.hash;
   setInterval(() => {
-    if (window.location.pathname !== lastPath) {
+    if (window.location.pathname !== lastPath || window.location.hash !== lastHash) {
       lastPath = window.location.pathname;
+      lastHash = window.location.hash;
       redirectIfChatPath();
     }
   }, 300);

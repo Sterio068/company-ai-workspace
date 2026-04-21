@@ -302,12 +302,20 @@ export const app = {
         const r = await authFetch("/api-accounting/admin/budget-status");
         if (r.ok) {
           const d = await r.json();
-          setText("roi-budget-value", `NT$ ${Number(d.spent_ntd).toLocaleString()}`);
-          setText("roi-budget-sub", `預算 NT$ ${Number(d.budget_ntd).toLocaleString()} · ${d.pct}%`);
-          const fill = document.getElementById("roi-budget-fill");
-          if (fill) {
-            fill.style.width = Math.min(100, d.pct) + "%";
-            fill.className = "roi-fill " + (d.alert_level === "over" ? "over" : d.alert_level === "warn" ? "warn" : "");
+          // v4.6 · 若資料源有問題 · 黃牌降級顯示而不是默默回 0
+          if (d.data_source_ok === false) {
+            setText("roi-budget-value", "資料源異常");
+            setText("roi-budget-sub", `⚠ ${d.data_source_issue || "LibreChat schema 變動?"} · 找工程師`);
+            const fill = document.getElementById("roi-budget-fill");
+            if (fill) { fill.style.width = "100%"; fill.className = "roi-fill warn"; }
+          } else {
+            setText("roi-budget-value", `NT$ ${Number(d.spent_ntd).toLocaleString()}`);
+            setText("roi-budget-sub", `預算 NT$ ${Number(d.budget_ntd).toLocaleString()} · ${d.pct}% · 定價 ${d.pricing_version || ""}`);
+            const fill = document.getElementById("roi-budget-fill");
+            if (fill) {
+              fill.style.width = Math.min(100, d.pct) + "%";
+              fill.className = "roi-fill " + (d.alert_level === "over" ? "over" : d.alert_level === "warn" ? "warn" : "");
+            }
           }
         }
       } catch {}

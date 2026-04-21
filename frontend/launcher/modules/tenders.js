@@ -44,7 +44,10 @@ export const tenders = {
         root.innerHTML = '<div class="chip-empty">尚無標案符合條件 · 可能 cron 還沒跑</div>';
         return;
       }
-      root.innerHTML = items.map(t => {
+      // v4.6 · 分批 render(Round 6 reviewer 紅線:舊 Intel 機長列表掉幀)
+      // 先 render 前 20 筆 · 剩下用 requestIdleCallback 補
+      const FIRST_BATCH = 20;
+      const renderItem = (t) => {
         const typeLabel = t.brief_type || "公告";
         const date = t.date ? String(t.date).slice(0, 8) : "";
         return `
@@ -60,14 +63,26 @@ export const tenders = {
             </div>
           </div>
         `;
-      }).join("");
-      // 用 event delegation 綁動作按鈕,不走 inline onclick
-      root.querySelectorAll("[data-tender-action]").forEach(btn => {
-        btn.addEventListener("click", e => {
+      };
+      root.innerHTML = items.slice(0, FIRST_BATCH).map(renderItem).join("");
+      if (items.length > FIRST_BATCH) {
+        const ric = window.requestIdleCallback || ((cb) => setTimeout(cb, 16));
+        ric(() => {
+          const more = document.createElement("div");
+          more.innerHTML = items.slice(FIRST_BATCH).map(renderItem).join("");
+          while (more.firstChild) root.appendChild(more.firstChild);
+        });
+      }
+      // event delegation 綁在 root · 後續分批 append 也能吃到
+      if (!root.dataset.delegated) {
+        root.dataset.delegated = "1";
+        root.addEventListener("click", e => {
+          const btn = e.target.closest("[data-tender-action]");
+          if (!btn) return;
           e.stopPropagation();
           this.mark(btn.dataset.tenderKey, btn.dataset.tenderAction);
         });
-      });
+      }
     } catch {
       root.innerHTML = '<div class="chip-empty">❌ 無法載入標案</div>';
     }
