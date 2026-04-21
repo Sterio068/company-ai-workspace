@@ -184,3 +184,83 @@ def test_tender_funnel_empty(db):
     r = admin_metrics.tender_funnel(db)
     assert r["funnel"]["new_discovered"] == 0
     assert r["funnel"]["won"] == 0
+
+
+# ============================================================
+# Round 9 Q1 · fail-safe 策略(資料來源異常時)
+# ============================================================
+def test_user_month_spend_returns_dict_with_ok(db, users_col):
+    """正常路徑回 ok=True · spent_ntd 數字"""
+    r = admin_metrics.user_month_spend_ntd(db, users_col, "x@y.com")
+    assert isinstance(r, dict)
+    assert r["ok"] is True
+    assert r["spent_ntd"] == 0.0
+    assert r["user_found"] is False  # email 對不到 user · 這是合理 0
+
+
+def test_user_month_spend_data_source_error_returns_ok_false(users_col):
+    """傳壞掉的 db (例如 None.transactions) · ok=False"""
+    class BrokenDB:
+        @property
+        def transactions(self):
+            raise ConnectionError("Mongo down")
+    r = admin_metrics.user_month_spend_ntd(BrokenDB(), users_col, "x@y.com")
+    # users_col.find_one("x@y.com") 會回 None · 走 user_not_in_librechat
+    # 改用 broken users_col 才會觸發 exception
+    class BrokenUsers:
+        def find_one(self, *a, **kw):
+            raise ConnectionError("users col down")
+    r = admin_metrics.user_month_spend_ntd(BrokenDB(), BrokenUsers(), "x@y.com")
+    assert r["ok"] is False
+    assert "data_source_error" in r["reason"]
+
+
+def test_quota_hard_stop_fail_safe_blocks_normal_user(db, users_col):
+    """資料來源異常 + hard_stop · 一般同仁被擋 · 跳找 Champion"""
+    class BrokenDB:
+        @property
+        def transactions(self):
+            raise ConnectionError("Mongo down")
+    class BrokenUsers:
+        def find_one(self, *a, **kw):
+            raise ConnectionError("users col down")
+    r = admin_metrics.quota_check(
+        BrokenDB(), BrokenUsers(), "staff@x.com",
+        mode="hard_stop", user_soft_cap_ntd=1200.0,
+    )
+    assert r["allowed"] is False
+    assert r.get("fail_safe") is True
+    assert "資料來源" in r["reason"]
+    assert "Champion" in r["reason"]
+
+
+def test_quota_hard_stop_fail_safe_admin_passes(db, users_col):
+    """資料來源異常 + admin · 仍放行(維運不能斷)"""
+    class BrokenDB:
+        @property
+        def transactions(self):
+            raise ConnectionError("Mongo down")
+    class BrokenUsers:
+        def find_one(self, *a, **kw):
+            raise ConnectionError("users col down")
+    r = admin_metrics.quota_check(
+        BrokenDB(), BrokenUsers(), "admin@chengfu.local",
+        mode="hard_stop",
+        admin_allowlist={"admin@chengfu.local"},
+    )
+    assert r["allowed"] is True
+    assert r.get("override") is True
+
+
+def test_quota_soft_warn_fail_safe_passes_with_warning(db, users_col):
+    """資料來源異常 + soft_warn · 放行 + 警告(維持原邏輯)"""
+    class BrokenUsers:
+        def find_one(self, *a, **kw):
+            raise ConnectionError("Mongo flaky")
+    r = admin_metrics.quota_check(
+        db, BrokenUsers(), "staff@x.com",
+        mode="soft_warn", user_soft_cap_ntd=1200.0,
+    )
+    assert r["allowed"] is True
+    assert "warning" in r
+    assert "資料來源" in r["warning"]

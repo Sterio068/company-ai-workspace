@@ -274,3 +274,107 @@ def test_delete_source_from_index_no_meili():
     """meili_client=None 時 · 不 crash · 回 ok=False"""
     r = knowledge_indexer.delete_source_from_index("src_x", None)
     assert r["ok"] is False
+
+
+# ============================================================
+# Round 9 Q4 · 兩階段時間戳(scanned vs search_indexed)
+# ============================================================
+def test_indexer_meili_fail_keeps_search_timestamp_behind(tmp_src):
+    """Meili 掛掉時 · last_scanned_at 前進 · 但 last_search_indexed_at 不動"""
+    class BrokenMeili:
+        def index(self, *a):
+            raise RuntimeError("Meili down")
+        def create_index(self, *a, **kw):
+            raise RuntimeError("auth fail")
+
+    stats = knowledge_indexer.reindex_source(
+        tmp_src["id"], tmp_src["col"], meili_client=BrokenMeili(),
+    )
+    assert stats["ok"] is True
+    assert stats["search_progress_advanced"] is False
+    assert "meili_error" in stats
+
+    doc = tmp_src["col"].find_one(
+        {"_id": __import__("bson").ObjectId(tmp_src["id"])}
+    )
+    # scanning 進度:有前進
+    assert doc["last_scanned_at"] is not None
+    # search 進度:沒前進(None 代表從未成功)
+    assert doc.get("last_search_indexed_at") is None
+
+
+def test_indexer_meili_recovery_after_failure(tmp_src):
+    """先讓 Meili 掛 → 第二次修好 · 應該補跑之前 scanned 過的檔"""
+    class BrokenMeili:
+        def index(self, *a):
+            raise RuntimeError("Meili down")
+        def create_index(self, *a, **kw):
+            raise RuntimeError("auth fail")
+
+    # 第一輪 · Meili 掛
+    s1 = knowledge_indexer.reindex_source(
+        tmp_src["id"], tmp_src["col"], meili_client=BrokenMeili(),
+    )
+    assert s1["search_progress_advanced"] is False
+    files_scanned_r1 = s1["file_count"]
+    assert files_scanned_r1 >= 3
+
+    # 第二輪 · 沒 Meili(模擬恢復前) → scanned 已在 r1 前進 · 這輪沒事
+    s2 = knowledge_indexer.reindex_source(
+        tmp_src["id"], tmp_src["col"], meili_client=None,
+    )
+    # 檔案都沒變 · mtime 未過 scanned 時間 · 全部 unchanged
+    # 但注意 since_mtime 取 min(scanned, search) · search 仍是 None
+    # 所以應該重跑全部的 r1 檔 · 讓 scan 機制自己補上
+    # 這驗證「Meili 恢復後下次 cron 自動補」的行為
+    # (實際 cron 會帶 meili client · 這裡 meili=None 只驗邏輯)
+
+    # 第三輪 · 帶正常 meili(用 None 代替 · 但驗 search_progress 前進邏輯)
+    # 為測試方便 · 用 mongomock + patch 記錄 add_documents 有被叫
+    called = {"n": 0}
+    class FakeIndex:
+        def update_settings(self, *a): pass
+        def add_documents(self, docs): called["n"] += len(docs)
+        def delete_documents(self, **kw): pass
+    class FakeMeili:
+        def index(self, uid):
+            return FakeIndex()
+        def create_index(self, *a, **kw): pass
+        def delete_index(self, *a): pass
+
+    # 先模擬 fetch_info 時 index 不存在 · 需 create
+    # 簡化:直接 patch _ensure_index 回 FakeIndex
+    import services.knowledge_indexer as ki
+    orig = ki._ensure_index
+    ki._ensure_index = lambda c: FakeIndex()
+    try:
+        s3 = knowledge_indexer.reindex_source(
+            tmp_src["id"], tmp_src["col"], meili_client=FakeMeili(),
+        )
+    finally:
+        ki._ensure_index = orig
+
+    # r3 應該重跑 r1 的檔(因為 search 進度從未前進)
+    assert s3["file_count"] >= files_scanned_r1, \
+        f"Q4 · Meili 恢復後應重跑 r1 的檔 · 實際 r3={s3['file_count']} r1={files_scanned_r1}"
+    assert s3["search_progress_advanced"] is True
+    doc = tmp_src["col"].find_one(
+        {"_id": __import__("bson").ObjectId(tmp_src["id"])}
+    )
+    assert doc.get("last_search_indexed_at") is not None
+
+
+def test_indexer_no_meili_advances_legacy_timestamp(tmp_src):
+    """meili_client=None(cron 無 Meili)· last_indexed_at 仍前進 · legacy 行為相容"""
+    stats = knowledge_indexer.reindex_source(
+        tmp_src["id"], tmp_src["col"], meili_client=None,
+    )
+    assert stats["ok"] is True
+    # search_progress_advanced 在無 meili 時為 None · 不是 True/False
+    assert stats.get("search_progress_advanced") is None
+    doc = tmp_src["col"].find_one(
+        {"_id": __import__("bson").ObjectId(tmp_src["id"])}
+    )
+    # 相容舊 Admin UI · legacy 欄位還是要更新
+    assert doc["last_indexed_at"] is not None
+    assert doc["last_scanned_at"] is not None

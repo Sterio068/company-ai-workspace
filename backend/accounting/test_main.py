@@ -582,6 +582,51 @@ def test_knowledge_search_without_meili(client):
     assert body["hits"] == [] or "hits" in body
 
 
+# ============================================================
+# Round 9 Q3 · 未授權 Agent 完全看不到 source 名稱
+# ============================================================
+def test_knowledge_list_hides_sources_for_unauthorized_agent(client, tmp_source_dir):
+    """白名單 Agent 才看得到 source 名稱(reviewer Round 9)"""
+    r = client.post(
+        "/admin/sources",
+        json={
+            "name": "機密客戶合約",
+            "path": tmp_source_dir,
+            "agent_access": ["01", "03"],  # 只給投標 + 結案
+        },
+        headers=ADMIN_HEADERS,
+    )
+    sid = r.json()["id"]
+
+    # Agent #05(公關)叫 /knowledge/list → 不應看到「機密客戶合約」
+    r = client.get("/knowledge/list", headers={"X-Agent-Num": "05"})
+    assert r.status_code == 200
+    names = [s["name"] for s in r.json()["sources"]]
+    assert "機密客戶合約" not in names
+
+    # Agent #01(投標)在白名單 → 看得到
+    r = client.get("/knowledge/list", headers={"X-Agent-Num": "01"})
+    names = [s["name"] for s in r.json()["sources"]]
+    assert "機密客戶合約" in names
+
+    # 不帶 X-Agent-Num(一般同仁直接瀏覽)不過濾 · 照常看得到
+    r = client.get("/knowledge/list")
+    names = [s["name"] for s in r.json()["sources"]]
+    assert "機密客戶合約" in names
+
+
+def test_knowledge_list_empty_agent_access_visible_to_all(client, tmp_source_dir):
+    """agent_access=[] 表示「所有 Agent 可讀」· 任何 X-Agent-Num 都能看到"""
+    r = client.post(
+        "/admin/sources",
+        json={"name": "公開資料", "path": tmp_source_dir, "agent_access": []},
+        headers=ADMIN_HEADERS,
+    )
+    r = client.get("/knowledge/list", headers={"X-Agent-Num": "99"})
+    names = [s["name"] for s in r.json()["sources"]]
+    assert "公開資料" in names
+
+
 def test_design_recraft_moderation_rejected(client, monkeypatch):
     """Mock 422 · 驗 moderation 路徑回 rejected + 人話"""
     import main as main_mod

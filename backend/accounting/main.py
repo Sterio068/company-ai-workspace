@@ -1872,13 +1872,23 @@ def _path_is_excluded(rel_path: str, excludes: list[str]) -> bool:
 @app.get("/knowledge/list")
 def knowledge_list(source_id: Optional[str] = None, project: Optional[str] = None,
                    request: Request = None):
-    """列資料源 / 列某 source 下的 top-level 資料夾 / 列某資料夾下的檔"""
-    # 無 source_id · 回所有 enabled sources
+    """列資料源 / 列某 source 下的 top-level 資料夾 / 列某資料夾下的檔
+
+    Round 9 Q3 · 無 source_id 時依 X-Agent-Num 過濾
+    未授權 Agent 連 source 名稱都看不到(PR 公司客戶名單本身就是機敏)
+    """
+    # 無 source_id · 回所有 enabled sources(依 agent_access 過濾)
     if not source_id:
+        agent_num = (request.headers.get("X-Agent-Num") if request else None)
         docs = list(knowledge_sources_col.find(
             {"enabled": True},
-            {"_id": 1, "name": 1, "type": 1, "path": 1, "last_index_stats": 1},
+            {"_id": 1, "name": 1, "type": 1, "path": 1, "last_index_stats": 1,
+             "agent_access": 1},
         ))
+        # Q3 · agent_num 在白名單外的 source 完全藏起(連名字都看不到)
+        if agent_num:
+            docs = [d for d in docs
+                    if not d.get("agent_access") or agent_num in d["agent_access"]]
         return {
             "sources": [
                 {
@@ -2021,8 +2031,12 @@ def knowledge_search(
     source_id: Optional[str] = None,
     project: Optional[str] = None,
     limit: int = Query(default=20, ge=1, le=100),
+    request: Request = None,
 ):
-    """全文搜尋 · 經 Meili · source_id / project 可過濾"""
+    """全文搜尋 · 經 Meili · source_id / project 可過濾
+
+    Round 9 Q3 · 依 X-Agent-Num 過濾結果(連 hit 都不能透露)
+    """
     meili = _get_meili_client()
     if not meili:
         return {
@@ -2031,7 +2045,27 @@ def knowledge_search(
             "estimatedTotalHits": 0,
             "message": "搜尋服務未啟用 · 請管理員檢查 Meili",
         }
-    return knowledge_indexer.search(meili, q, source_id=source_id, project=project, limit=limit)
+    result = knowledge_indexer.search(meili, q, source_id=source_id, project=project, limit=limit)
+
+    # Q3 · 過濾 hit · 移除無權限的 source_id
+    agent_num = request.headers.get("X-Agent-Num") if request else None
+    if agent_num and isinstance(result, dict) and result.get("hits"):
+        # 找出此 agent 不能讀的 source_id 黑名單
+        forbidden_ids = set()
+        for src in knowledge_sources_col.find(
+            {"enabled": True, "agent_access": {"$exists": True, "$ne": []}},
+            {"_id": 1, "agent_access": 1},
+        ):
+            if agent_num not in src["agent_access"]:
+                forbidden_ids.add(str(src["_id"]))
+        if forbidden_ids:
+            original = len(result["hits"])
+            result["hits"] = [h for h in result["hits"]
+                              if h.get("source_id") not in forbidden_ids]
+            removed = original - len(result["hits"])
+            if removed:
+                result["filtered_for_agent"] = removed
+    return result
 
 
 # ============================================================

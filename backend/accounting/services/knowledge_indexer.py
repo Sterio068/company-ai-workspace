@@ -107,17 +107,42 @@ def reindex_source(source_id: str, knowledge_sources_col, meili_client=None) -> 
         return {"ok": False, "skipped": True, "reason": "已停用"}
 
     started = datetime.utcnow()
-    last_indexed = src.get("last_indexed_at")
-    # 兩個修:
-    # 1. TZ · datetime.utcnow() 是 naive · .timestamp() 會被當 local 轉 → 造成 8h 偏差
-    #    用 calendar.timegm(utctimetuple()) 正確轉 UTC naive → epoch
-    # 2. 精度 · mongomock / MongoDB 儲存 datetime 只保 ms · 而 st_mtime 有 ns/μs
-    #    file_mtime = int(st.st_mtime) 後再比 · 避免邊界誤判
+    # Round 9 Q4 · 兩階段時間戳(拆 scanned 與 search_indexed)
+    # - last_scanned_at · 最近一次抽字到本地(即使 Meili 掛也前進)
+    # - last_search_indexed_at · 最近一次成功寫入 Meili(搜尋可用)
+    #
+    # 增量 threshold 選擇:
+    # (a) 帶 Meili → 用 last_search_indexed_at · Meili 掛過的檔會被補跑
+    # (b) 不帶 Meili(cron 沒配 / test 模式) → 用 last_scanned_at 避免重跑抽字
+    # (c) 舊 source(只有 last_indexed_at legacy) → 當 scanned 的 fallback
+    last_scanned = src.get("last_scanned_at")
+    last_search = src.get("last_search_indexed_at")
+    legacy = src.get("last_indexed_at")
+
     import calendar
-    if isinstance(last_indexed, datetime):
-        since_mtime = calendar.timegm(last_indexed.utctimetuple())
+    def _to_epoch(dt):
+        if not isinstance(dt, datetime):
+            return 0
+        # TZ · datetime.utcnow() 是 naive · .timestamp() 被當 local 轉 → 8h 偏差
+        # 精度 · Mongo 存 datetime 只保 ms · st_mtime 有 μs · int 化對齊
+        return calendar.timegm(dt.utctimetuple())
+
+    if meili_client is not None:
+        # (a) 用 search 進度 · 這樣 Meili 掛過的檔會自動補跑
+        # 注意:若 last_search 從未成功 · 就從 0 開始(不 fallback 到 scanned/legacy)
+        #       這正是 Q4 的核心 · 強迫 Meili 補齊所有檔
+        if isinstance(last_search, datetime):
+            since_mtime = _to_epoch(last_search)
+        else:
+            since_mtime = 0  # Meili 從沒成功過 · 重跑所有檔
     else:
-        since_mtime = 0
+        # (b) 純抽字模式 · 用 scanned 避免重跑(沒 Meili 需求就不浪費抽字)
+        if isinstance(last_scanned, datetime):
+            since_mtime = _to_epoch(last_scanned)
+        elif isinstance(legacy, datetime):
+            since_mtime = _to_epoch(legacy)
+        else:
+            since_mtime = 0
 
     excludes = src.get("exclude_patterns", [])
     mime_white = src.get("mime_whitelist")  # None = 全收
@@ -221,6 +246,13 @@ def reindex_source(source_id: str, knowledge_sources_col, meili_client=None) -> 
             logger.error("[indexer] Meili final add_documents fail: %s", e)
             errors += len(docs_batch)
 
+    # Q4 · 三種情境:
+    # (a) 沒給 meili_client(cron / 測試沒配)· 不計搜尋進度 · 但 scanned 仍前進
+    # (b) 給了但 _ensure_index fail(key 錯 / Meili down)· scanned 前進但 search 不進
+    # (c) 正常 · 兩個都前進
+    meili_configured = meili_client is not None
+    meili_succeeded = bool(index) and (file_count == 0 or errors < file_count)
+
     stats = {
         "ok": True,
         "file_count": file_count,
@@ -232,21 +264,40 @@ def reindex_source(source_id: str, knowledge_sources_col, meili_client=None) -> 
             "too_big": skipped_too_big,
             "wrong_mime": skipped_mime,
         },
-        "meili": "indexed" if index else ("unavailable" if meili_error else "not_configured"),
+        "meili": "indexed" if meili_succeeded else ("unavailable" if meili_error else "not_configured"),
     }
     if meili_error:
         stats["meili_error"] = meili_error
-    # 寫回 source meta
-    knowledge_sources_col.update_one(
-        {"_id": src["_id"]},
-        {"$set": {
-            "last_indexed_at": datetime.utcnow(),
-            "last_index_stats": stats,
-        }},
-    )
+
+    # Q4 · 寫回兩階段時間戳
+    now = datetime.utcnow()
+    update_doc = {
+        "last_scanned_at": now,  # scanning 永遠前進(抽字已跑)
+        "last_index_stats": stats,
+    }
+    if meili_configured and meili_succeeded:
+        # 有 Meili 且寫成功 → search 進度前進
+        update_doc["last_search_indexed_at"] = now
+        update_doc["last_indexed_at"] = now  # legacy 同步
+        stats["search_progress_advanced"] = True
+    elif meili_configured and not meili_succeeded:
+        # 有 Meili 但掛了 → search 不進 · legacy 退守到舊 search 時間
+        stats["search_progress_advanced"] = False
+        update_doc["last_indexed_at"] = last_search or legacy
+        logger.warning(
+            "[indexer] source=%s · Meili 寫入失敗 · 下次 cron 會重試此批",
+            src["name"],
+        )
+    else:
+        # 沒給 Meili(cron/test 模式 · 不期望搜尋) → legacy 前進
+        update_doc["last_indexed_at"] = now
+        stats["search_progress_advanced"] = None  # 不適用
+
+    knowledge_sources_col.update_one({"_id": src["_id"]}, {"$set": update_doc})
     logger.info(
-        "[indexer] source=%s · files=%d · errors=%d · took=%.1fs",
+        "[indexer] source=%s · files=%d · errors=%d · took=%.1fs · meili=%s",
         src["name"], file_count, errors, stats["index_seconds"],
+        "ok" if meili_succeeded else ("n/a" if not meili_configured else "lag"),
     )
     return stats
 

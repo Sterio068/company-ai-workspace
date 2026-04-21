@@ -97,14 +97,22 @@ def price_ntd(model: str, tokens_in: int, tokens_out: int,
 
 
 def user_month_spend_ntd(db, users_col, email: str,
-                         usd_to_ntd: float = 32.5) -> float:
-    """某 user 本月已花 NT$"""
+                         usd_to_ntd: float = 32.5) -> dict:
+    """某 user 本月已花 NT$(Round 9 Q1:回 dict · 區分「真的 0」vs「查不到」)
+
+    Returns
+    -------
+    {"ok": True,  "spent_ntd": float, "user_found": True}   · 正常(含真實 0)
+    {"ok": False, "spent_ntd": 0.0, "reason": str}          · 資料來源異常
+    {"ok": True,  "spent_ntd": 0.0, "user_found": False}    · email 對不到 user(新使用者合理)
+    """
     if not email:
-        return 0.0
+        return {"ok": True, "spent_ntd": 0.0, "user_found": False, "reason": "no_email"}
     try:
         u = users_col.find_one({"email": email}, {"_id": 1})
         if not u:
-            return 0.0
+            return {"ok": True, "spent_ntd": 0.0, "user_found": False,
+                    "reason": "user_not_in_librechat"}
         uid = u["_id"]
         now = datetime.utcnow()
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -117,10 +125,11 @@ def user_month_spend_ntd(db, users_col, email: str,
             }},
         ]
         stats = list(db.transactions.aggregate(pipeline))
-        return sum(price_ntd(s["_id"] or "", s.get("tin", 0) or 0,
-                             s.get("tout", 0) or 0, usd_to_ntd) for s in stats)
-    except Exception:
-        return 0.0
+        spent = sum(price_ntd(s["_id"] or "", s.get("tin", 0) or 0,
+                              s.get("tout", 0) or 0, usd_to_ntd) for s in stats)
+        return {"ok": True, "spent_ntd": spent, "user_found": True}
+    except Exception as e:
+        return {"ok": False, "spent_ntd": 0.0, "reason": f"data_source_error: {type(e).__name__}: {e}"}
 
 
 # ============================================================
@@ -282,6 +291,11 @@ def quota_check(db, users_col, email: Optional[str],
     """
     Launcher 送對話前先打 · mode=hard_stop 時 pct>=100 回 allowed=False
     管理員與 override 白名單永遠 allowed=True
+
+    Round 9 Q1 · fail-safe 策略(資料來源異常時):
+    - admin / override 白名單 → 仍放行(維運不能斷)
+    - 一般同仁 → 在 hard_stop 模式擋送 · 跳「資料來源暫時異常 · 請找 Champion」
+    - soft_warn / off 模式維持原行為(只警告)
     """
     override_emails = override_emails or set()
     admin_allowlist = admin_allowlist or set()
@@ -293,8 +307,32 @@ def quota_check(db, users_col, email: Optional[str],
     if email in override_emails or email in admin_allowlist:
         return {"allowed": True, "mode": mode, "override": True}
 
-    spent = user_month_spend_ntd(db, users_col, email, usd_to_ntd)
+    spend_result = user_month_spend_ntd(db, users_col, email, usd_to_ntd)
     cap = user_soft_cap_ntd
+    spent = spend_result["spent_ntd"]
+
+    # ========== Q1 fail-safe ==========
+    # 資料來源異常 = 不可信任「0 元」· 區分 mode 處理
+    if not spend_result.get("ok"):
+        if mode == "hard_stop":
+            return {
+                "allowed": False,
+                "mode": mode,
+                "email": email,
+                "reason": "預算資料來源暫時異常 · 為保護公司預算暫停送出 · 請找 Champion 或 Sterio 放行",
+                "data_source_error": spend_result.get("reason"),
+                "fail_safe": True,
+            }
+        # soft_warn / 其他 → 放行但警告
+        return {
+            "allowed": True,
+            "mode": mode,
+            "email": email,
+            "warning": "⚠ 預算資料來源異常 · Champion 已通知檢查",
+            "data_source_error": spend_result.get("reason"),
+        }
+    # ===================================
+
     pct = (spent / cap * 100) if cap else 0
     out = {
         "allowed": True,
