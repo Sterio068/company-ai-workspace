@@ -61,6 +61,29 @@ head -20 /tmp/sse-before.jsonl  # 確認有 data: 事件
 > **規則:絕不在 production 直接升版** · 升版必須先在 sandbox 跑完 §5-§6 全套契約測試
 > sandbox 與 production **完全不共用** · DB / port / volume 都隔離
 
+### ⚠️ Mac mini 記憶體模式(Round 10 reviewer)
+
+**24GB Mac mini 同時跑 production + sandbox 會爆:**
+
+```
+production:  librechat 4GB + mongo 1GB + meili 0.5GB + accounting 0.5GB + nginx 0.2GB = ~6.2GB
+sandbox:     librechat 3GB + mongo 0.5GB + meili 0.3GB + accounting 0.3GB + nginx 0.1GB = ~4.2GB
+Docker Desktop overhead: ~2GB
+macOS + apps: ~8GB
+合計: ~20.4GB · 24GB 只剩 3.6GB buffer · swap 頻繁 · Launcher 會卡
+```
+
+**升版窗口 3 選 1:**
+
+| 模式 | 何時 | 做法 | 同仁影響 |
+|---|---|---|---|
+| 🟢 **夜間模式** | 週五 22:00 ~ 週六 02:00 | `docker compose stop librechat` + 啟 sandbox + 測完 down + 再 start production | 週末 4 小時服務中斷 · 事先 Slack 通知 |
+| 🟡 **外部機模式** | 任何時段 | 在 Sterio 自己的 Mac / 雲端 VM 跑 sandbox(不占承富 Mac mini) | 承富零影響 · 但 Sterio 要自備機 |
+| 🔴 **雙跑模式** | 只做 30 分鐘契約測試 | 接受 swap · 只確認 sandbox 起得來 · 不做負載測 | 升版當下同仁可能卡 30 分鐘 |
+
+**預設:** 夜間模式 · 週五 Slack 通知「週五晚 10 點到六凌晨 2 點維護」
+**禁止:** 工作日白天啟 sandbox(除非預先全員停用 AI 半小時)
+
 ### 0. 啟動 sandbox(待升版本)
 ```bash
 # 設你想測的 LibreChat 版本(GitHub Releases 看)
