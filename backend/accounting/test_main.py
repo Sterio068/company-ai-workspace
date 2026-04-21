@@ -373,6 +373,214 @@ def test_design_recraft_success_mocked(client, monkeypatch):
     assert len(body["images"]) == 3  # Q2 · 老闆要 3 張
 
 
+# ============================================================
+# G · 多來源知識庫(V1.1-SPEC §E · 老闆 Q3)
+# ============================================================
+import tempfile, os as _os
+
+ADMIN_HEADERS = {"X-User-Email": "sterio068@gmail.com"}
+
+
+@pytest.fixture
+def tmp_source_dir():
+    """在 /tmp/chengfu-test-sources 下建臨時目錄 · 路徑白名單內"""
+    _os.makedirs("/tmp/chengfu-test-sources", exist_ok=True)
+    d = tempfile.mkdtemp(dir="/tmp/chengfu-test-sources")
+    # 建幾個測試檔
+    _os.makedirs(_os.path.join(d, "projects", "海廢案"), exist_ok=True)
+    with open(_os.path.join(d, "projects", "海廢案", "建議書.txt"), "w") as f:
+        f.write("承富創意 · 2024 環保署海洋廢棄物專案建議書")
+    with open(_os.path.join(d, ".DS_Store"), "w") as f:
+        f.write("mac system file")
+    with open(_os.path.join(d, "readme.md"), "w") as f:
+        f.write("測試來源 root")
+    yield d
+    import shutil
+    shutil.rmtree(d, ignore_errors=True)
+
+
+def test_knowledge_source_create_and_list(client, tmp_source_dir):
+    """建 source + list · 驗路徑白名單 + readable"""
+    # 無 admin header → 403
+    r = client.post("/admin/sources", json={"name": "x", "path": tmp_source_dir})
+    assert r.status_code == 403
+
+    # 建立 source
+    r = client.post(
+        "/admin/sources",
+        json={
+            "name": "測試來源",
+            "type": "local",
+            "path": tmp_source_dir,
+            "max_size_mb": 10,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    sid = r.json()["id"]
+    assert r.json()["validation"]["path_exists"] is True
+
+    # list 應該看得到
+    r = client.get("/admin/sources", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    sources = r.json()
+    assert any(s["id"] == sid for s in sources)
+    mine = [s for s in sources if s["id"] == sid][0]
+    assert mine["name"] == "測試來源"
+    assert mine["enabled"] is True
+
+
+def test_knowledge_source_reject_bad_path(client):
+    """路徑不在白名單 · 400"""
+    r = client.post(
+        "/admin/sources",
+        json={"name": "bad", "path": "/etc/passwd-like"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+
+
+def test_knowledge_source_reject_nonexistent(client):
+    """路徑白名單內但不存在 · 400"""
+    r = client.post(
+        "/admin/sources",
+        json={"name": "nope", "path": "/tmp/chengfu-test-sources/definitely-not-exist-xyz"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+
+
+def test_knowledge_source_reject_duplicate_path(client, tmp_source_dir):
+    """同路徑兩次 · 409"""
+    body = {"name": "dup1", "path": tmp_source_dir}
+    r1 = client.post("/admin/sources", json=body, headers=ADMIN_HEADERS)
+    assert r1.status_code == 200
+    r2 = client.post("/admin/sources", json={**body, "name": "dup2"},
+                     headers=ADMIN_HEADERS)
+    assert r2.status_code == 409
+
+
+def test_knowledge_source_patch_and_delete(client, tmp_source_dir):
+    """patch 啟用/停用 + delete"""
+    r = client.post(
+        "/admin/sources",
+        json={"name": "patch test", "path": tmp_source_dir},
+        headers=ADMIN_HEADERS,
+    )
+    sid = r.json()["id"]
+
+    # patch · 停用
+    r = client.patch(f"/admin/sources/{sid}", json={"enabled": False},
+                     headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+
+    # reindex disabled source → 400
+    r = client.post(f"/admin/sources/{sid}/reindex", headers=ADMIN_HEADERS)
+    assert r.status_code == 400
+
+    # delete
+    r = client.delete(f"/admin/sources/{sid}", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+
+    # delete 再一次 → 404
+    r = client.delete(f"/admin/sources/{sid}", headers=ADMIN_HEADERS)
+    assert r.status_code == 404
+
+
+def test_knowledge_list_public(client, tmp_source_dir):
+    """/knowledge/list · 同仁可叫 · 列 enabled sources"""
+    r = client.post(
+        "/admin/sources",
+        json={"name": "list test", "path": tmp_source_dir},
+        headers=ADMIN_HEADERS,
+    )
+    sid = r.json()["id"]
+
+    # 列所有 sources(無 source_id)
+    r = client.get("/knowledge/list")
+    assert r.status_code == 200
+    body = r.json()
+    assert "sources" in body
+    assert any(s["id"] == sid for s in body["sources"])
+
+    # 列某 source 的 top-level
+    r = client.get(f"/knowledge/list?source_id={sid}")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["source_id"] == sid
+    # projects/ 與 readme.md 應該在 · .DS_Store 要被排除
+    names = [e["name"] for e in body["entries"]]
+    assert "projects" in names
+    assert "readme.md" in names
+    assert ".DS_Store" not in names
+
+
+def test_knowledge_read_path_traversal_blocked(client, tmp_source_dir):
+    """../../../etc/passwd 被擋"""
+    r = client.post(
+        "/admin/sources",
+        json={"name": "traversal test", "path": tmp_source_dir},
+        headers=ADMIN_HEADERS,
+    )
+    sid = r.json()["id"]
+
+    # 合法 read
+    r = client.get(f"/knowledge/read?source_id={sid}&rel_path=readme.md")
+    assert r.status_code == 200
+    assert r.json()["filename"] == "readme.md"
+    assert r.json()["size"] > 0
+
+    # 越界 read
+    r = client.get(f"/knowledge/read?source_id={sid}&rel_path=../../etc/passwd")
+    assert r.status_code == 403
+
+    # excluded pattern 擋
+    r = client.get(f"/knowledge/read?source_id={sid}&rel_path=.DS_Store")
+    assert r.status_code == 403
+
+
+def test_knowledge_agent_access_whitelist(client, tmp_source_dir):
+    """source 有 agent_access 白名單 · 非清單 Agent 擋"""
+    r = client.post(
+        "/admin/sources",
+        json={
+            "name": "whitelist test",
+            "path": tmp_source_dir,
+            "agent_access": ["01", "03"],  # 只給招標 + 結案
+        },
+        headers=ADMIN_HEADERS,
+    )
+    sid = r.json()["id"]
+
+    # Agent #05(公關)沒在清單 → 403
+    r = client.get(
+        f"/knowledge/read?source_id={sid}&rel_path=readme.md",
+        headers={"X-Agent-Num": "05"},
+    )
+    assert r.status_code == 403
+
+    # Agent #01(招標)在清單 → 200
+    r = client.get(
+        f"/knowledge/read?source_id={sid}&rel_path=readme.md",
+        headers={"X-Agent-Num": "01"},
+    )
+    assert r.status_code == 200
+
+    # 沒帶 X-Agent-Num(同仁直接叫)不擋
+    r = client.get(f"/knowledge/read?source_id={sid}&rel_path=readme.md")
+    assert r.status_code == 200
+
+
+def test_knowledge_search_stub(client):
+    """E-1 階段 /knowledge/search 回 stub · 不 crash 就 OK"""
+    r = client.get("/knowledge/search?q=建議書")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["query"] == "建議書"
+    assert body["hits"] == []
+    assert "E-2" in body["message"]
+
+
 def test_design_recraft_moderation_rejected(client, monkeypatch):
     """Mock 422 · 驗 moderation 路徑回 rejected + 人話"""
     import main as main_mod

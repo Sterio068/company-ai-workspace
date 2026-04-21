@@ -44,6 +44,8 @@ projects_col = db.projects
 feedback_col = db.feedback
 audit_col = db.audit_log
 convos_col = db.conversations  # LibreChat 的 collection · 只讀
+knowledge_sources_col = db.knowledge_sources  # V1.1 §E · 多來源知識庫
+knowledge_audit_col = db.knowledge_audit      # /knowledge/read audit trail
 
 # ============================================================
 # Lifespan (FastAPI ≥ 0.93 推薦取代 on_event)
@@ -67,6 +69,10 @@ async def lifespan(app: FastAPI):
     transactions_col.create_index([("project_id", 1)])
     invoices_col.create_index([("date", -1)])
     invoices_col.create_index([("status", 1), ("date", -1)])
+    knowledge_sources_col.create_index([("enabled", 1), ("created_at", -1)])
+    knowledge_sources_col.create_index([("path", 1)], unique=True)
+    knowledge_audit_col.create_index([("created_at", -1)])
+    knowledge_audit_col.create_index([("user", 1), ("source_id", 1)])
     try:
         db.conversations.create_index([("chengfu_summarized_at", -1)])
     except Exception:
@@ -1656,6 +1662,359 @@ def revert_agent_prompt(agent_num: str, _admin: str = Depends(require_admin)):
 
 
 # ============================================================
+# G · 多來源知識庫(V1.1-SPEC §E · 老闆 Q3 · 不只 NAS)
+# E-1:knowledge_sources collection + Admin CRUD + 公開讀取 API
+# E-2:多格式抽字 + Meili 索引 cron(另一批)
+# E-3:前端 Admin UI + 知識庫 view(另一批)
+# ============================================================
+import fnmatch
+
+# 允許掛載的 source root 白名單(防呆)· 不在清單上的絕對路徑建不起來
+_ALLOWED_SOURCE_ROOTS = [
+    p.strip() for p in os.getenv(
+        "KNOWLEDGE_ALLOWED_ROOTS",
+        "/Volumes,/Users,/mnt,/data,/tmp/chengfu-test-sources"
+    ).split(",") if p.strip()
+]
+
+
+def _validate_source_path(abs_path: str):
+    """路徑必須在允許 root 之下 · 防止意外把 /etc 或 /root 索引進去"""
+    abs_path = os.path.abspath(abs_path)
+    allowed = any(
+        abs_path == root or abs_path.startswith(root.rstrip("/") + "/")
+        for root in _ALLOWED_SOURCE_ROOTS
+    )
+    if not allowed:
+        raise HTTPException(
+            400,
+            f"路徑 {abs_path} 不在允許清單:{_ALLOWED_SOURCE_ROOTS} · "
+            "請改環境變數 KNOWLEDGE_ALLOWED_ROOTS",
+        )
+    return abs_path
+
+
+class KnowledgeSource(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    type: Literal["smb", "local", "symlink", "usb"] = "local"
+    path: str = Field(min_length=1)
+    exclude_patterns: list[str] = [
+        "*.lock", "~$*", ".DS_Store", "Thumbs.db", ".git/*",
+    ]
+    agent_access: list[str] = []  # 空=所有 Agent 可讀
+    mime_whitelist: Optional[list[str]] = None  # null=全收
+    max_size_mb: int = Field(default=50, ge=1, le=500)
+
+
+class KnowledgeSourcePatch(BaseModel):
+    name: Optional[str] = None
+    enabled: Optional[bool] = None
+    exclude_patterns: Optional[list[str]] = None
+    agent_access: Optional[list[str]] = None
+    mime_whitelist: Optional[list[str]] = None
+    max_size_mb: Optional[int] = Field(default=None, ge=1, le=500)
+
+
+def _serialize_source(doc: dict) -> dict:
+    """MongoDB doc → JSON · ObjectId & datetime → str"""
+    if not doc:
+        return {}
+    out = dict(doc)
+    out["id"] = str(out.pop("_id"))
+    for k in ("created_at", "updated_at", "last_indexed_at"):
+        v = out.get(k)
+        if isinstance(v, datetime):
+            out[k] = v.isoformat()
+    return out
+
+
+@app.get("/admin/sources")
+def list_sources(_admin: str = Depends(require_admin)):
+    """列所有資料源 · 包含 disabled(Admin UI 才看到 disabled)"""
+    docs = list(knowledge_sources_col.find({}).sort("created_at", -1))
+    return [_serialize_source(d) for d in docs]
+
+
+@app.post("/admin/sources")
+def create_source(src: KnowledgeSource, admin_email: str = Depends(require_admin)):
+    """建一個資料源 · 驗路徑存在且在 allowed roots 之下。
+
+    回 {id, validation} · 建立後 cron 下次會自動 reindex
+    (E-2 會加 reindex_source_async 觸發即時索引)
+    """
+    abs_path = _validate_source_path(src.path)
+    if not os.path.exists(abs_path):
+        raise HTTPException(
+            400,
+            f"路徑不存在或容器無法 mount:{abs_path} · "
+            "若是 NAS 請先 mount 再建 source",
+        )
+    if not os.access(abs_path, os.R_OK):
+        raise HTTPException(403, f"路徑無讀取權限:{abs_path}")
+    # 避免重複路徑
+    if knowledge_sources_col.find_one({"path": abs_path}):
+        raise HTTPException(409, f"路徑已登記為資料源:{abs_path}")
+
+    doc = src.model_dump()
+    doc.update({
+        "enabled": True,
+        "path": abs_path,
+        "last_indexed_at": None,
+        "last_index_stats": None,
+        "created_by": admin_email,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    })
+    r = knowledge_sources_col.insert_one(doc)
+    sid = str(r.inserted_id)
+    logger.info("[knowledge] source created: %s (%s) by %s", sid, abs_path, admin_email)
+    return {
+        "id": sid,
+        "validation": {"path_exists": True, "readable": True, "abs_path": abs_path},
+    }
+
+
+@app.patch("/admin/sources/{source_id}")
+def update_source(
+    source_id: str,
+    patch: KnowledgeSourcePatch,
+    _admin: str = Depends(require_admin),
+):
+    """更新 source · 路徑不可改(太容易亂 index)· 要換 path 請刪再建"""
+    try:
+        _id = ObjectId(source_id)
+    except Exception:
+        raise HTTPException(400, "source_id 格式錯誤")
+    updates = {k: v for k, v in patch.model_dump(exclude_unset=True).items() if v is not None}
+    if not updates:
+        raise HTTPException(400, "沒有可更新欄位")
+    updates["updated_at"] = datetime.utcnow()
+    r = knowledge_sources_col.update_one({"_id": _id}, {"$set": updates})
+    if r.matched_count == 0:
+        raise HTTPException(404, "資料源不存在")
+    return {"ok": True, "updated": r.modified_count}
+
+
+@app.delete("/admin/sources/{source_id}")
+def delete_source(source_id: str, _admin: str = Depends(require_admin)):
+    """刪 source · E-2 會連帶從 Meili 清此 source 的文件"""
+    try:
+        _id = ObjectId(source_id)
+    except Exception:
+        raise HTTPException(400, "source_id 格式錯誤")
+    doc = knowledge_sources_col.find_one_and_delete({"_id": _id})
+    if not doc:
+        raise HTTPException(404, "資料源不存在")
+    # E-2 會實作 Meili 清除 · 這裡先 stub
+    logger.info("[knowledge] source deleted: %s · Meili cleanup queued (E-2)", source_id)
+    return {"ok": True, "name": doc.get("name")}
+
+
+@app.post("/admin/sources/{source_id}/reindex")
+def reindex_source(source_id: str, _admin: str = Depends(require_admin)):
+    """手動觸發 reindex · E-2 會接上真正索引 · 這裡先更新 last_indexed_at stub"""
+    try:
+        _id = ObjectId(source_id)
+    except Exception:
+        raise HTTPException(400, "source_id 格式錯誤")
+    src = knowledge_sources_col.find_one({"_id": _id})
+    if not src:
+        raise HTTPException(404, "資料源不存在")
+    if not src.get("enabled"):
+        raise HTTPException(400, "資料源已停用")
+    # E-2 stub · 回 queued
+    logger.info("[knowledge] reindex queued for %s (E-2 will run actual indexer)", source_id)
+    return {
+        "status": "queued",
+        "source_id": source_id,
+        "message": "已排入索引工作(E-2 功能上線後即時執行 · 目前每日 02:00 cron)",
+    }
+
+
+# ------------------------------------------------------------
+# 公開讀取 API · 同仁 + Agent 都可叫
+# ------------------------------------------------------------
+def _path_is_excluded(rel_path: str, excludes: list[str]) -> bool:
+    """fnmatch pattern 檢查 · 包含檔名與路徑層級"""
+    name = os.path.basename(rel_path)
+    for pat in excludes or []:
+        if fnmatch.fnmatch(name, pat) or fnmatch.fnmatch(rel_path, pat):
+            return True
+        # 資料夾 pattern(結尾 /*)也比對 parent
+        if pat.endswith("/*") and rel_path.startswith(pat[:-2].lstrip("/") + "/"):
+            return True
+    return False
+
+
+@app.get("/knowledge/list")
+def knowledge_list(source_id: Optional[str] = None, project: Optional[str] = None,
+                   request: Request = None):
+    """列資料源 / 列某 source 下的 top-level 資料夾 / 列某資料夾下的檔"""
+    # 無 source_id · 回所有 enabled sources
+    if not source_id:
+        docs = list(knowledge_sources_col.find(
+            {"enabled": True},
+            {"_id": 1, "name": 1, "type": 1, "path": 1, "last_index_stats": 1},
+        ))
+        return {
+            "sources": [
+                {
+                    "id": str(d["_id"]),
+                    "name": d["name"],
+                    "type": d["type"],
+                    "file_count": (d.get("last_index_stats") or {}).get("file_count", 0),
+                }
+                for d in docs
+            ]
+        }
+
+    try:
+        _id = ObjectId(source_id)
+    except Exception:
+        raise HTTPException(400, "source_id 格式錯誤")
+    src = knowledge_sources_col.find_one({"_id": _id, "enabled": True})
+    if not src:
+        raise HTTPException(404, "資料源不存在或已停用")
+
+    # Agent 存取權限檢查
+    agent_num = (request.headers.get("X-Agent-Num") if request else None)
+    if agent_num and src.get("agent_access") and agent_num not in src["agent_access"]:
+        raise HTTPException(403, f"此資料源未開放給 #{agent_num} 助手")
+
+    base = src["path"]
+    target = os.path.abspath(os.path.join(base, project)) if project else base
+    # path traversal 防護
+    if not target.startswith(os.path.abspath(base)):
+        raise HTTPException(403, "路徑越界")
+    if not os.path.isdir(target):
+        raise HTTPException(404, "資料夾不存在")
+
+    excludes = src.get("exclude_patterns", [])
+    entries = []
+    try:
+        for name in sorted(os.listdir(target)):
+            if name.startswith("."):
+                continue
+            rel = os.path.relpath(os.path.join(target, name), base)
+            if _path_is_excluded(rel, excludes):
+                continue
+            full = os.path.join(target, name)
+            is_dir = os.path.isdir(full)
+            entries.append({
+                "name": name,
+                "rel_path": rel,
+                "is_dir": is_dir,
+                "size": os.path.getsize(full) if not is_dir else None,
+            })
+    except PermissionError:
+        raise HTTPException(403, "資料夾讀取權限不足")
+
+    return {
+        "source_id": source_id,
+        "source_name": src["name"],
+        "rel_path": project or "",
+        "entries": entries,
+    }
+
+
+@app.get("/knowledge/read")
+def knowledge_read(
+    source_id: str,
+    rel_path: str,
+    request: Request,
+):
+    """讀某 source 內某檔的 metadata + 前 2000 字預覽。
+
+    E-1 只做 metadata(size/modified/mime 猜測)· 真正抽字在 E-2 做。
+    安全:path traversal 強制 · agent_access 白名單 · audit log 寫進 knowledge_audit
+    """
+    try:
+        _id = ObjectId(source_id)
+    except Exception:
+        raise HTTPException(400, "source_id 格式錯誤")
+    src = knowledge_sources_col.find_one({"_id": _id, "enabled": True})
+    if not src:
+        raise HTTPException(404, "資料源不存在或已停用")
+
+    # Agent 存取權限
+    agent_num = request.headers.get("X-Agent-Num")
+    if agent_num and src.get("agent_access") and agent_num not in src["agent_access"]:
+        raise HTTPException(403, f"此資料源未開放給 #{agent_num} 助手")
+
+    # path traversal 防護
+    base = os.path.abspath(src["path"])
+    abs_path = os.path.abspath(os.path.join(base, rel_path))
+    if not abs_path.startswith(base + os.sep) and abs_path != base:
+        raise HTTPException(403, "路徑越界")
+    if not os.path.isfile(abs_path):
+        raise HTTPException(404, "檔案不存在或不是檔案")
+
+    # exclude pattern 檢查(避免偷讀 .DS_Store 等)
+    if _path_is_excluded(rel_path, src.get("exclude_patterns", [])):
+        raise HTTPException(403, "此檔案在排除清單內")
+
+    # 檔案大小檢查
+    size = os.path.getsize(abs_path)
+    max_size = src.get("max_size_mb", 50) * 1024 * 1024
+    if size > max_size:
+        raise HTTPException(413, f"檔案超過 {src.get('max_size_mb', 50)}MB 上限")
+
+    # Audit log(誰讀了什麼檔 · 配合 PDPA)
+    user_email = (request.headers.get("X-User-Email") or "").strip().lower() or None
+    try:
+        knowledge_audit_col.insert_one({
+            "user": user_email,
+            "agent": agent_num,
+            "source_id": source_id,
+            "rel_path": rel_path,
+            "size": size,
+            "created_at": datetime.utcnow(),
+        })
+    except Exception as e:
+        logger.warning("[knowledge] audit log fail: %s", e)
+
+    # E-1 只回 metadata · E-2 會接 extract(pdf/docx/...)
+    import mimetypes
+    mime, _ = mimetypes.guess_type(abs_path)
+    return {
+        "source_id": source_id,
+        "source_name": src["name"],
+        "rel_path": rel_path,
+        "filename": os.path.basename(abs_path),
+        "size": size,
+        "mime": mime or "application/octet-stream",
+        "modified_at": datetime.fromtimestamp(
+            os.path.getmtime(abs_path)
+        ).isoformat(),
+        "content_preview": None,  # E-2 會填 pdf/docx 抽字前 2000 字
+        "extract_status": "pending_e2",  # 告知前端 E-2 未上線
+    }
+
+
+@app.get("/knowledge/search")
+def knowledge_search(
+    q: str = Query(min_length=2),
+    source_id: Optional[str] = None,
+    project: Optional[str] = None,
+    limit: int = Query(default=20, ge=1, le=100),
+    request: Request = None,
+):
+    """全文搜尋 · E-1 回 stub(empty hits + message)· E-2 接真正 Meili"""
+    # 確認 q 有意義 · 回友善結構讓前端不會 crash
+    return {
+        "query": q,
+        "hits": [],
+        "estimatedTotalHits": 0,
+        "message": "知識庫索引尚未建立(E-2 功能) · 目前只能用 /knowledge/list 瀏覽",
+        "filters_applied": {
+            "source_id": source_id,
+            "project": project,
+            "limit": limit,
+        },
+    }
+
+
+# ============================================================
 # Health
 # ============================================================
 @app.get("/healthz")
@@ -1666,6 +2025,7 @@ def health():
         "accounts": accounts_col.count_documents({}),
         "projects": projects_col.count_documents({}),
         "feedback": feedback_col.count_documents({}),
+        "knowledge_sources": knowledge_sources_col.count_documents({"enabled": True}),
     }
 
 
