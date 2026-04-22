@@ -164,6 +164,18 @@ async def lifespan(app: FastAPI):
         db.scheduled_posts.create_index([("author", 1), ("created_at", -1)])
     except Exception as e:
         logger.warning("[index] scheduled_posts: %s", e)
+    # Feature #7 · site_surveys index
+    try:
+        db.site_surveys.create_index([("owner", 1), ("created_at", -1)])
+        db.site_surveys.create_index([("project_id", 1), ("created_at", -1)])
+        # TTL 2 年(活動週期 + 後續復盤)· 過期自動清
+        db.site_surveys.create_index(
+            [("created_at", 1)],
+            expireAfterSeconds=2 * 365 * 24 * 3600,
+            name="ttl_2y",
+        )
+    except Exception as e:
+        logger.warning("[index] site_surveys: %s", e)
     # Feature #6 · media_contacts email unique(R21#4 · partial 排除空字串)
     try:
         db.media_contacts.create_index(
@@ -762,6 +774,12 @@ app.include_router(_media_router.router)
 # ============================================================
 from routers import social as _social_router
 app.include_router(_social_router.router)
+
+# ============================================================
+# Site Survey · v1.2 Feature #7 · 場勘 PWA + Claude Vision
+# ============================================================
+from routers import site_survey as _site_survey_router
+app.include_router(_site_survey_router.router)
 
 # ============================================================
 # G · 多來源知識庫 · ROADMAP §11.1 B-6 已抽到 routers/knowledge.py
