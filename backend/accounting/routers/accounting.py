@@ -23,10 +23,19 @@ from typing import Optional, Literal
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from bson import ObjectId
+from bson.errors import InvalidId
 
 
 router = APIRouter(tags=["accounting"])
 logger = logging.getLogger("chengfu")
+
+
+def _tx_oid(tx_id: str) -> ObjectId:
+    """R15 · transaction ObjectId 統一解析 · bad id 回 400 而非 500"""
+    try:
+        return ObjectId(tx_id)
+    except (InvalidId, TypeError):
+        raise HTTPException(400, "tx_id 格式錯誤")
 
 
 # ============================================================
@@ -202,8 +211,11 @@ def list_transactions(
 
 @router.delete("/transactions/{tx_id}")
 def delete_transaction(tx_id: str):
+    """R15 · 用 _tx_oid · 補 404"""
     from main import transactions_col
-    r = transactions_col.delete_one({"_id": ObjectId(tx_id)})
+    r = transactions_col.delete_one({"_id": _tx_oid(tx_id)})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "交易不存在")
     return {"deleted": r.deleted_count}
 
 

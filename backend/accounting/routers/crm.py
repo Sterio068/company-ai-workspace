@@ -29,6 +29,14 @@ router = APIRouter(tags=["crm"])
 logger = logging.getLogger("chengfu")
 
 
+def _lead_oid(lead_id: str) -> ObjectId:
+    """R14#2 · 統一 ObjectId 解析 · 不被 Mongo 寫入錯誤誤吞成 400"""
+    try:
+        return ObjectId(lead_id)
+    except (InvalidId, TypeError):
+        raise HTTPException(400, "lead_id 格式錯誤")
+
+
 # ============================================================
 # Models
 # ============================================================
@@ -105,11 +113,7 @@ def update_lead(lead_id: str, updates: dict):
 
     update["updated_at"] = datetime.utcnow()
 
-    try:
-        oid = ObjectId(lead_id)
-    except (InvalidId, TypeError):
-        raise HTTPException(400, "lead_id 格式錯誤")
-
+    oid = _lead_oid(lead_id)
     old = db.crm_leads.find_one({"_id": oid}, {"stage": 1})
     if not old:
         raise HTTPException(404, "lead 不存在")
@@ -131,22 +135,29 @@ def update_lead(lead_id: str, updates: dict):
 
 @router.delete("/crm/leads/{lead_id}")
 def delete_lead(lead_id: str):
+    """R14#2 · 用 _lead_oid · 補 404"""
     from main import db
-    r = db.crm_leads.delete_one({"_id": ObjectId(lead_id)})
+    r = db.crm_leads.delete_one({"_id": _lead_oid(lead_id)})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "lead 不存在")
     return {"deleted": r.deleted_count}
 
 
 @router.post("/crm/leads/{lead_id}/notes")
 def add_lead_note(lead_id: str, note: str, by: Optional[str] = None):
-    """加觸點 · 電話 / 會議 / Email 紀錄"""
+    """加觸點 · 電話 / 會議 / Email 紀錄
+    R14#2 · 用 _lead_oid · 防 lead 不存在仍回 200(false success)
+    """
     from main import db
-    db.crm_leads.update_one(
-        {"_id": ObjectId(lead_id)},
+    r = db.crm_leads.update_one(
+        {"_id": _lead_oid(lead_id)},
         {"$push": {"notes": {
             "text": note, "at": datetime.utcnow().isoformat(), "by": by,
         }},
          "$set": {"updated_at": datetime.utcnow()}}
     )
+    if r.matched_count == 0:
+        raise HTTPException(404, "lead 不存在")
     return {"added": True}
 
 

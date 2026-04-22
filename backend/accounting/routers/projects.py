@@ -85,17 +85,23 @@ def create_project(p: Project):
 
 @router.put("/projects/{project_id}")
 def update_project(project_id: str, p: Project):
+    """R14#1 · 用 _project_oid · 補 404 · bad id 不再 500"""
     from main import projects_col
     data = p.model_dump(exclude_unset=True)  # py-review #1 · pydantic v2 一致
     data["updated_at"] = datetime.utcnow()
-    r = projects_col.update_one({"_id": ObjectId(project_id)}, {"$set": data})
+    r = projects_col.update_one({"_id": _project_oid(project_id)}, {"$set": data})
+    if r.matched_count == 0:
+        raise HTTPException(404, "專案不存在")
     return {"updated": r.modified_count}
 
 
 @router.delete("/projects/{project_id}")
 def delete_project(project_id: str):
+    """R14#1 · 用 _project_oid · 補 404"""
     from main import projects_col
-    r = projects_col.delete_one({"_id": ObjectId(project_id)})
+    r = projects_col.delete_one({"_id": _project_oid(project_id)})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "專案不存在")
     return {"deleted": r.deleted_count}
 
 

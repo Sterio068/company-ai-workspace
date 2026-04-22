@@ -300,10 +300,23 @@ Week 11+ · v2.0(長遠)
 > 修了的:Dockerfile orchestrator / .dict() / uptime-kuma digest / pymupdf 1.25 / N+1 cache /
 > preferences auth / tender-alerts auth / slowapi rate limit / Meili filter 注入 / except logger
 
-### 11.1 main.py 拆 routers/(senior-architect 建議 1 · 8-12h)
-- 現 2380 行 / 70 endpoints · domain 跨 accounts/projects/crm/admin/knowledge/design
-- 按 FastAPI APIRouter 拆 5-6 個 router · main.py 目標 < 200 行
-- 前置 v1.2 ROADMAP §10.1-10.3 所有 auth 重構
+### 11.1 main.py 拆 routers/ ✅ 完成(11 router · 超額 5/6 目標)
+- 原 2400 行 / 70 endpoints · domain 跨 accounts/projects/crm/admin/knowledge/design
+- 已抽 11 個 router(原預估 5-6)+ routers/_deps.py 集中 helper
+  * B-1 routers/safety.py(56 行)· L3 classifier
+  * B-2 routers/feedback.py(91)· 👍👎 收集 + admin-only stats
+  * B-3 routers/users.py(77)· 同事偏好(Level 4 Learning)
+  * B-4 routers/tenders.py(48)· g0v 採購網標案監測
+  * B-5 routers/design.py(235)· Fal.ai Recraft v3 生圖
+  * B-6 routers/knowledge.py(665)· §E 多源知識庫 + §10.3 X-Agent-Num derive
+  * B-7 routers/admin.py(563)· dashboard / cost / monthly-report / agent-prompts
+  * B-8 routers/accounting.py(384)· accounts / tx / invoices / quotes / pnl / aging
+  * B-9 routers/crm.py(174)· Kanban Pipeline · 8 stage
+  * B-10 routers/projects.py(125)· /projects CRUD + Handoff B2 4 格卡
+  * B-11 routers/memory.py(99)· Haiku context summarize
+- main.py:**730 行**(從 2400 縮 70%)· 剩 bootstrap/auth/middleware + /quota/* + /healthz
+- 17 輪 Codex audit(R5 → R14)修了 50+ 紅黃 · v1.0 → v1.1 release ready
+- 完成 commit:`c119317`(safety)→ `67c479c`(R13 修)→ R14 收尾
 
 ### 11.2 launcher state/project-store.js(senior-architect 建議 4 · 6-8h)
 - chat.js 555 行成上帝物件 · cross-module 抓 currentProject 散處
