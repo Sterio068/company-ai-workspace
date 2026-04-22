@@ -23,7 +23,9 @@ Collection · site_surveys:
 import base64
 import logging
 import os
-from datetime import datetime
+import tempfile
+import threading
+from datetime import datetime, timedelta
 from typing import Optional, List
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Query, UploadFile
@@ -47,6 +49,88 @@ def _oid(survey_id: str) -> ObjectId:
         return ObjectId(survey_id)
     except (InvalidId, TypeError):
         raise HTTPException(400, "survey_id 格式錯誤")
+
+
+def _validate_gps(lat: Optional[float], lng: Optional[float], acc: Optional[float]):
+    """R23#3 · GPS 範圍驗證"""
+    if lat is None and lng is None:
+        return
+    if lat is None or lng is None:
+        raise HTTPException(400, "GPS lat/lng 要一起給 或都不給")
+    if not (-90 <= lat <= 90):
+        raise HTTPException(400, f"lat {lat} 超範圍 [-90, 90]")
+    if not (-180 <= lng <= 180):
+        raise HTTPException(400, f"lng {lng} 超範圍 [-180, 180]")
+    if acc is not None and acc < 0:
+        raise HTTPException(400, f"accuracy {acc} 不可負")
+
+
+def recover_stale_surveys(max_stale_minutes: int = 10):
+    """R23#2 · startup 時掃 stuck survey · 有 tmp files 則重跑 · 無則 failed"""
+    try:
+        from main import db
+        cutoff = datetime.utcnow() - timedelta(minutes=max_stale_minutes)
+        q = {"status": "processing", "updated_at": {"$lt": cutoff}}
+        stale = list(db.site_surveys.find(q))
+        if not stale:
+            return
+        logger.info("[site-survey] recover %d stale", len(stale))
+        for s in stale:
+            sid = str(s["_id"])
+            tmp_paths = s.get("_tmp_image_paths") or []
+            mime_list = s.get("_tmp_mime_list") or []
+            if tmp_paths and all(os.path.exists(p) for p in tmp_paths):
+                threading.Thread(
+                    target=_process_survey_from_files,
+                    args=(sid, tmp_paths, mime_list),
+                    daemon=True,
+                ).start()
+            else:
+                db.site_surveys.update_one(
+                    {"_id": s["_id"]},
+                    {"$set": {"status": "failed",
+                              "error": "recovery · tmp images missing after restart"}},
+                )
+    except Exception as e:
+        logger.error("[site-survey] recover_stale 失敗: %s", e)
+
+
+def _cleanup_tmp_files(paths: list):
+    """R23#1 · 刪所有 tmp file · 即使失敗"""
+    for p in paths or []:
+        try:
+            os.remove(p)
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            logger.warning("[site-survey] cleanup tmp %s · %s", p, e)
+
+
+def _process_survey_from_files(survey_id_str: str, tmp_paths: list, mime_list: list):
+    """R23#1 · 從 tmp 檔讀 · 不 hold 5 × 5MB b64 在 memory
+    · 每張讀一次 · 讀完可以丟 · 只 peak 1 張 worth"""
+    from main import db
+    import base64 as _b64
+    try:
+        b64_list = []
+        for p in tmp_paths:
+            if not os.path.exists(p):
+                logger.error("[site-survey] tmp missing %s · skip", p)
+                b64_list.append(None)
+                continue
+            with open(p, "rb") as f:
+                b64_list.append(_b64.b64encode(f.read()).decode("ascii"))
+        _process_survey(survey_id_str, b64_list, mime_list)
+    finally:
+        _cleanup_tmp_files(tmp_paths)
+        # 清 DB 的 tmp refs
+        try:
+            db.site_surveys.update_one(
+                {"_id": ObjectId(survey_id_str)},
+                {"$unset": {"_tmp_image_paths": "", "_tmp_mime_list": ""}},
+            )
+        except Exception:
+            pass
 
 
 def _anthropic_key() -> str:
@@ -166,7 +250,12 @@ async def create_survey(
     project_id: Optional[str] = Form(default=None),
     email: str = require_user_dep(),
 ):
-    """上傳場勘 · 回 survey_id · 前端 polling /site-survey/{id}"""
+    """上傳場勘 · 回 survey_id · 前端 polling /site-survey/{id}
+
+    R23#1 · 照片寫 tmp file(不一次 hold 全在 memory) · background worker 逐張讀
+    R23#2 · DB 存 _tmp_image_paths · container restart 可 recover
+    R23#3 · GPS 範圍驗證
+    """
     from main import db
 
     if not images:
@@ -174,24 +263,41 @@ async def create_survey(
     if len(images) > MAX_IMAGES_PER_SURVEY:
         raise HTTPException(400, f"最多 {MAX_IMAGES_PER_SURVEY} 張 · 目前 {len(images)}")
 
-    # 驗 mime + size · 讀進 memory(小檔案 · 5 張 × 5MB = 25MB OK)
-    b64_list = []
+    _validate_gps(gps_lat, gps_lng, gps_accuracy)
+
+    # R23#1 · 驗 + 落 tmp file · 不一次全塞 memory
+    tmp_paths = []
     mime_list = []
     total_bytes = 0
-    for img in images:
-        mime = (img.content_type or "").lower()
-        # HEIC/HEIF 常被 iPhone 送但 Haiku Vision 不支援 · 只接受 JPEG/PNG/WebP
-        if mime not in ("image/jpeg", "image/png", "image/webp"):
-            raise HTTPException(400, f"照片格式不支援:{mime} · 請用 JPEG/PNG/WebP")
-        content = await img.read()
-        size = len(content)
-        if size > MAX_IMAGE_BYTES:
-            raise HTTPException(413, f"照片 > {MAX_IMAGE_BYTES // 1024 // 1024}MB · 請先 resize")
-        if size < 1024:
-            raise HTTPException(400, "照片太小 · 可能空檔")
-        total_bytes += size
-        b64_list.append(base64.b64encode(content).decode("ascii"))
-        mime_list.append(mime)
+    try:
+        for img in images:
+            mime = (img.content_type or "").lower()
+            if mime not in ("image/jpeg", "image/png", "image/webp"):
+                _cleanup_tmp_files(tmp_paths)
+                raise HTTPException(400, f"照片格式不支援:{mime} · 請用 JPEG/PNG/WebP")
+            content = await img.read()
+            size = len(content)
+            if size > MAX_IMAGE_BYTES:
+                _cleanup_tmp_files(tmp_paths)
+                raise HTTPException(413, f"照片 > {MAX_IMAGE_BYTES // 1024 // 1024}MB · 請先 resize")
+            if size < 1024:
+                _cleanup_tmp_files(tmp_paths)
+                raise HTTPException(400, "照片太小 · 可能空檔")
+            total_bytes += size
+            # 寫 tmp · 清 memory
+            fd, tpath = tempfile.mkstemp(prefix="chengfu-survey-", suffix=f".{mime.split('/')[-1]}")
+            try:
+                os.write(fd, content)
+            finally:
+                os.close(fd)
+            tmp_paths.append(tpath)
+            mime_list.append(mime)
+            del content  # 釋放 memory
+    except HTTPException:
+        raise
+    except Exception as e:
+        _cleanup_tmp_files(tmp_paths)
+        raise HTTPException(500, f"上傳處理失敗: {str(e)[:200]}")
 
     location = {}
     if gps_lat is not None and gps_lng is not None:
@@ -204,18 +310,20 @@ async def create_survey(
         "owner": email,
         "project_id": project_id,
         "location": location,
-        "media": [],  # _process_survey 填
+        "media": [],
         "structured": {},
         "image_count": len(images),
         "total_bytes": total_bytes,
         "status": "processing",
+        "_tmp_image_paths": tmp_paths,  # R23#2 · recovery 用
+        "_tmp_mime_list": mime_list,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     }
     r = db.site_surveys.insert_one(doc)
     sid = str(r.inserted_id)
 
-    background.add_task(_process_survey, sid, b64_list, mime_list)
+    background.add_task(_process_survey_from_files, sid, tmp_paths, mime_list)
 
     return {"survey_id": sid, "status": "processing",
             "image_count": len(images),
@@ -285,27 +393,32 @@ def push_to_handoff(survey_id: str, email: str = require_user_dep()):
     s = doc.get("structured", {})
     issues = s.get("issues", [])
     venue = s.get("venue", {})
-    asset_refs = [
-        {"type": "note",
-         "label": "場勘彙整",
-         "ref": f"{venue.get('type','')} · {venue.get('size_estimate','')} · "
-                f"入口 {len(s.get('entrances',[]))} 處 · 洗手間 {s.get('toilets_count','未見')}"}
-    ]
+    survey_note = {
+        "type": "note",
+        "label": "場勘彙整 · " + datetime.utcnow().strftime("%Y-%m-%d"),
+        "ref": f"{venue.get('type','')} · {venue.get('size_estimate','')} · "
+               f"入口 {len(s.get('entrances',[]))} 處 · 洗手間 {s.get('toilets_count','未見')}",
+    }
 
     try:
         p_oid = ObjectId(project_id)
     except Exception:
         raise HTTPException(400, "project_id 格式錯")
 
+    # R23#4 · 不覆寫人工欄位(asset_refs / constraints)
+    # 改:addToSet asset_refs(append 不 dup)+ 獨立欄位存場勘 issues
     r = db.projects.update_one(
         {"_id": p_oid},
-        {"$set": {
-            "handoff.asset_refs": asset_refs,
-            "handoff.constraints": issues,  # 場勘發現的 issues 變 constraints
-            "handoff.source_survey_id": survey_id,
-            "handoff.updated_by": email,
-            "handoff.updated_at": datetime.utcnow(),
-        }},
+        {
+            "$push": {"handoff.asset_refs": survey_note},
+            "$set": {
+                "handoff.site_survey_id": survey_id,
+                "handoff.site_issues": issues,
+                "handoff.site_venue": venue,
+                "handoff.updated_by": email,
+                "handoff.updated_at": datetime.utcnow(),
+            },
+        },
     )
     if r.matched_count == 0:
         raise HTTPException(404, "project 不存在")

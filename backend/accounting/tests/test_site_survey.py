@@ -132,5 +132,9 @@ def test_push_to_handoff(client):
     assert r.json()["issues_count"] == 1
 
     proj = main.projects_col.find_one({"_id": proj_id})
-    assert proj["handoff"]["constraints"] == ["入口有高差"]
-    assert "室內" in proj["handoff"]["asset_refs"][0]["ref"]
+    # R23#4 · 獨立欄位不覆寫人工 constraints
+    assert proj["handoff"]["site_issues"] == ["入口有高差"]
+    # asset_refs 用 $push · append(原 project 沒 handoff · 從空 list 開始)
+    refs = proj["handoff"]["asset_refs"]
+    assert len(refs) == 1
+    assert "室內" in refs[0]["ref"]

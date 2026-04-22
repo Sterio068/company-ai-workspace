@@ -258,6 +258,12 @@ async def lifespan(app: FastAPI):
         recover_stale_meetings(max_stale_minutes=10)
     except Exception as e:
         logger.warning("[meeting] recover_stale 啟動失敗(非致命): %s", e)
+    # R23#2 · Feature #7 recover stuck site survey
+    try:
+        from routers.site_survey import recover_stale_surveys
+        recover_stale_surveys(max_stale_minutes=10)
+    except Exception as e:
+        logger.warning("[site-survey] recover_stale 啟動失敗(非致命): %s", e)
     yield
     # Shutdown
     logger.info("app shutting down")
