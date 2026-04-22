@@ -193,13 +193,19 @@ def crm_stats():
             "count": {"$sum": 1},
             "budget_total": {"$sum": {"$ifNull": ["$budget", 0]}},
             # R14#2 · 漏斗期望值 = sum(budget × probability · 只算 active stage)
+            # R17#2 · probability 預設是 0.0(非 None)· 舊 Python `(p or 0.5)` 把 0.0 當 falsy
+            # Mongo `$ifNull` 不會把 0.0 變 · 需用 $cond $gt 保留舊語意:missing/0 → 0.5
             "expected_value": {
                 "$sum": {
                     "$cond": [
                         {"$in": ["$stage", ["lead", "qualifying", "proposing", "submitted"]]},
                         {"$multiply": [
                             {"$ifNull": ["$budget", 0]},
-                            {"$ifNull": ["$probability", 0.5]},
+                            {"$cond": [
+                                {"$gt": [{"$ifNull": ["$probability", 0]}, 0]},
+                                "$probability",
+                                0.5,
+                            ]},
                         ]},
                         0,
                     ]

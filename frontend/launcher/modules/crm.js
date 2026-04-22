@@ -33,8 +33,11 @@ export const crm = {
 
   async loadLeads() {
     try {
-      const r = await fetch(`${BASE}/leads`);
-      this.leads = await r.json();
+      // R17#1 修 · backend 改 {items,total,...} shape · 加 limit=500 取足
+      const r = await fetch(`${BASE}/leads?limit=500`);
+      const body = await r.json();
+      // 向後相容 · 新舊 shape 都吃
+      this.leads = Array.isArray(body) ? body : (body.items || []);
       const count = document.getElementById("crm-count");
       if (count) {
         count.textContent = this.leads.filter(l =>
