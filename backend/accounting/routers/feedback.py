@@ -6,7 +6,7 @@ Codex R6#4 · list/stats 改 admin-only · create 用 trusted email
 Codex R7#4 · create 完全不信 fb.user_email · 必 trusted_email
 v1.2 §11.1 B-1.5 · 改用 routers/_deps.py 共用 helper
 """
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from typing import Optional, Literal
 from datetime import datetime
@@ -48,17 +48,37 @@ def create_feedback(fb: Feedback, request: Request):
 
 @router.get("/feedback")
 def list_feedback(
-    verdict: Optional[str] = None, agent: Optional[str] = None, limit: int = 100,
+    verdict: Optional[str] = None,
+    agent: Optional[str] = None,
+    limit: int = Query(default=50, ge=1, le=500),  # R14#1 · 預設 50 · 上限 500
+    skip: int = Query(default=0, ge=0),
     _admin: str = require_admin_dep(),  # R6#4 · admin-only · v1.2 用 _deps.py
 ):
-    """R6#4 · admin-only · 防匿名讀全部 user_email/note"""
+    """R6#4 · admin-only · 防匿名讀全部 user_email/note
+    R14#1 · 加 pagination(skip/limit) + 封頂 500 · 防爬蟲發 ?limit=10000 打爆
+    · 用 projection 只撈必要欄位 · 減少 network + memory
+    """
     from main import feedback_col
     q = {}
     if verdict:
         q["verdict"] = verdict
     if agent:
         q["agent_name"] = {"$regex": agent, "$options": "i"}
-    return _serialize(list(feedback_col.find(q).sort("created_at", -1).limit(limit)))
+    cursor = feedback_col.find(
+        q,
+        # R14#1 · projection · 不撈 prompt raw / note 全文(Day 0 後改 admin 看需求加)
+        {"_id": 1, "message_id": 1, "conversation_id": 1, "agent_name": 1,
+         "verdict": 1, "note": 1, "user_email": 1, "created_at": 1},
+    ).sort("created_at", -1).skip(skip).limit(limit)
+    items = _serialize(list(cursor))
+    total = feedback_col.count_documents(q)
+    return {
+        "items": items,
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "has_more": (skip + len(items)) < total,
+    }
 
 
 def _compute_feedback_stats():

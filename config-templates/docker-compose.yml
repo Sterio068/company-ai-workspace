@@ -43,6 +43,13 @@ services:
     networks:
       - chengfu-network
     mem_limit: 256m
+    # R14#16 · nginx log rotation(mounted /var/log/nginx · docker log driver 只管 stdout/stderr)
+    # 真正的 access.log/error.log 在 volume 裡 · logrotate 另由 host 排(見 docs/04-OPERATIONS.md)
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
 
   # ==================== LibreChat 主服務 ====================
   # 原生能力覆蓋:
@@ -172,7 +179,16 @@ services:
       - "8000"
     networks:
       - chengfu-network
-    mem_limit: 512m
+    # R14#12 · 強制 resource limit · 1 個爛 query 不會 OOM kill nginx/mongo/librechat
+    mem_limit: 1g
+    mem_reservation: 256m
+    cpus: 2.0
+    # R14#16 · log rotation(accounting 吐 JSON log · 限 max-size 避免 disk full)
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
 
   # ==================== Uptime 監控 ====================
   # 承富系統健康儀表 · 失敗推 Slack/Email

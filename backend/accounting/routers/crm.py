@@ -19,7 +19,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -69,14 +69,29 @@ class Lead(BaseModel):
 # Endpoints
 # ============================================================
 @router.get("/crm/leads")
-def list_leads(stage: Optional[str] = None, owner: Optional[str] = None):
-    """Kanban 讀全部 leads · 依階段分組"""
+def list_leads(
+    stage: Optional[str] = None,
+    owner: Optional[str] = None,
+    limit: int = Query(default=100, ge=1, le=500),  # R14#2 · 封頂 500
+    skip: int = Query(default=0, ge=0),
+):
+    """Kanban 讀 leads · 依階段分組
+    R14#2 · 加 pagination · 防全撈 1000+ 筆記憶體爆
+    """
     from main import db, serialize
     q = {}
     if stage: q["stage"] = stage
     if owner: q["owner"] = owner
-    leads = list(db.crm_leads.find(q).sort("updated_at", -1))
-    return serialize(leads)
+    cursor = db.crm_leads.find(q).sort("updated_at", -1).skip(skip).limit(limit)
+    leads = serialize(list(cursor))
+    total = db.crm_leads.count_documents(q)
+    return {
+        "items": leads,
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "has_more": (skip + len(leads)) < total,
+    }
 
 
 @router.post("/crm/leads")
@@ -163,28 +178,45 @@ def add_lead_note(lead_id: str, note: str, by: Optional[str] = None):
 
 @router.get("/crm/stats")
 def crm_stats():
-    """Kanban 儀表統計 · 漏斗價值 · 勝率 · by_stage"""
+    """Kanban 儀表統計 · 漏斗價值 · 勝率 · by_stage
+
+    R14#2 · 原本 active_leads 全撈 Python for-loop 加總(1000+ leads 會慢)
+    改 Mongo $match + $group · 單次 aggregate 拿全部 · Python 只整理輸出
+    · full-scan 扣掉 · 100 leads × 10 req/min × 8h = 48k 次也可
+    """
     from main import db
+
+    # 一次 aggregate 拿 by_stage + by_category(active / won / lost)
     pipeline = [
-        {"$group": {"_id": "$stage", "count": {"$sum": 1},
-                    "budget_total": {"$sum": "$budget"}}},
+        {"$group": {
+            "_id": "$stage",
+            "count": {"$sum": 1},
+            "budget_total": {"$sum": {"$ifNull": ["$budget", 0]}},
+            # R14#2 · 漏斗期望值 = sum(budget × probability · 只算 active stage)
+            "expected_value": {
+                "$sum": {
+                    "$cond": [
+                        {"$in": ["$stage", ["lead", "qualifying", "proposing", "submitted"]]},
+                        {"$multiply": [
+                            {"$ifNull": ["$budget", 0]},
+                            {"$ifNull": ["$probability", 0.5]},
+                        ]},
+                        0,
+                    ]
+                }
+            },
+        }},
     ]
     by_stage = list(db.crm_leads.aggregate(pipeline))
-    won = db.crm_leads.count_documents({"stage": "won"})
-    lost = db.crm_leads.count_documents({"stage": "lost"})
-    win_rate = round(won / (won + lost) * 100, 1) if (won + lost) > 0 else None
 
-    active_leads = list(db.crm_leads.find({
-        "stage": {"$in": ["lead", "qualifying", "proposing", "submitted"]}
-    }))
-    expected_value = sum(
-        (l.get("budget") or 0) * (l.get("probability") or 0.5)
-        for l in active_leads
-    )
+    won = next((s["count"] for s in by_stage if s["_id"] == "won"), 0)
+    lost = next((s["count"] for s in by_stage if s["_id"] == "lost"), 0)
+    win_rate = round(won / (won + lost) * 100, 1) if (won + lost) > 0 else None
+    expected_value = sum(s.get("expected_value", 0) for s in by_stage)
 
     return {
         "by_stage": [{"stage": s["_id"], "count": s["count"],
-                      "budget_total": s["budget_total"] or 0} for s in by_stage],
+                      "budget_total": s.get("budget_total", 0) or 0} for s in by_stage],
         "win_rate": win_rate,
         "active_pipeline_value": round(expected_value, 0),
         "total_leads": sum(s["count"] for s in by_stage),

@@ -327,14 +327,24 @@ export const knowledge = {
     root.querySelectorAll(".kb-source header").forEach(h => {
       h.addEventListener("click", () => this._expandSource(h.closest(".kb-source")));
     });
-    // 搜尋
+    // 搜尋 · R14#10 · AbortController + debounce · 防打字快時舊 request 先到導致結果亂序
+    let _searchAbort = null;
+    let _searchDebounce = null;
     root.querySelector("#kb-search-input")?.addEventListener("input", e => {
       const q = e.target.value.trim();
+      // 新 request 先 abort 舊的
+      if (_searchAbort) { try { _searchAbort.abort(); } catch {} }
+      if (_searchDebounce) clearTimeout(_searchDebounce);
+
       if (q.length < 2) {
         document.getElementById("kb-search-results").innerHTML = "";
         return;
       }
-      this._searchAll(q);
+      // 200ms debounce 避免打字快時連 5 個 request
+      _searchDebounce = setTimeout(() => {
+        _searchAbort = new AbortController();
+        this._searchAll(q, _searchAbort.signal);
+      }, 200);
     });
   },
 
@@ -439,12 +449,12 @@ export const knowledge = {
     } catch (e) { toast.error(e.message); }
   },
 
-  async _searchAll(q) {
+  async _searchAll(q, signal) {
     const root = document.getElementById("kb-search-results");
     if (!root) return;
     root.innerHTML = `<div class="chip-empty">搜尋中…</div>`;
     try {
-      const r = await authFetch(withConvId(`${BASE}/knowledge/search?q=${encodeURIComponent(q)}&limit=20`));
+      const r = await authFetch(withConvId(`${BASE}/knowledge/search?q=${encodeURIComponent(q)}&limit=20`), { signal });
       if (!r.ok) throw new Error(r.status);
       const body = await r.json();
       const hits = body.hits || [];
