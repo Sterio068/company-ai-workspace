@@ -366,7 +366,8 @@ export const chat = {
           );
           if (r) note = r.note;
         }
-        await fetch("/api-accounting/feedback", {
+        // R8#5 · 改 authFetch · 帶 cookie + X-User-Email · prod 嚴格 mode 才能成功
+        await authFetch("/api-accounting/feedback", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -375,6 +376,7 @@ export const chat = {
             agent_name: CORE_AGENTS.find(a => a.num === this.currentAgentNum)?.name,
             verdict,
             note,
+            // R7#4 · server 只認 trusted_email · 這欄位送了也會被覆蓋
             user_email: this._userStore?.()?.email,
           }),
         });

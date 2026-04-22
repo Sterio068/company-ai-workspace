@@ -154,6 +154,20 @@ services:
       # /Users / /mnt 要開請 env 明示 · 防離職員工桌面被索引
       - KNOWLEDGE_ALLOWED_ROOTS=${KNOWLEDGE_ALLOWED_ROOTS:-/Volumes,/data}
       - FAL_API_KEY=${FAL_API_KEY:-}
+      # ============ Codex R7/R8 · auth 三 env(prod 強制) ============
+      # ECC_ENV=production → _is_prod()=True → 啟動時驗 JWT_REFRESH_SECRET / ECC_INTERNAL_TOKEN
+      # 沒設 → R8#6 raise · 防誤配 dev mode
+      - ECC_ENV=${ECC_ENV:-production}
+      - NODE_ENV=${NODE_ENV:-production}
+      # JWT_REFRESH_SECRET 從 LibreChat .env 同步 · _verify_librechat_cookie 驗 refreshToken 用
+      # 沒設 + prod → 啟動 raise(R7#1)· dev mode 容許 silent fallback
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-}
+      # ECC_INTERNAL_TOKEN · cron daily-digest / tender-monitor 用 · prod 強制
+      # 用 `openssl rand -hex 32` 產生 · 同步進 launchd plist 環境
+      - ECC_INTERNAL_TOKEN=${ECC_INTERNAL_TOKEN:-}
+      # X-User-Email legacy fallback · prod 預設關 · dev 預設開
+      # 設 1 → 即使 prod 也允許(過渡期 launcher 還沒切 cookie 時用)
+      - ALLOW_LEGACY_AUTH_HEADERS=${ALLOW_LEGACY_AUTH_HEADERS:-0}
     expose:
       - "8000"
     networks:

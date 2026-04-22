@@ -23,7 +23,9 @@ import json
 import uuid
 import logging
 import asyncio
+import hmac
 import httpx
+from collections import OrderedDict
 from pymongo import MongoClient
 from bson import ObjectId
 
@@ -77,6 +79,21 @@ def _legacy_auth_headers_enabled() -> bool:
         return False
     # 預設行為 · prod=False · dev=True
     return not _is_prod()
+
+
+def _env_mode_configured() -> bool:
+    """Codex R8#6 · ECC_ENV / NODE_ENV 必須有一個明確設(防誤配 dev mode)"""
+    return bool(os.getenv("ECC_ENV", "").strip() or os.getenv("NODE_ENV", "").strip())
+
+
+def _secrets_equal(a: str, b: str) -> bool:
+    """Codex R8#2 · 比 secret 用 hmac.compare_digest 防 timing attack"""
+    if not a or not b:
+        return False
+    try:
+        return hmac.compare_digest(a, b)
+    except Exception:
+        return False
 
 
 # ============================================================
@@ -158,12 +175,22 @@ async def lifespan(app: FastAPI):
             "[auth] X-User-Email legacy fallback ON · "
             "dev mode 或 ALLOW_LEGACY_AUTH_HEADERS=1 · prod 應確保 nginx 已 strip 此 header"
         )
-    # R7#2 · ECC_INTERNAL_TOKEN 啟動時檢查
+    # R8#6 · ECC_ENV / NODE_ENV 必須明確設 · 防部署人員忘加 docker-compose env 落回 dev mode
+    if not _env_mode_configured():
+        raise RuntimeError(
+            "ECC_ENV or NODE_ENV must be set explicitly · "
+            "預設 dev mode 太危險 · prod 部署必設 ECC_ENV=production"
+        )
+    # R7#2 + R8#2 · ECC_INTERNAL_TOKEN 啟動時檢查 · prod 強制
     if not os.getenv("ECC_INTERNAL_TOKEN", "").strip():
         if _is_prod():
-            logger.warning(
-                "[auth] ECC_INTERNAL_TOKEN 未設 · cron daily-digest / tender-monitor 將無法呼叫 admin endpoint"
+            raise RuntimeError(
+                "ECC_INTERNAL_TOKEN required in production · "
+                "cron daily-digest / tender-monitor 須有此 token 呼叫 admin endpoint"
             )
+        logger.warning(
+            "[auth] ECC_INTERNAL_TOKEN 未設(dev mode 容許)· cron 跨 service 呼叫會 401"
+        )
     # Codex Round 10.5 · 啟動時主動探 OCR · /healthz 立刻看得到真狀態
     try:
         from services.knowledge_extract import probe_ocr_startup
@@ -212,10 +239,10 @@ def _user_or_ip(request: Request) -> str:
     任何人 curl 加亂塞 X-Internal-Token: foo 就能打同一 internal bucket
     修正:必須等於 ECC_INTERNAL_TOKEN env value
     """
-    # R7#2 · Internal token 必須 secret-equal · 不只是有 header
+    # R7#2 + R8#2 · Internal token 必須 secret-equal · 用 hmac.compare_digest 防 timing attack
     expected_internal = os.getenv("ECC_INTERNAL_TOKEN", "").strip()
     provided_internal = (request.headers.get("X-Internal-Token") or "").strip()
-    if expected_internal and provided_internal and provided_internal == expected_internal:
+    if _secrets_equal(provided_internal, expected_internal):
         return "u:internal"
     # 直接呼叫 _verify_librechat_cookie · 不靠 request.state(middleware 順序問題)
     try:
@@ -383,17 +410,21 @@ def _verify_librechat_cookie(request: Request) -> Optional[str]:
         return None
 
 
-# R7#1 · LRU cache for user email lookup · 60s TTL(refresh token 7d · email 不常變)
-_USER_EMAIL_CACHE: dict[str, tuple[str, float]] = {}
+# R7#1 + R8#1 · 真 LRU cache for user email lookup · 60s TTL(refresh token 7d · email 不常變)
+# R8#1 · OrderedDict + popitem(last=False) 真 LRU 語意 · 不再「滿 200 直接清空」
+_USER_EMAIL_CACHE: "OrderedDict[str, tuple[str, float]]" = OrderedDict()
 _USER_EMAIL_CACHE_TTL = 60.0
+_USER_EMAIL_CACHE_MAX = 200
 
 
 def _lookup_user_email_cached(user_id: str) -> Optional[str]:
-    """從 _users_col 反查 email · 60s LRU cache 避免每 request 都打 Mongo"""
+    """從 _users_col 反查 email · 60s LRU cache · OrderedDict 真 LRU 不集體 miss"""
     import time
     now = time.time()
     cached = _USER_EMAIL_CACHE.get(user_id)
     if cached and now - cached[1] < _USER_EMAIL_CACHE_TTL:
+        # R8#1 · 真 LRU · 命中時 move_to_end 標記為最近使用
+        _USER_EMAIL_CACHE.move_to_end(user_id)
         return cached[0] or None
     try:
         # ObjectId 可能 invalid(舊 token)· try-except 包好
@@ -403,9 +434,9 @@ def _lookup_user_email_cached(user_id: str) -> Optional[str]:
             return None
         u = _users_col.find_one({"_id": oid}, {"email": 1})
         email = (u.get("email") or "").strip().lower() if u else ""
-        # 簡單 LRU cap · 200 item
-        if len(_USER_EMAIL_CACHE) > 200:
-            _USER_EMAIL_CACHE.clear()
+        # R8#1 · 真 LRU evict · pop 最舊 · 不再 clear 整片
+        while len(_USER_EMAIL_CACHE) >= _USER_EMAIL_CACHE_MAX:
+            _USER_EMAIL_CACHE.popitem(last=False)
         _USER_EMAIL_CACHE[user_id] = (email, now)
         return email or None
     except Exception as e:
@@ -444,11 +475,12 @@ def require_admin(request: Request,
     2. X-Internal-Token header(cron / 內部 service · ECC_INTERNAL_TOKEN env)
     3. X-User-Email + 白名單 + JWT_SECRET 未設(legacy 測試模式 · production 不接受)
     """
-    # ============ Codex R5#2 · 內部 service token(daily-digest cron 用) ============
+    # ============ Codex R5#2 + R8#2 · 內部 service token(daily-digest cron 用) ============
+    # R8#2 · hmac.compare_digest 防 timing attack
     internal_token_expected = os.getenv("ECC_INTERNAL_TOKEN", "").strip()
     if internal_token_expected:
         provided = (request.headers.get("X-Internal-Token") or "").strip()
-        if provided and provided == internal_token_expected:
+        if _secrets_equal(provided, internal_token_expected):
             return "internal:cron"
 
     if not email:
@@ -1382,26 +1414,30 @@ def quota_check(email: Optional[str] = Depends(current_user_email)):
 
 
 @app.get("/quota/preflight")
+@_limiter.limit(os.getenv("RATE_LIMIT_QUOTA_PREFLIGHT", "60/minute"))
 def quota_preflight(request: Request, email: Optional[str] = Depends(current_user_email)):
-    """Codex R7#9 · nginx auth_request 用 · 看 user 是否仍在預算內
+    """Codex R7#9 + R8#3 · nginx auth_request 用 · 看 user 是否仍在預算內
 
     回應 contract:
     - 204 No Content · 通過(允許 LibreChat /api/ask)
-    - 429 Too Many Requests · 擋(超預算 · nginx 回 user 502/403)
+    - 429 Too Many Requests · 擋 · 帶 X-Quota-* response headers 給 nginx error_page 用
     - 401 · 沒驗到身份(prod 嚴格擋 · dev 視為通過 · 給 launcher 開發空間)
 
     使用方式(nginx):
         location = /_quota_gate {
             internal;
-            proxy_pass http://accounting:8090/quota/preflight;
-            proxy_pass_request_body off;
+            proxy_pass http://accounting:8000/quota/preflight;
         }
         location /api/ask {
             auth_request /_quota_gate;
-            proxy_pass http://librechat:3080;
+            auth_request_set $quota_spent_ntd $upstream_http_x_quota_spent_ntd;
+            ...
         }
+
+    R8#3 · 加 60/min 專屬 rate limit(防 user 連發 100 次 /api/ask 打死 quota_check)
     """
     from starlette.responses import Response
+    from fastapi.responses import JSONResponse
     if not email:
         # prod 嚴格 · dev 放行給 launcher 開發
         if _is_prod():
@@ -1416,13 +1452,24 @@ def quota_preflight(request: Request, email: Optional[str] = Depends(current_use
         usd_to_ntd=_USD_TO_NTD,
     )
     if result.get("allowed") is False:
-        raise HTTPException(
-            429,
-            detail={
-                "reason": result.get("reason", "quota exceeded"),
-                "spent_ntd": result.get("spent_ntd", 0),
-                "cap_ntd": result.get("cap_ntd", 0),
-                "request_id": getattr(request.state, "request_id", ""),
+        # R8#3 · 透過 X-Quota-* response headers 把細節傳給 nginx error_page
+        spent = result.get("spent_ntd", 0)
+        cap = result.get("cap_ntd", 0)
+        rid = getattr(request.state, "request_id", "")
+        return JSONResponse(
+            status_code=429,
+            content={
+                "detail": {
+                    "reason": result.get("reason", "quota exceeded"),
+                    "spent_ntd": spent,
+                    "cap_ntd": cap,
+                    "request_id": rid,
+                }
+            },
+            headers={
+                "X-Quota-Spent-Ntd": str(spent),
+                "X-Quota-Cap-Ntd": str(cap),
+                "X-Quota-Request-Id": str(rid),
             },
         )
     return Response(status_code=204)

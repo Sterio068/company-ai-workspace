@@ -31,6 +31,18 @@ services:
     ports:
       - "80:80"
 
+  # ============================================================
+  # Codex R8#6 · 本機 dev mode override
+  # ============================================================
+  # docker-compose.yml 預設 ECC_ENV=production · 啟動會驗 JWT_REFRESH_SECRET
+  # 本機沒 LibreChat .env 同步 · 強制 dev mode 不擋啟動
+  accounting:
+    environment:
+      - ECC_ENV=development
+      - NODE_ENV=development
+      # dev mode 預設 ALLOW_LEGACY_AUTH_HEADERS · launcher 沒 cookie 時仍能用 X-User-Email
+      - ALLOW_LEGACY_AUTH_HEADERS=1
+
   # MongoDB 預設只在 docker network 內可達(accounting / librechat 內部走 mongodb:27017)
   # 若你要用 Compass 從 host 連 · 暫時手動加(看 PRE-DELIVERY-CHECKLIST Day -7 邊界檢查):
   #

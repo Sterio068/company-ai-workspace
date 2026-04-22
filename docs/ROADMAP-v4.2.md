@@ -274,14 +274,18 @@ Week 11+ · v2.0(長遠)
 - **工時:** 1-2 天
 - **緩解:** 短期靠「內網 + Cloudflare Access 限 10 人」· Codex R3.2 已做 admin 嚴格化
 
-### 10.3 X-Agent-Num 瀏覽器可偽造
+### 10.3 X-Agent-Num 瀏覽器可偽造(Codex R7#11 + R8#9 重提 · 仍未修)
 - **問題:** 知識庫 ACL 靠 `X-Agent-Num` header · 同仁可 curl 偽造任意 agent 讀機敏
-- **影響:** 公關助手可讀「只給投標助手」的源
-- **修法:**
-  - Agent 身分由 accounting server-side session 推(chat context → agent_id → agent_num)
-  - nginx strip inbound `X-Agent-Num`
-- **工時:** 1 天
-- **緩解:** 短期靠「LibreChat UI 不讓使用者自選 agent_num 寫入 header」· Codex R3.3 已擋無 header 的情況
+- **影響:** 公關助手可讀「只給投標助手」的源(投標機敏 / 客戶情報)
+- **R7#11 + R8#9 codex 確認位置:** `backend/accounting/main.py:2075 / 2176 / 2325`(knowledge/list, knowledge/search, knowledge/read)
+- **修法(R8 codex 推薦最簡方向):**
+  1. nginx strip inbound `X-Agent-Num`(在 chengfu-proxy.conf 加 `proxy_set_header X-Agent-Num "";`)
+  2. accounting 從 `conversationId` → LibreChat `convos_col.find_one({_id})` 拿 agent_id
+  3. agent_id `agent_xxx` → 從 description / metadata 反推 1-29(因 Agent Builder 建時 prefix `🎯 投標 #1`)
+  4. New conversation(沒 conversationId)→ 預設只給「公開」sources(public flag)
+- **工時:** 1 天(含 5 unit tests · 5 contract tests)
+- **緩解(現狀):** Codex R3.3 已擋「無 header 預設可看」· 但 R7#11 / R8#9 抓有 header 仍信任
+- **何時修:** v1.2 sprint 第 1 件(routers/_deps.py 之後)
 
 ### 10.4(可選)Markdown XSS 加 DOMPurify 專業防線
 - **問題:** Codex R4.3 已用白名單 + renderer.html='' 擋 · 但非 DOMPurify 等級
