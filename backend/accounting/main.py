@@ -1614,65 +1614,10 @@ def summarize_conversation(req: SummarizeRequest):
 
 
 # ============================================================
-# User Preferences(跨 Agent 使用者記憶)· Level 4 Learning 核心
+# User Preferences · ROADMAP §11.1 已抽到 routers/users.py
 # ============================================================
-class UserPreference(BaseModel):
-    key: str          # e.g. "writing_style" / "formality" / "favorite_clients"
-    value: str        # 任意字串
-    learned_from: Optional[str] = None  # 從哪個對話 / Agent 學到
-    confidence: float = 1.0  # 0-1
-
-
-def _require_self_or_admin(user_email: str, caller: Optional[str]) -> str:
-    """Audit · sec F-2 · 同人或 admin 才可改/讀偏好"""
-    if not caller:
-        raise HTTPException(403, "未識別呼叫者 · 請從 launcher 進入")
-    caller_lc = caller.lower()
-    if caller_lc == user_email.lower() or caller_lc in _admin_allowlist:
-        return caller_lc
-    raise HTTPException(403, f"只能讀/改自己的偏好(您:{caller_lc} · 對象:{user_email})")
-
-
-@app.get("/users/{user_email}/preferences")
-def get_user_prefs(user_email: str,
-                   caller: Optional[str] = Depends(current_user_email)):
-    """取使用者偏好 · Audit sec F-2 · 同人或 admin 才可"""
-    _require_self_or_admin(user_email, caller)
-    prefs = list(db.user_preferences.find({"user_email": user_email}))
-    return {
-        "user_email": user_email,
-        "preferences": {p["key"]: p["value"] for p in prefs},
-        "count": len(prefs),
-    }
-
-
-@app.post("/users/{user_email}/preferences")
-def save_user_pref(user_email: str, pref: UserPreference,
-                   caller: Optional[str] = Depends(current_user_email)):
-    """記使用者偏好 · Audit sec F-2 · 不可改別人的"""
-    _require_self_or_admin(user_email, caller)
-    db.user_preferences.update_one(
-        {"user_email": user_email, "key": pref.key},
-        {"$set": {
-            "user_email": user_email,
-            "key": pref.key,
-            "value": pref.value,
-            "learned_from": pref.learned_from,
-            "confidence": pref.confidence,
-            "updated_at": datetime.utcnow(),
-        }},
-        upsert=True,
-    )
-    return {"saved": True}
-
-
-@app.delete("/users/{user_email}/preferences/{key}")
-def delete_user_pref(user_email: str, key: str,
-                     caller: Optional[str] = Depends(current_user_email)):
-    """Audit sec F-2"""
-    _require_self_or_admin(user_email, caller)
-    r = db.user_preferences.delete_one({"user_email": user_email, "key": key})
-    return {"deleted": r.deleted_count}
+from routers import users as _users_router
+app.include_router(_users_router.router)
 
 
 # ============================================================
