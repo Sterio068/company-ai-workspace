@@ -917,9 +917,27 @@ const urlParams = new URLSearchParams(window.location.search);
 const pendingInput = urlParams.get("pending");
 const convoToOpen  = urlParams.get("convo");
 
+// ROADMAP §11.6 + sec F-7 · `?pending=` 反射 XSS / prompt 投送風險
+// 攻擊者可佈局 `<a href="http://localhost/?pending=...">` 騙員工點 · 自動送惡意 prompt
+// 修法:必先 modal 確認 · 加 source domain 警告 · 內容過長截斷
 if (pendingInput) {
-  window.addEventListener("DOMContentLoaded", () => {
-    chat.open("00", decodeURIComponent(pendingInput));
+  window.addEventListener("DOMContentLoaded", async () => {
+    const decoded = decodeURIComponent(pendingInput);
+    const truncated = decoded.length > 200 ? decoded.slice(0, 200) + "…" : decoded;
+    const referrer = document.referrer || "(直接點擊網址)";
+    const ok = await modal.confirm(
+      `<div style='margin-bottom:10px'>偵測到外部連結帶入內容 · 確認要送出嗎?</div>
+       <div style='font-size:12px;color:var(--text-secondary);margin-bottom:8px'>來源:${escapeHtml(referrer)}</div>
+       <pre style='font-size:12px;background:var(--bg-subtle,rgba(0,0,0,0.05));padding:8px;border-radius:6px;max-height:200px;overflow:auto;white-space:pre-wrap'>${escapeHtml(truncated)}</pre>
+       <small style='color:var(--text-tertiary)'>未經確認的內容不會送到 AI · 取消可關閉。</small>`,
+      { title: "外部連結帶入內容", icon: "⚠️", primary: "我確認送出", cancel: "取消" }
+    );
+    if (ok) {
+      chat.open("00", decoded);
+    } else {
+      // 清掉 URL query 避免 reload 又跳
+      history.replaceState({}, document.title, window.location.pathname);
+    }
   });
 }
 

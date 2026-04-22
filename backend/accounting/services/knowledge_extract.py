@@ -200,20 +200,26 @@ def ocr_status() -> dict:
 
 
 def _extract_pdf(path: str) -> dict:
+    """ROADMAP §11.4 · max_ocr_pages 上限 · 防 200 頁掃描檔吃光 RAM"""
     global _OCR_AVAILABLE, _OCR_LAST_ERROR
+    import os as _os
     fitz = _lazy_fitz()
+    max_ocr = int(_os.getenv("MAX_OCR_PAGES_PER_PDF", "20"))
     doc = fitz.open(path)
     pages = []
     ocr_triggered = 0
     ocr_skipped_no_engine = 0
+    ocr_skipped_over_limit = 0
     try:
         for page in doc:
             text = page.get_text("text").strip()
             # 若文字太少而頁面有圖片 · 嘗試 OCR 降級
             if len(text) < 120 and page.get_images():
                 if _OCR_AVAILABLE is False:
-                    # 已知 OCR 不可用 · 跳過不再試 · 但記計數
                     ocr_skipped_no_engine += 1
+                elif ocr_triggered >= max_ocr:
+                    # ROADMAP §11.4 · 超過上限 · 跳過 OCR 但保留純 text(可能空)
+                    ocr_skipped_over_limit += 1
                 else:
                     try:
                         tp = page.get_textpage_ocr(language="chi_tra+eng")
@@ -221,7 +227,6 @@ def _extract_pdf(path: str) -> dict:
                         ocr_triggered += 1
                         _OCR_AVAILABLE = True
                     except Exception as e:
-                        # OCR 未安裝 tesseract 或其他錯 · 記下來 metric 看
                         if _OCR_AVAILABLE is None:
                             _OCR_AVAILABLE = False
                             _OCR_LAST_ERROR = f"{type(e).__name__}: {str(e)[:120]}"
@@ -242,6 +247,9 @@ def _extract_pdf(path: str) -> dict:
     }
     if ocr_skipped_no_engine:
         result["ocr_skipped_no_engine"] = ocr_skipped_no_engine
+    if ocr_skipped_over_limit:
+        result["ocr_skipped_over_limit"] = ocr_skipped_over_limit
+        result["ocr_max_pages_setting"] = max_ocr
     return result
 
 

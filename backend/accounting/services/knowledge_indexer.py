@@ -219,8 +219,11 @@ def reindex_source(source_id: str, knowledge_sources_col, meili_client=None) -> 
             "reason": f"路徑不存在或不可讀: {base}",
         }
 
+    # ROADMAP §11.4 · Step 1 · walk + filter · 收集 to-process file list
+    # ROADMAP §11.4 · Step 2 · 用 ThreadPoolExecutor 並行 extract(I/O bound + Tesseract 部分釋 GIL)
+    # 預估 50k 檔(5k OCR)從 6-10h → 2-3h
+    to_process = []
     for root, dirs, files in os.walk(base):
-        # 修剪目錄 · 別走進排除的
         dirs[:] = [
             d for d in dirs
             if not _match_excluded(
@@ -239,7 +242,6 @@ def reindex_source(source_id: str, knowledge_sources_col, meili_client=None) -> 
             except OSError:
                 errors += 1
                 continue
-            # 增量:只處理 mtime 之後 · file mtime 也 int 化(mongomock/Mongo 截 ms 精度)
             if int(stat.st_mtime) <= since_mtime:
                 skipped_unchanged += 1
                 continue
@@ -250,47 +252,55 @@ def reindex_source(source_id: str, knowledge_sources_col, meili_client=None) -> 
             if mime_white and ext not in [w.lower().lstrip(".") for w in mime_white]:
                 skipped_mime += 1
                 continue
+            to_process.append((path, rel))
 
-            try:
-                doc = extract(path)
-            except Exception as e:
-                logger.warning("[indexer] extract fail %s: %s", path, e)
-                errors += 1
-                continue
-            if doc.get("type") == "error":
-                errors += 1
-                # 還是 index 進去 · 讓使用者看得到「這檔讀失敗」
-            # 衍生欄位給 Meili
-            doc["id"] = _doc_id_for(str(src["_id"]), rel)
-            doc["source_id"] = str(src["_id"])
-            doc["source_name"] = src["name"]
-            doc["rel_path"] = rel
-            # 自動推 project · 若結構是 projects/<案>/...
-            parts = rel.split(os.sep)
-            if len(parts) > 1 and parts[0] == "projects":
-                doc["project"] = parts[1]
-            else:
-                doc["project"] = None
+    # 並行 extract · workers 4 預設(env REINDEX_WORKERS 可調)
+    from concurrent.futures import ThreadPoolExecutor
+    workers = int(os.getenv("REINDEX_WORKERS", "4"))
 
-            docs_batch.append(doc)
-            file_count += 1
+    def _extract_one(item):
+        path, rel = item
+        try:
+            doc = extract(path)
+        except Exception as e:
+            logger.warning("[indexer] extract fail %s: %s", path, e)
+            return None, rel, "error"
+        return doc, rel, doc.get("type", "ok")
 
-            # 批次送 Meili · 避免單次 payload 太大
-            # Codex Round 10.5 R1 · add_documents 只是 enqueue · 要 wait_for_task 才算真入
-            # Codex Round 10.5 R2 · 任一批失敗 sticky meili_any_failed=True · last_search 不前進
-            if index and len(docs_batch) >= 200:
-                task_ok = _submit_and_wait(index, docs_batch, meili_client)
-                if not task_ok:
-                    errors += len(docs_batch)
-                    meili_any_failed = True
-                docs_batch = []
+    if workers > 1 and len(to_process) > 10:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            results = list(pool.map(_extract_one, to_process))
+    else:
+        results = [_extract_one(item) for item in to_process]
 
-    # flush 最後一批
+    # 整合 + 送 Meili
+    for doc, rel, type_str in results:
+        if doc is None:
+            errors += 1
+            continue
+        if type_str == "error":
+            errors += 1
+        doc["id"] = _doc_id_for(str(src["_id"]), rel)
+        doc["source_id"] = str(src["_id"])
+        doc["source_name"] = src["name"]
+        doc["rel_path"] = rel
+        parts = rel.split(os.sep)
+        if len(parts) > 1 and parts[0] == "projects":
+            doc["project"] = parts[1]
+        else:
+            doc["project"] = None
+        docs_batch.append(doc)
+        file_count += 1
+
+    # ROADMAP §11.4 · 並行 extract 完 · 200 doc/批送 Meili
+    # Codex R10.5 R1+R2 · wait_for_task + sticky meili_any_failed
     if index and docs_batch:
-        task_ok = _submit_and_wait(index, docs_batch, meili_client)
-        if not task_ok:
-            errors += len(docs_batch)
-            meili_any_failed = True
+        for i in range(0, len(docs_batch), 200):
+            chunk = docs_batch[i:i+200]
+            task_ok = _submit_and_wait(index, chunk, meili_client)
+            if not task_ok:
+                errors += len(chunk)
+                meili_any_failed = True
 
     # Q4 · 三種情境:
     # (a) 沒給 meili_client(cron / 測試沒配)· 不計搜尋進度 · 但 scanned 仍前進
