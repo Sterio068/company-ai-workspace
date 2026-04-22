@@ -292,15 +292,35 @@ def _send_email_internal(msg: EmailNotification) -> dict:
         raise HTTPException(502, f"SMTP 失敗: {str(e)[:200]}")
 
 
-# 注意:rate limit decorator 在 main.py wire router 時動態套(避免 circular import)
-@router.post("/admin/email/send")
 def send_email(msg: EmailNotification, request: Request,
                _admin: str = require_admin_dep()):
     """透過 SMTP 寄 Email · Audit sec F-1 · 防 SMTP 帳號濫用 · 月報 + 警告夠用
 
-    rate limit(20/hour)在 main.py wire 時透過 _limiter.limit() 套上
+    R11#1 · rate limit(20/hour)由 main.py register_rate_limited_routes 動態註冊
+    原 `@router.post + _admin_router.send_email = wrap(...)` 假修 · @router.post 已 capture 原 fn
     """
     return _send_email_internal(msg)
+
+
+# R11#1 · 真動態註冊 rate-limited route · 由 main.py wire 時呼叫
+_EMAIL_ROUTES_REGISTERED = False
+
+
+def register_rate_limited_routes(limit_decorator):
+    """main.py 在 include_router 之前呼叫 · 把 send_email 包 rate limit 後註冊到 router
+
+    R11#1 codex 抓 · @router.post 已 capture 原 fn · 後續 reassign module attr 無效
+    解法:不用 @router.post 註冊 send_email · 改 add_api_route 動態加 wrapped 版
+    """
+    global _EMAIL_ROUTES_REGISTERED
+    if _EMAIL_ROUTES_REGISTERED:
+        return
+    router.add_api_route(
+        "/admin/email/send",
+        limit_decorator(send_email),
+        methods=["POST"],
+    )
+    _EMAIL_ROUTES_REGISTERED = True
 
 
 @router.post("/admin/send-monthly-report")
@@ -348,11 +368,12 @@ def send_monthly_report_to_admin(_admin: str = require_admin_dep()):
 
 
 @router.get("/admin/monthly-report")
-def monthly_report(month: Optional[str] = None, _admin: Optional[str] = None):
+def monthly_report(month: Optional[str] = None, _admin: str = require_admin_dep()):
     """月度營運報告 · 給老闆/Sterio 月底看
 
-    注意:此函式可被內部直接呼叫(send_monthly_report)· _admin 為 Optional
-    對外當 endpoint 用時 · FastAPI 會 inject Depends · 內部呼叫直接 None
+    R11#2 · 必須走 require_admin_dep · 不能用 Optional[str]=None
+    原寫法:FastAPI 把 _admin 當 Optional query param · 攻擊者能 GET /admin/monthly-report 取得月報
+    新寫法:Depends 強制 admin · 內部 send_monthly_report() 直接 call 仍 OK(Python 不檢查 Depends)
     """
     from main import pnl_report, feedback_col
     from routers.feedback import _compute_feedback_stats

@@ -970,8 +970,9 @@ app.include_router(_feedback_router.router)
 # /quota/check + /quota/preflight 仍在 main(slowapi 緊耦合 · nginx auth_request 直連)
 # ============================================================
 from routers import admin as _admin_router
-# 動態套 rate limit 在 send_email(避免 admin.py 循環 import _limiter)
-_admin_router.send_email = _limiter.limit("20/hour")(_admin_router.send_email)
+# R11#1 真動態註冊 rate-limited route(原 reassign send_email 對 @router.post 已 capture 的 fn 無效)
+# 必須在 include_router 之前呼叫 · 才會 add_api_route 進 router
+_admin_router.register_rate_limited_routes(_limiter.limit("20/hour"))
 app.include_router(_admin_router.router)
 
 
