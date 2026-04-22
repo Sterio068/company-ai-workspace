@@ -30,6 +30,20 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+
+def _parse_date_boundary(raw: str, *, end: bool = False) -> datetime:
+    """R18 · audit-log 日期 parser · 容忍 YYYY-MM-DD 或完整 ISO datetime
+    原本 f"{start_date}T00:00:00" 若 raw 已含 T 會變 T..T 導致 ValueError 500
+    """
+    s = raw.strip().replace("Z", "+00:00")
+    try:
+        if "T" in s:
+            return datetime.fromisoformat(s)
+        d = date.fromisoformat(s)
+        return datetime.combine(d, datetime.max.time() if end else datetime.min.time())
+    except ValueError:
+        raise HTTPException(422, "date must be YYYY-MM-DD or ISO datetime")
+
 from ._deps import require_admin_dep
 
 
@@ -266,13 +280,13 @@ def audit_log(
     q = {}
     if action: q["action"] = action
     if user:   q["user"] = user
-    # date range · 用 ISO 字串比(created_at 是 datetime · 需轉)
+    # date range · R18 · 容忍 YYYY-MM-DD 或完整 ISO datetime
     if start_date or end_date:
         q["created_at"] = {}
         if start_date:
-            q["created_at"]["$gte"] = datetime.fromisoformat(f"{start_date}T00:00:00")
+            q["created_at"]["$gte"] = _parse_date_boundary(start_date)
         if end_date:
-            q["created_at"]["$lte"] = datetime.fromisoformat(f"{end_date}T23:59:59")
+            q["created_at"]["$lte"] = _parse_date_boundary(end_date, end=True)
     cursor = audit_col.find(q).sort("created_at", -1).skip(skip).limit(limit)
     items = serialize(list(cursor))
     total = audit_col.count_documents(q)
