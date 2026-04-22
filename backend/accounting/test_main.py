@@ -660,7 +660,8 @@ def test_agent_num_derive_from_conversation_id(client, tmp_source_dir):
     })
 
     # 清 cache 防干擾
-    main_mod._AGENT_NUM_FROM_CONVO_CACHE.clear()
+    from routers import knowledge as _kr
+    _kr._AGENT_NUM_FROM_CONVO_CACHE.clear()
 
     # 帶 conversation_id 的 user · derive 應拿到 "11" · 看得到 source
     r = client.get("/knowledge/list?conversation_id=test-convo-001")
@@ -682,8 +683,9 @@ def test_agent_num_spoof_via_header_blocked_in_prod(client, tmp_source_dir, monk
     # 強制 prod mode · _legacy_auth_headers_enabled() → False
     monkeypatch.setenv("ECC_ENV", "production")
     monkeypatch.setenv("ALLOW_LEGACY_AUTH_HEADERS", "0")
-    main_mod._AGENT_NUM_FROM_CONVO_CACHE.clear()
-    main_mod._AGENT_FORBIDDEN_CACHE["ts"] = 0.0  # 清 cache
+    from routers import knowledge as _kr
+    _kr._AGENT_NUM_FROM_CONVO_CACHE.clear()
+    _kr._AGENT_FORBIDDEN_CACHE["ts"] = 0.0  # 清 cache
 
     # 攻擊者只送 X-Agent-Num · 沒 conversation_id · prod mode 完全忽略 header
     r = client.get("/knowledge/list", headers={"X-Agent-Num": "11"})
@@ -700,7 +702,8 @@ def test_agent_num_derive_unknown_conversation_returns_none(client, tmp_source_d
         json={"name": "公開測試 §10.3", "path": tmp_source_dir, "agent_access": []},
         headers=ADMIN_HEADERS,
     )
-    main_mod._AGENT_NUM_FROM_CONVO_CACHE.clear()
+    from routers import knowledge as _kr
+    _kr._AGENT_NUM_FROM_CONVO_CACHE.clear()
     r = client.get("/knowledge/list?conversation_id=nonexistent-xyz")
     assert r.status_code == 200
     names = [s["name"] for s in r.json()["sources"]]
