@@ -9,11 +9,26 @@
  * 不處理:上傳檔(永遠 NAS 為 source of truth)· 抽字在後端
  */
 import { authFetch } from "./auth.js";
+import { chat } from "./chat.js";
 import { escapeHtml } from "./util.js";
 import { toast } from "./toast.js";
 import { modal } from "./modal.js";
 
 const BASE = "/api-accounting";
+
+/**
+ * R9#1 / ROADMAP §10.3 · 所有 /knowledge/* 必帶 conversation_id
+ * 後端 _resolve_agent_num 從 conversation_id → LibreChat agent → derive agent_num
+ * 沒帶 conversation_id 時 prod 拿不到 agent_num · 白名單 source 全藏
+ *
+ * 用法:`withConvId("/api-accounting/knowledge/list?source_id=xxx")`
+ */
+function withConvId(url) {
+  const id = (chat?.currentConvoId || "").trim();
+  if (!id) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}conversation_id=${encodeURIComponent(id)}`;
+}
 
 export const knowledge = {
   _sources: [],       // {id, name, type, path, enabled, ...}
@@ -268,7 +283,7 @@ export const knowledge = {
     if (!root) return;
     root.innerHTML = `<div class="chip-empty">載入中…</div>`;
     try {
-      const r = await authFetch(`${BASE}/knowledge/list`);
+      const r = await authFetch(withConvId(`${BASE}/knowledge/list`));
       if (!r.ok) throw new Error(r.status);
       const { sources } = await r.json();
       this._publicSources = sources || [];
@@ -333,7 +348,7 @@ export const knowledge = {
     cardEl.classList.add("open");
     children.innerHTML = "載入中…";
     try {
-      const r = await authFetch(`${BASE}/knowledge/list?source_id=${sid}`);
+      const r = await authFetch(withConvId(`${BASE}/knowledge/list?source_id=${sid}`));
       if (!r.ok) throw new Error(r.statusText);
       const { entries } = await r.json();
       delete children.dataset.placeholder;
@@ -364,7 +379,7 @@ export const knowledge = {
 
   async _browseFolder(sid, path) {
     try {
-      const r = await authFetch(`${BASE}/knowledge/list?source_id=${sid}&project=${encodeURIComponent(path)}`);
+      const r = await authFetch(withConvId(`${BASE}/knowledge/list?source_id=${sid}&project=${encodeURIComponent(path)}`));
       if (!r.ok) throw new Error(r.statusText);
       const body = await r.json();
       // 用 drawer 顯示資料夾內容(reuse C 的 drawer)
@@ -393,7 +408,7 @@ export const knowledge = {
 
   async _openFile(sid, rel) {
     try {
-      const r = await authFetch(`${BASE}/knowledge/read?source_id=${sid}&rel_path=${encodeURIComponent(rel)}`);
+      const r = await authFetch(withConvId(`${BASE}/knowledge/read?source_id=${sid}&rel_path=${encodeURIComponent(rel)}`));
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
         toast.error(err.detail || "讀取失敗");
@@ -429,7 +444,7 @@ export const knowledge = {
     if (!root) return;
     root.innerHTML = `<div class="chip-empty">搜尋中…</div>`;
     try {
-      const r = await authFetch(`${BASE}/knowledge/search?q=${encodeURIComponent(q)}&limit=20`);
+      const r = await authFetch(withConvId(`${BASE}/knowledge/search?q=${encodeURIComponent(q)}&limit=20`));
       if (!r.ok) throw new Error(r.status);
       const body = await r.json();
       const hits = body.hits || [];
@@ -465,7 +480,7 @@ export const knowledge = {
   async paletteSearch(q) {
     if (!q || q.length < 2) return [];
     try {
-      const r = await authFetch(`${BASE}/knowledge/search?q=${encodeURIComponent(q)}&limit=5`);
+      const r = await authFetch(withConvId(`${BASE}/knowledge/search?q=${encodeURIComponent(q)}&limit=5`));
       if (!r.ok) return [];
       const body = await r.json();
       return (body.hits || []).map(h => ({

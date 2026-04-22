@@ -9,7 +9,9 @@ Routers shared dependencies · Codex R7#6 / R8#8 推薦先建再抽 knowledge/ad
 - require_admin_dep · 包 require_admin
 
 設計原則:
-1. 全部 lazy import main · 避免循環
+1. `from main import` 寫在 function body · 是 router import 後第一次 endpoint 註冊時觸發
+   (FastAPI 把 default arg 中的 Depends 在 app 建立時解析 · 而非每 request)
+   · R9#7 codex 修正:不是「每 request lazy」· 是「import time lazy」· 避免循環的是後者
 2. dep factory 回 Depends() · 而非已 wrap 的 callable · 讓 FastAPI 正確 inject
 3. 命名統一 · *_dep 後綴(可讀)
 4. _serialize 與 main.serialize 行為一致(增 datetime ISO 處理)
