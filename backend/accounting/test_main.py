@@ -276,28 +276,22 @@ def test_l3_classifier_detects_unit_internal(client):
 # ============================================================
 # F · Fal.ai 設計助手(V1.1-SPEC §A · Q2 num_images=3)
 # ============================================================
-def test_design_recraft_without_api_key(client):
-    """FAL_API_KEY 未設 → 503 + friendly_message"""
-    import main as main_mod
-    saved = main_mod.FAL_KEY
-    main_mod.FAL_KEY = ""
-    try:
-        r = client.post("/design/recraft", json={
-            "prompt": "中秋節品牌主視覺 · 橘黃色調 · 現代簡潔",
-            "image_size": "square_hd",
-        })
-        assert r.status_code == 503
-        body = r.json()
-        # FastAPI 把 detail 包一層
-        detail = body.get("detail", {})
-        if isinstance(detail, dict):
-            assert "未啟用" in detail.get("friendly_message", "")
-            assert detail.get("status") == "unconfigured"
-        else:
-            # 若 detail 是字串 · 至少要有訊息
-            assert "未啟用" in str(detail) or "FAL" in str(detail)
-    finally:
-        main_mod.FAL_KEY = saved
+def test_design_recraft_without_api_key(client, monkeypatch):
+    """FAL_API_KEY 未設 → 503 + friendly_message
+    ROADMAP §11.1 B-5 · router 改 _fal_key() 讀 env · test 用 monkeypatch.setenv"""
+    monkeypatch.setenv("FAL_API_KEY", "")
+    r = client.post("/design/recraft", json={
+        "prompt": "中秋節品牌主視覺 · 橘黃色調 · 現代簡潔",
+        "image_size": "square_hd",
+    })
+    assert r.status_code == 503
+    body = r.json()
+    detail = body.get("detail", {})
+    if isinstance(detail, dict):
+        assert "未啟用" in detail.get("friendly_message", "")
+        assert detail.get("status") == "unconfigured"
+    else:
+        assert "未啟用" in str(detail) or "FAL" in str(detail)
 
 
 def test_design_recraft_rejects_short_prompt(client):
@@ -315,16 +309,11 @@ def test_design_recraft_rejects_bad_size(client):
     assert r.status_code == 422
 
 
-def test_design_recraft_status_without_api_key(client):
+def test_design_recraft_status_without_api_key(client, monkeypatch):
     """status 端點 · 無 key 也 503"""
-    import main as main_mod
-    saved = main_mod.FAL_KEY
-    main_mod.FAL_KEY = ""
-    try:
-        r = client.get("/design/recraft/status/req_fake")
-        assert r.status_code == 503
-    finally:
-        main_mod.FAL_KEY = saved
+    monkeypatch.setenv("FAL_API_KEY", "")
+    r = client.get("/design/recraft/status/req_fake")
+    assert r.status_code == 503
 
 
 def test_design_recraft_success_mocked(client, monkeypatch):
@@ -356,11 +345,12 @@ def test_design_recraft_success_mocked(client, monkeypatch):
                 {"url": "https://fal.cdn/c.png", "width": 1024, "height": 1024},
             ]})
 
-    monkeypatch.setattr(main_mod, "FAL_KEY", "fake-key-for-test")
-    monkeypatch.setattr(main_mod.httpx, "AsyncClient", FakeClient)
-    # asyncio.sleep → 立刻 return · 避免測試等 12 秒
+    # ROADMAP §11.1 B-5 · router 內部 import httpx/asyncio · monkeypatch router 模組
+    import routers.design as design_mod
+    monkeypatch.setenv("FAL_API_KEY", "fake-key-for-test")
+    monkeypatch.setattr(design_mod.httpx, "AsyncClient", FakeClient)
     async def _nop(x): return
-    monkeypatch.setattr(main_mod.asyncio, "sleep", _nop)
+    monkeypatch.setattr(design_mod.asyncio, "sleep", _nop)
 
     r = client.post("/design/recraft", json={
         "prompt": "中秋節品牌主視覺 橘黃調",
@@ -837,8 +827,9 @@ def test_design_recraft_moderation_rejected(client, monkeypatch):
         async def post(self, *a, **kw): return RejResp()
         async def get(self, *a, **kw): return RejResp()
 
-    monkeypatch.setattr(main_mod, "FAL_KEY", "fake-key-for-test")
-    monkeypatch.setattr(main_mod.httpx, "AsyncClient", FakeClient)
+    import routers.design as design_mod
+    monkeypatch.setenv("FAL_API_KEY", "fake-key-for-test")
+    monkeypatch.setattr(design_mod.httpx, "AsyncClient", FakeClient)
 
     r = client.post("/design/recraft", json={
         "prompt": "真人總統肖像 寫實",  # 被 moderation 的假例
