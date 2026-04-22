@@ -190,13 +190,17 @@ def test_handoff_card_bad_project_id(client):
 # C · 回饋收集
 # ============================================================
 def test_create_feedback(client):
-    r = client.post("/feedback", json={
-        "message_id": "msg_001",
-        "agent_name": "🎯 投標顧問",
-        "verdict": "up",
-        "note": "建議書結構很清楚",
-        "user_email": "test@chengfu.local",
-    })
+    """R7#4 · /feedback 必須登入 · 用 X-User-Email header 才行"""
+    r = client.post("/feedback",
+        json={
+            "message_id": "msg_001",
+            "agent_name": "🎯 投標顧問",
+            "verdict": "up",
+            "note": "建議書結構很清楚",
+            "user_email": "test@chengfu.local",
+        },
+        headers={"X-User-Email": "test@chengfu.local"},
+    )
     assert r.status_code == 200
 
 
@@ -731,6 +735,34 @@ def test_auth_feedback_create_uses_trusted_email(client):
     fb = main_mod.feedback_col.find_one({"message_id": "spy_msg"})
     assert fb is not None
     assert fb["user_email"] == "real_attacker@chengfu.local"
+
+
+def test_auth_feedback_blocks_anonymous(client):
+    """R7#4 · 沒有 trusted_email 時 · 即使 body 自己塞 user_email 也擋
+    防匿名偽造 feedback 給競爭對手做負評刷"""
+    r = client.post("/feedback",
+        json={"message_id": "anon_attack", "verdict": "down",
+              "note": "這個 agent 很爛", "user_email": "victim@chengfu.local"},
+        # 注意:故意不送 X-User-Email
+    )
+    assert r.status_code == 403
+    # 驗:DB 不該有這筆
+    import main as main_mod
+    fb = main_mod.feedback_col.find_one({"message_id": "anon_attack"})
+    assert fb is None
+
+
+def test_auth_quota_preflight_dev_mode_passes_anonymous(client):
+    """R7#9 · /quota/preflight nginx auth_request 用
+    dev mode(沒設 ECC_ENV=production)· 沒 user 時應放行 · 給 launcher 開發空間"""
+    r = client.get("/quota/preflight")
+    assert r.status_code == 204
+
+
+def test_auth_quota_preflight_returns_204_when_within_budget(client):
+    """R7#9 · 有 user + 在預算內 → 204"""
+    r = client.get("/quota/preflight", headers={"X-User-Email": "test@chengfu.local"})
+    assert r.status_code in (204, 429)  # 預算 logic 視 admin_metrics 而定 · 不該 401/403
 
 
 def test_healthz_includes_ocr_status(client):

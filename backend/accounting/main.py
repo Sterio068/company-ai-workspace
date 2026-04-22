@@ -48,6 +48,38 @@ knowledge_sources_col = db.knowledge_sources  # V1.1 §E · 多來源知識庫
 knowledge_audit_col = db.knowledge_audit      # /knowledge/read audit trail
 
 # ============================================================
+# Codex R7#1 / R7#2 / R7#10 · prod-mode auth 調節 helper
+# 必須在 lifespan 之前定義 · 因為 startup 會 call
+# ============================================================
+def _is_prod() -> bool:
+    """環境判斷 · ECC_ENV / NODE_ENV 任一為 production"""
+    return (
+        os.getenv("ECC_ENV", "").lower() == "production"
+        or os.getenv("NODE_ENV", "").lower() == "production"
+    )
+
+
+def _jwt_refresh_configured() -> bool:
+    """JWT_REFRESH_SECRET 真有設 · 不是 placeholder"""
+    sec = os.getenv("JWT_REFRESH_SECRET", "")
+    return bool(sec) and not sec.startswith("<GENERATE")
+
+
+def _legacy_auth_headers_enabled() -> bool:
+    """R7#10 · 是否允許 X-User-Email header fallback
+    · prod 預設 OFF(必走 cookie 或 internal token)
+    · dev 預設 ON(沒 LibreChat 也能 launcher 開發)
+    · prod 若 nginx 沒 strip header · 攻擊者可偽造身份 → 設 ALLOW_LEGACY_AUTH_HEADERS=1 才開"""
+    explicit = os.getenv("ALLOW_LEGACY_AUTH_HEADERS", "").strip()
+    if explicit == "1":
+        return True
+    if explicit == "0":
+        return False
+    # 預設行為 · prod=False · dev=True
+    return not _is_prod()
+
+
+# ============================================================
 # Lifespan (FastAPI ≥ 0.93 推薦取代 on_event)
 # ============================================================
 @asynccontextmanager
@@ -98,18 +130,40 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.debug("[index] conversations.chengfu_summarized_at skip: %s", e)
     logger.info("indexes ensured · app ready")
-    # ROADMAP §11.12 + Codex R6#1 · JWT secret 啟動檢查
+    # ROADMAP §11.12 + Codex R6#1 / R7#1 · JWT secret 啟動檢查
     # 注意:LibreChat v0.8.4 access token 在 JSON · 不發 token cookie
     # 我們改驗 refreshToken cookie · 用 JWT_REFRESH_SECRET 簽
+    # R7#1 · refresh payload 是 {id, sessionId} 不是 {email} · 必須 lookup users
     _jwt_refresh = os.getenv("JWT_REFRESH_SECRET", "")
     if not _jwt_refresh or _jwt_refresh.startswith("<GENERATE"):
+        if _is_prod():
+            # R7#1 · prod 強制 fail closed · dev/test 仍只 warn
+            raise RuntimeError(
+                "JWT_REFRESH_SECRET required in production · "
+                "從 LibreChat .env 同步 JWT_REFRESH_SECRET 進 accounting "
+                "(否則 cookie auth OFF · X-User-Email 可被偽造)"
+            )
         logger.warning(
-            "[auth] JWT_REFRESH_SECRET 未設或為 placeholder · "
+            "[auth] JWT_REFRESH_SECRET 未設或為 placeholder(dev mode)· "
             "Cookie 驗 OFF · admin endpoint 走 X-User-Email 相容路徑(可被偽造)· "
             "production 必設 · 見 docs/05-SECURITY.md"
         )
     else:
         logger.info("[auth] JWT_REFRESH_SECRET 已設 · cookie 驗 ON · admin 強制 trusted")
+    # R7#10 · prod legacy header fallback 預設關 · 開發或明確 opt-in 才開
+    if not _legacy_auth_headers_enabled():
+        logger.info("[auth] X-User-Email legacy fallback OFF · 必走 cookie 或 internal token")
+    else:
+        logger.warning(
+            "[auth] X-User-Email legacy fallback ON · "
+            "dev mode 或 ALLOW_LEGACY_AUTH_HEADERS=1 · prod 應確保 nginx 已 strip 此 header"
+        )
+    # R7#2 · ECC_INTERNAL_TOKEN 啟動時檢查
+    if not os.getenv("ECC_INTERNAL_TOKEN", "").strip():
+        if _is_prod():
+            logger.warning(
+                "[auth] ECC_INTERNAL_TOKEN 未設 · cron daily-digest / tender-monitor 將無法呼叫 admin endpoint"
+            )
     # Codex Round 10.5 · 啟動時主動探 OCR · /healthz 立刻看得到真狀態
     try:
         from services.knowledge_extract import probe_ocr_startup
@@ -149,13 +203,19 @@ from slowapi.middleware import SlowAPIMiddleware
 
 
 def _user_or_ip(request: Request) -> str:
-    """Codex R5#7 + R6#2 · 限速 key 優先 trusted user · IP fallback
+    """Codex R5#7 + R6#2 + R7#2 · 限速 key 優先 trusted user · IP fallback
 
     R6#2 抓:SlowAPIMiddleware 在 endpoint dependency 前跑 · request.state 還沒設
     修正:在 key_func 內直接驗 cookie · 不依賴 state
+
+    R7#2 抓:`if request.headers.get("X-Internal-Token")` 只看存在 · 不比對 secret
+    任何人 curl 加亂塞 X-Internal-Token: foo 就能打同一 internal bucket
+    修正:必須等於 ECC_INTERNAL_TOKEN env value
     """
-    # Internal token(cron)優先
-    if request.headers.get("X-Internal-Token"):
+    # R7#2 · Internal token 必須 secret-equal · 不只是有 header
+    expected_internal = os.getenv("ECC_INTERNAL_TOKEN", "").strip()
+    provided_internal = (request.headers.get("X-Internal-Token") or "").strip()
+    if expected_internal and provided_internal and provided_internal == expected_internal:
         return "u:internal"
     # 直接呼叫 _verify_librechat_cookie · 不靠 request.state(middleware 順序問題)
     try:
@@ -273,19 +333,23 @@ _admin_allowlist = {e.strip().lower() for e in (
 
 
 def _verify_librechat_cookie(request: Request) -> Optional[str]:
-    """Codex R6#1 · 修正 R5#1 錯誤前提
+    """Codex R6#1 + R7#1 · 修正 R5#1 + R6#1 錯誤前提
 
     R5#1 假設 LibreChat 發 `token` cookie · 但 v0.8.4 原始碼:
     - login/refresh 回 JSON {token, user} · access 只在 response body
     - cookie 只設 refreshToken + token_provider
-    所以 R5#1 cookie 路徑「永遠 None · admin 永遠走 X-User-Email legacy」
-    = 等於沒做認證強化 · production 仍可偽造
+    所以 R5#1 cookie 路徑「永遠 None」= 等於沒做認證強化
 
-    新策略:
-    1. 驗 refreshToken cookie(LibreChat 實際發 · JWT_REFRESH_SECRET 簽)
-    2. refreshToken 雖長效(7d) · 有 LibreChat httpOnly + SameSite 保護
-    3. require_admin 仍要白名單 · refreshToken 只證 user 是誰 · 不直接 = admin
-    4. 失敗 → None · 走 X-User-Email legacy(JWT_REFRESH_SECRET 未設時)
+    R6#1 改驗 refreshToken · 但只 read `payload.email`
+    R7#1 抓:LibreChat refresh payload 實際是 {id, sessionId} · 不是 {email}
+    驗證來源:packages/data-schemas/src/methods/session.ts
+    所以 R6#1 仍 silent fail · prod cookie 路徑等於沒接
+
+    R7#1 修正:
+    1. JWT 解出 payload.id(Mongo ObjectId hex string)
+    2. 用 _users_col.find_one({"_id": ObjectId(id)}) 反查 email
+    3. 失敗 → None · 走 X-User-Email legacy(若 ALLOW_LEGACY_AUTH_HEADERS)
+    4. 為效能 · LRU cache 60 秒(refresh token 7d 期效 · email 變動極少)
     """
     try:
         import jwt as _jwt
@@ -298,18 +362,54 @@ def _verify_librechat_cookie(request: Request) -> Optional[str]:
             return None
         try:
             payload = _jwt.decode(refresh_token, sec, algorithms=["HS256"])
-            email = (payload.get("email") or "").strip().lower()
-            if email:
-                return email
         except _jwt.ExpiredSignatureError:
             logger.debug("[auth] refreshToken expired · user should re-login")
             return None
         except _jwt.InvalidTokenError as e:
             logger.debug("[auth] refreshToken invalid · %s", e)
             return None
-        return None
+        # R7#1 · payload 標準是 {id, sessionId} · email 是 LibreChat 後來加的非標欄位
+        # 先試 payload.email(若 LibreChat 升級加上)· 失敗才走 ID lookup(主路徑)
+        email_in_payload = (payload.get("email") or "").strip().lower()
+        if email_in_payload:
+            return email_in_payload
+        user_id = payload.get("id") or payload.get("sub") or payload.get("userId")
+        if not user_id:
+            logger.debug("[auth] refreshToken payload 無 id 欄位 · keys=%s", list(payload.keys()))
+            return None
+        return _lookup_user_email_cached(str(user_id))
     except Exception as e:
         logger.debug("[auth] cookie verify outer fail: %s", e)
+        return None
+
+
+# R7#1 · LRU cache for user email lookup · 60s TTL(refresh token 7d · email 不常變)
+_USER_EMAIL_CACHE: dict[str, tuple[str, float]] = {}
+_USER_EMAIL_CACHE_TTL = 60.0
+
+
+def _lookup_user_email_cached(user_id: str) -> Optional[str]:
+    """從 _users_col 反查 email · 60s LRU cache 避免每 request 都打 Mongo"""
+    import time
+    now = time.time()
+    cached = _USER_EMAIL_CACHE.get(user_id)
+    if cached and now - cached[1] < _USER_EMAIL_CACHE_TTL:
+        return cached[0] or None
+    try:
+        # ObjectId 可能 invalid(舊 token)· try-except 包好
+        try:
+            oid = ObjectId(user_id)
+        except Exception:
+            return None
+        u = _users_col.find_one({"_id": oid}, {"email": 1})
+        email = (u.get("email") or "").strip().lower() if u else ""
+        # 簡單 LRU cap · 200 item
+        if len(_USER_EMAIL_CACHE) > 200:
+            _USER_EMAIL_CACHE.clear()
+        _USER_EMAIL_CACHE[user_id] = (email, now)
+        return email or None
+    except Exception as e:
+        logger.debug("[auth] users lookup id=%s · %s", user_id, e)
         return None
 
 
@@ -317,19 +417,21 @@ def current_user_email(
     request: Request,
     x_user_email: Optional[str] = Header(default=None),
 ) -> Optional[str]:
-    """取得當前使用者 email · 優先順序(Codex R3.2):
-    1. LibreChat cookie 驗過的 email(最可信)
-    2. X-User-Email header(legacy · v1.2 前保留 · 但會標記 untrusted)
+    """取得當前使用者 email · 優先順序(Codex R3.2 / R7#1 / R7#10):
+    1. LibreChat refreshToken cookie + JWT_REFRESH_SECRET + 反查 _users_col(R7#1)
+    2. X-User-Email header(legacy · ALLOW_LEGACY_AUTH_HEADERS 才開 · prod 預設 OFF)
 
-    若只靠 X-User-Email · 任何人 curl 可偽造 admin。
-    有 cookie 時優先用 cookie 結果 · 標記 trusted=True。
+    R7#10:prod 若 nginx 沒 strip X-User-Email · 任何人 curl 可偽造 admin。
+    所以 prod 預設關 fallback · 只有 dev / 明確 opt-in 才開。
     """
     trusted_email = _verify_librechat_cookie(request)
     if trusted_email:
         request.state.email_trusted = True
         return trusted_email
-    # Fallback · legacy X-User-Email(標記不可信 · require_admin 會判斷)
     request.state.email_trusted = False
+    # R7#10 · prod 模式預設關 X-User-Email fallback · 防 nginx 沒 strip 時被偽造
+    if not _legacy_auth_headers_enabled():
+        return None
     return (x_user_email or "").strip().lower() or None
 
 
@@ -1277,6 +1379,53 @@ def quota_check(email: Optional[str] = Depends(current_user_email)):
         user_soft_cap_ntd=_USER_SOFT_CAP_DEFAULT,
         usd_to_ntd=_USD_TO_NTD,
     )
+
+
+@app.get("/quota/preflight")
+def quota_preflight(request: Request, email: Optional[str] = Depends(current_user_email)):
+    """Codex R7#9 · nginx auth_request 用 · 看 user 是否仍在預算內
+
+    回應 contract:
+    - 204 No Content · 通過(允許 LibreChat /api/ask)
+    - 429 Too Many Requests · 擋(超預算 · nginx 回 user 502/403)
+    - 401 · 沒驗到身份(prod 嚴格擋 · dev 視為通過 · 給 launcher 開發空間)
+
+    使用方式(nginx):
+        location = /_quota_gate {
+            internal;
+            proxy_pass http://accounting:8090/quota/preflight;
+            proxy_pass_request_body off;
+        }
+        location /api/ask {
+            auth_request /_quota_gate;
+            proxy_pass http://librechat:3080;
+        }
+    """
+    from starlette.responses import Response
+    if not email:
+        # prod 嚴格 · dev 放行給 launcher 開發
+        if _is_prod():
+            raise HTTPException(401, "未識別使用者 · LibreChat 對話需登入")
+        return Response(status_code=204)
+    result = admin_metrics.quota_check(
+        db, _users_col, email,
+        mode=QUOTA_MODE,
+        override_emails=QUOTA_OVERRIDE_EMAILS,
+        admin_allowlist=_admin_allowlist,
+        user_soft_cap_ntd=_USER_SOFT_CAP_DEFAULT,
+        usd_to_ntd=_USD_TO_NTD,
+    )
+    if result.get("allowed") is False:
+        raise HTTPException(
+            429,
+            detail={
+                "reason": result.get("reason", "quota exceeded"),
+                "spent_ntd": result.get("spent_ntd", 0),
+                "cap_ntd": result.get("cap_ntd", 0),
+                "request_id": getattr(request.state, "request_id", ""),
+            },
+        )
+    return Response(status_code=204)
 
 
 

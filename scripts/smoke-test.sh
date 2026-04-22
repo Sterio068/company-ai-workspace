@@ -43,7 +43,7 @@ check "Meilisearch 容器運行中" "docker ps --filter name=chengfu-meili --fil
 echo ""
 echo "[網路連線]"
 check "nginx /healthz"           "curl -sf ${BASE_URL}/healthz"
-check "承富 Launcher /"          "curl -sf ${BASE_URL}/ | grep -q '承富'"
+check "承富 Launcher /"          "[[ \$(curl -sf ${BASE_URL}/) == *承富* ]]"
 check "LibreChat API /api/config" "curl -sf ${BASE_URL}/api/config"
 check "LibreChat /chat"          "curl -sf ${BASE_URL}/chat -o /dev/null -w '%{http_code}' | grep -qE '200|301|302'"
 

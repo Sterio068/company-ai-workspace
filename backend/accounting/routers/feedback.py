@@ -43,16 +43,18 @@ def _serialize(doc):
 
 @router.post("/feedback")
 def create_feedback(fb: Feedback, request: Request):
-    """R6#4 · user_email 從 trusted identity 取 · 不信前端 body
-    若 trusted email 取不到 · 才 fallback 到 fb.user_email"""
+    """R6#4 + R7#4 · user_email 從 trusted identity 取 · 完全不信前端 body
+    R7#4 抓:R6#4 fallback fb.user_email 仍可偽造他人回饋
+    修正:無 trusted_email 直接 403 · feedback 必須登入"""
     from main import feedback_col, current_user_email
-    data = fb.model_dump()
     trusted_email = current_user_email(request, request.headers.get("X-User-Email"))
-    if trusted_email:
-        data["user_email"] = trusted_email  # 覆蓋 body 內的 · 防偽造他人回饋
+    if not trusted_email:
+        raise HTTPException(403, "未識別使用者 · feedback 必須登入(R7#4)")
+    data = fb.model_dump()
+    data["user_email"] = trusted_email  # 覆蓋 body · 防偽造
     data["created_at"] = datetime.utcnow()
     feedback_col.update_one(
-        {"message_id": fb.message_id, "user_email": data.get("user_email")},
+        {"message_id": fb.message_id, "user_email": trusted_email},
         {"$set": data},
         upsert=True,
     )
