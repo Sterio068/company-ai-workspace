@@ -158,9 +158,13 @@ async def lifespan(app: FastAPI):
         )
     except Exception as e:
         logger.warning("[ttl] meetings TTL: %s", e)
-    # Feature #6 · media_contacts unique email index
+    # Feature #6 · media_contacts email unique(R21#4 · partial 排除空字串)
     try:
-        db.media_contacts.create_index([("email", 1)], unique=True, sparse=True)
+        db.media_contacts.create_index(
+            [("email", 1)],
+            unique=True,
+            partialFilterExpression={"email": {"$type": "string", "$gt": ""}},
+        )
         db.media_contacts.create_index([("outlet", 1), ("beats", 1)])
         db.media_pitch_history.create_index([("contact_id", 1), ("pitched_at", -1)])
     except Exception as e:

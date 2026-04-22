@@ -96,9 +96,10 @@ def test_recommend_jaccard_match(client):
          "accepted_count": 0, "pitched_count": 0, "accepted_topics": []},
     ])
 
+    # R21#3 · recommend admin-only(email PDPA L02)
     r = client.post("/media/recommend",
         json={"topic": ["環保"], "limit": 10},
-        headers=USER)
+        headers=ADMIN)
     assert r.status_code == 200
     items = r.json()["items"]
     # 環保記者應上榜(first · 分數高)

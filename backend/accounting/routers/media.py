@@ -26,7 +26,8 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
+from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
 from bson.errors import InvalidId
 
@@ -212,8 +213,11 @@ def list_pitches(contact_id: str, _user: str = require_user_dep()):
 # 推薦演算法
 # ============================================================
 @router.post("/media/recommend")
-def recommend_contacts(req: RecommendRequest, _user: str = require_user_dep()):
+def recommend_contacts(req: RecommendRequest, _admin: str = require_admin_dep()):
     """主題 → top N 記者 + 分數 + 理由
+
+    R21#3 · admin-only · 回傳含 email(PDPA Level 02)· 一般同事不直接拿
+    · 若同事要發稿 · 走「admin 推薦 → 填 04 新聞稿 → admin 寄」流程
 
     score = 0.5 × jaccard(topic, beats)
           + 0.3 × (accepted_count / max_accepted)
@@ -261,7 +265,9 @@ def recommend_contacts(req: RecommendRequest, _user: str = require_user_dep()):
             else:
                 recency = 1.0
         else:
-            recency = 1.0  # 從沒接觸過 · 最高分
+            # R21#5 · 從沒接觸過給 0.6 · 不是 1.0(避免壓過老關係)
+            # 老關係(accepted_count > 0)雖 recency 可能普通 · 但 acc_score 更高
+            recency = 0.6
 
         score = 0.5 * jaccard + 0.3 * acc_score + 0.2 * recency
         scored.append({
@@ -307,13 +313,16 @@ async def import_csv(
     if len(content) > 5 * 1024 * 1024:
         raise HTTPException(413, "CSV > 5MB · 請拆批")
 
-    try:
-        text = content.decode("utf-8-sig")  # 處理 Excel UTF-8 BOM
-    except UnicodeDecodeError:
+    # R21#2 · 多編碼 fallback · UTF-8 BOM → Big5 → GBK
+    text = None
+    for enc in ("utf-8-sig", "big5", "gbk"):
         try:
-            text = content.decode("big5")
+            text = content.decode(enc)
+            break
         except UnicodeDecodeError:
-            raise HTTPException(400, "編碼無法辨識 · 請用 UTF-8 或 Big5")
+            continue
+    if text is None:
+        raise HTTPException(400, "編碼無法辨識 · 請用 UTF-8 / Big5 / GBK")
 
     reader = csv.DictReader(io.StringIO(text))
     required = {"name", "outlet", "email"}
@@ -326,10 +335,8 @@ async def import_csv(
         if not email or "@" not in email:
             errors.append({"row": idx, "email": row.get("email"), "issue": "email 格式錯"})
             continue
-        # CSV injection 防護(Excel 公式注入 =cmd)
-        for k, v in row.items():
-            if isinstance(v, str) and v.startswith(("=", "+", "-", "@")):
-                row[k] = "'" + v  # 前綴 ' 讓 Excel 當文字
+        # R21#2 · 不在 import 階段改 row(會污染 DB · "'張三" 變奇怪資料)
+        # CSV injection 防護改在 export 階段做(若未來加 /media/contacts/export)
 
         beats_raw = (row.get("beats") or "").strip()
         beats = [b.strip() for b in beats_raw.split("|") if b.strip()]
@@ -359,6 +366,9 @@ async def import_csv(
             else:
                 db.media_contacts.insert_one({**doc_insert, **doc_set})
                 imported += 1
+        except DuplicateKeyError:
+            # R21 · 真 Mongo unique 撞(race condition · 另個 request 同 email 同時 insert)
+            errors.append({"row": idx, "email": email, "issue": "duplicate_email"})
         except Exception as e:
             errors.append({"row": idx, "email": email, "issue": str(e)[:100]})
 
