@@ -535,102 +535,11 @@ pnl_report = _accounting_router.pnl_report
 
 
 # ============================================================
-# B · 專案(取代 Launcher localStorage · 團隊共享)
+# B · 專案 + Handoff · v1.3 §11.1 B-10 已抽到 routers/projects.py
+# 含 /projects CRUD + /projects/{id}/handoff GET/PUT(B2 4 格卡)
 # ============================================================
-class Project(BaseModel):
-    name: str
-    client: Optional[str] = None
-    budget: Optional[float] = None
-    deadline: Optional[str] = None
-    description: Optional[str] = None
-    status: Literal["active", "closed"] = "active"
-    owner: Optional[str] = None
-
-
-@app.get("/projects")
-def list_projects(status: Optional[str] = None):
-    q = {}
-    if status: q["status"] = status
-    return serialize(list(projects_col.find(q).sort("updated_at", -1)))
-
-
-@app.post("/projects")
-def create_project(p: Project):
-    data = p.model_dump()
-    data["created_at"] = datetime.utcnow()
-    data["updated_at"] = datetime.utcnow()
-    r = projects_col.insert_one(data)
-    return {"id": str(r.inserted_id)}
-
-
-@app.put("/projects/{project_id}")
-def update_project(project_id: str, p: Project):
-    data = p.model_dump(exclude_unset=True)  # py-review #1 · pydantic v2 一致
-    data["updated_at"] = datetime.utcnow()
-    r = projects_col.update_one({"_id": ObjectId(project_id)}, {"$set": data})
-    return {"updated": r.modified_count}
-
-
-@app.delete("/projects/{project_id}")
-def delete_project(project_id: str):
-    r = projects_col.delete_one({"_id": ObjectId(project_id)})
-    return {"deleted": r.deleted_count}
-
-
-# ------------------------------------------------------------
-# B2 · Handoff 4 格卡(跨助手 · 跨人 · 跨日的交棒 artifact)
-# V1.1-SPEC §C · 獨立 endpoint 不用 PUT /projects/{id} 全量更新
-# ------------------------------------------------------------
-class HandoffAssetRef(BaseModel):
-    type: Literal["nas", "url", "file", "note"] = "note"
-    label: str = ""
-    ref: str = ""
-
-
-class HandoffCard(BaseModel):
-    goal: str = ""
-    constraints: list[str] = []
-    asset_refs: list[HandoffAssetRef] = []
-    next_actions: list[str] = []
-    source_conversation_id: Optional[str] = None
-
-
-@app.put("/projects/{project_id}/handoff")
-def update_handoff(project_id: str, card: HandoffCard, request: Request):
-    """PM 存完 · 多分頁 BroadcastChannel 會通知其他同仁 re-render。"""
-    email = (request.headers.get("X-User-Email") or "").strip().lower() or None
-    payload = {
-        **card.model_dump(),
-        "updated_by": email,
-        "updated_at": datetime.utcnow(),
-    }
-    try:
-        r = projects_col.update_one(
-            {"_id": ObjectId(project_id)},
-            {"$set": {"handoff": payload, "updated_at": datetime.utcnow()}},
-        )
-    except Exception:
-        raise HTTPException(400, "project_id 格式錯誤")
-    if r.matched_count == 0:
-        raise HTTPException(404, "專案不存在")
-    return {"ok": True, "updated_at": payload["updated_at"].isoformat()}
-
-
-@app.get("/projects/{project_id}/handoff")
-def get_handoff(project_id: str):
-    try:
-        doc = projects_col.find_one(
-            {"_id": ObjectId(project_id)}, {"handoff": 1, "name": 1}
-        )
-    except Exception:
-        raise HTTPException(400, "project_id 格式錯誤")
-    if not doc:
-        raise HTTPException(404, "專案不存在")
-    h = doc.get("handoff") or {}
-    # datetime → isoformat · 前端可直接 JSON.parse
-    if isinstance(h.get("updated_at"), datetime):
-        h["updated_at"] = h["updated_at"].isoformat()
-    return {"project_name": doc.get("name", ""), "handoff": h}
+from routers import projects as _projects_router
+app.include_router(_projects_router.router)
 
 
 # ============================================================
@@ -771,79 +680,11 @@ app.include_router(_safety_router.router)
 
 
 # ============================================================
-# Context Summary Middleware(對話超長自動摘要 · 省 token)
+# Context Summary · v1.3 §11.1 B-11 已抽到 routers/memory.py
+# /memory/summarize-conversation · Haiku 摘要 · 省 60% context token
 # ============================================================
-class SummarizeRequest(BaseModel):
-    conversation_id: str
-    keep_recent: int = 10  # 保留最近 N 輪不摘要
-    force: bool = False    # 強制摘要(即使未達門檻)
-
-
-@app.post("/memory/summarize-conversation")
-def summarize_conversation(req: SummarizeRequest):
-    """對話超過 N 輪時用 Haiku 摘要前面的 · 存回 conversation metadata。
-
-    節省邏輯:
-      - 20 輪對話 × 平均 1500 tokens = 30k tokens context
-      - 摘要成 2k tokens + 保留最近 10 輪(10k) = 12k tokens
-      - 每次呼叫省約 60% context
-    """
-    msgs_col = db.messages
-    try:
-        messages = list(msgs_col.find(
-            {"conversationId": req.conversation_id}
-        ).sort("createdAt", 1))
-    except Exception as e:
-        raise HTTPException(500, f"MongoDB 查詢失敗: {e}")
-
-    if len(messages) <= req.keep_recent and not req.force:
-        return {"summarized": False, "reason": f"對話僅 {len(messages)} 輪,未達門檻"}
-
-    to_summarize = messages[:-req.keep_recent] if not req.force else messages
-    if not to_summarize:
-        return {"summarized": False, "reason": "無可摘要訊息"}
-
-    # 用 Anthropic Haiku 摘要
-    try:
-        import anthropic
-        client = anthropic.Anthropic()
-
-        # 組成可讀的對話文字
-        dialogue = "\n\n".join([
-            f"{m.get('sender', m.get('role', 'user'))}: {(m.get('text') or '')[:500]}"
-            for m in to_summarize
-        ])
-
-        summary_resp = client.messages.create(
-            model="claude-haiku-4-5",
-            max_tokens=1000,
-            messages=[{
-                "role": "user",
-                "content": f"""把以下承富 AI 對話摘要成 200-400 字 · 保留關鍵事實 / 決議 / 待辦 · 繁中 · 台灣用語:\n\n{dialogue}"""
-            }]
-        )
-        summary_text = summary_resp.content[0].text
-
-        # 存回 conversation metadata
-        db.conversations.update_one(
-            {"conversationId": req.conversation_id},
-            {"$set": {
-                "chengfu_summary": summary_text,
-                "chengfu_summary_up_to": str(to_summarize[-1].get("_id", "")),
-                "chengfu_summarized_at": datetime.utcnow(),
-                "chengfu_summarized_messages": len(to_summarize),
-            }}
-        )
-
-        return {
-            "summarized": True,
-            "messages_summarized": len(to_summarize),
-            "summary_length": len(summary_text),
-            "kept_recent": req.keep_recent,
-            "estimated_tokens_saved": sum(len(m.get("text", "")) for m in to_summarize) // 4,
-        }
-    except Exception as e:
-        raise HTTPException(500, f"摘要失敗: {e}")
+from routers import memory as _memory_router
+app.include_router(_memory_router.router)
 
 
 # ============================================================
@@ -854,146 +695,11 @@ app.include_router(_users_router.router)
 
 
 # ============================================================
-# CRM Pipeline(Kanban · 標案 → 提案 → 得標 → 執行 → 結案)
+# CRM Pipeline · v1.3 §11.1 B-9 已抽到 routers/crm.py
+# Kanban · 標案 → 提案 → 得標 → 執行 → 結案 · 7 endpoint
 # ============================================================
-class LeadStage(str, Enum):
-    lead       = "lead"          # 新機會(採購網自動進這)
-    qualifying = "qualifying"    # 評估中(Go/No-Go 進行)
-    proposing  = "proposing"     # 撰寫提案中
-    submitted  = "submitted"     # 已送件等結果
-    won        = "won"           # 得標
-    lost       = "lost"          # 未得標
-    executing  = "executing"     # 執行中(得標後)
-    closed     = "closed"        # 結案完成
-
-
-class Lead(BaseModel):
-    title: str
-    client: Optional[str] = None
-    stage: LeadStage = LeadStage.lead
-    source: Optional[str] = None  # tender_alert / manual / referral
-    budget: Optional[float] = None
-    deadline: Optional[str] = None
-    owner: Optional[str] = None
-    description: Optional[str] = None
-    tender_key: Optional[str] = None  # 若從 tender_alert 來
-    probability: float = 0.0  # 0-1
-    notes: list[dict] = []  # 觸點 / 會議紀錄
-
-
-@app.get("/crm/leads")
-def list_leads(stage: Optional[str] = None, owner: Optional[str] = None):
-    """Kanban 讀全部 leads · 依階段分組。"""
-    q = {}
-    if stage: q["stage"] = stage
-    if owner: q["owner"] = owner
-    leads = list(db.crm_leads.find(q).sort("updated_at", -1))
-    return serialize(leads)
-
-
-@app.post("/crm/leads")
-def create_lead(lead: Lead):
-    data = lead.model_dump()
-    data["created_at"] = datetime.utcnow()
-    data["updated_at"] = datetime.utcnow()
-    r = db.crm_leads.insert_one(data)
-    return {"id": str(r.inserted_id)}
-
-
-@app.put("/crm/leads/{lead_id}")
-def update_lead(lead_id: str, updates: dict):
-    """部分更新 · 支援拖動 Kanban(只改 stage)或完整編輯。"""
-    allowed = {"title", "client", "stage", "source", "budget", "deadline",
-               "owner", "description", "probability", "notes"}
-    update = {k: v for k, v in updates.items() if k in allowed}
-    update["updated_at"] = datetime.utcnow()
-
-    # 若改到 stage · 記錄變動歷史
-    if "stage" in update:
-        db.crm_stage_history.insert_one({
-            "lead_id": lead_id,
-            "new_stage": update["stage"],
-            "changed_at": datetime.utcnow(),
-            "changed_by": updates.get("_by"),
-        })
-
-    r = db.crm_leads.update_one({"_id": ObjectId(lead_id)}, {"$set": update})
-    return {"updated": r.modified_count}
-
-
-@app.delete("/crm/leads/{lead_id}")
-def delete_lead(lead_id: str):
-    r = db.crm_leads.delete_one({"_id": ObjectId(lead_id)})
-    return {"deleted": r.deleted_count}
-
-
-@app.post("/crm/leads/{lead_id}/notes")
-def add_lead_note(lead_id: str, note: str, by: Optional[str] = None):
-    """加觸點 · 電話 / 會議 / Email 紀錄。"""
-    db.crm_leads.update_one(
-        {"_id": ObjectId(lead_id)},
-        {"$push": {"notes": {
-            "text": note, "at": datetime.utcnow().isoformat(), "by": by,
-        }},
-         "$set": {"updated_at": datetime.utcnow()}}
-    )
-    return {"added": True}
-
-
-@app.get("/crm/stats")
-def crm_stats():
-    """Kanban 儀表統計。"""
-    pipeline = [
-        {"$group": {"_id": "$stage", "count": {"$sum": 1},
-                    "budget_total": {"$sum": "$budget"}}},
-    ]
-    by_stage = list(db.crm_leads.aggregate(pipeline))
-    # 計算勝率(won / (won + lost))
-    won = db.crm_leads.count_documents({"stage": "won"})
-    lost = db.crm_leads.count_documents({"stage": "lost"})
-    win_rate = round(won / (won + lost) * 100, 1) if (won + lost) > 0 else None
-
-    # 漏斗價值(進行中的 leads 總預算 × 機率)
-    active_leads = list(db.crm_leads.find({
-        "stage": {"$in": ["lead", "qualifying", "proposing", "submitted"]}
-    }))
-    expected_value = sum(
-        (l.get("budget") or 0) * (l.get("probability") or 0.5)
-        for l in active_leads
-    )
-
-    return {
-        "by_stage": [{"stage": s["_id"], "count": s["count"],
-                      "budget_total": s["budget_total"] or 0} for s in by_stage],
-        "win_rate": win_rate,
-        "active_pipeline_value": round(expected_value, 0),
-        "total_leads": sum(s["count"] for s in by_stage),
-    }
-
-
-@app.post("/crm/import-from-tenders")
-def import_leads_from_tenders():
-    """把標記為 'interested' 的 tender_alerts 轉成 CRM leads。"""
-    interested = list(db.tender_alerts.find({"status": "interested"}))
-    imported = 0
-    for t in interested:
-        # 避免重複
-        if db.crm_leads.find_one({"tender_key": t.get("tender_key")}):
-            continue
-        db.crm_leads.insert_one({
-            "title": t.get("title"),
-            "client": t.get("unit_name"),
-            "stage": "lead",
-            "source": "tender_alert",
-            "tender_key": t.get("tender_key"),
-            "description": f"來源:政府電子採購網 · 關鍵字「{t.get('keyword')}」",
-            "probability": 0.5,
-            "notes": [],
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow(),
-        })
-        imported += 1
-    return {"imported": imported, "total_interested": len(interested)}
+from routers import crm as _crm_router
+app.include_router(_crm_router.router)
 
 # ============================================================
 # G · 多來源知識庫 · ROADMAP §11.1 B-6 已抽到 routers/knowledge.py
