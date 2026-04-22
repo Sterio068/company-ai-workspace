@@ -4,11 +4,14 @@ Users router · 跨 Agent 使用者偏好(Level 4 Learning 核心)
 ROADMAP §11.1 B-3 · 從 main.py 抽出
 - D-009 · 跨 Agent 「記住 user 偏好正式語氣」
 - 安全:Codex sec F-2 · 同人或 admin 才可改 · 防 prompt injection
+v1.2 §11.1 B-1.5 · 改用 routers/_deps.py 共用 helper
 """
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
+
+from ._deps import current_user_email_dep, get_db
 
 
 router = APIRouter(tags=["users"])
@@ -32,16 +35,10 @@ def _require_self_or_admin(user_email: str, caller: Optional[str]) -> str:
     raise HTTPException(403, f"只能讀/改自己的偏好(您:{caller_lc} · 對象:{user_email})")
 
 
-def _caller_email_dep():
-    """Lazy import current_user_email · 避免 circular"""
-    from main import current_user_email
-    return Depends(current_user_email)
-
-
 @router.get("/users/{user_email}/preferences")
 def get_user_prefs(user_email: str,
-                   caller: Optional[str] = _caller_email_dep()):
-    from main import db
+                   caller: Optional[str] = current_user_email_dep()):
+    db = get_db()
     _require_self_or_admin(user_email, caller)
     prefs = list(db.user_preferences.find({"user_email": user_email}))
     return {
@@ -53,8 +50,8 @@ def get_user_prefs(user_email: str,
 
 @router.post("/users/{user_email}/preferences")
 def save_user_pref(user_email: str, pref: UserPreference,
-                   caller: Optional[str] = _caller_email_dep()):
-    from main import db
+                   caller: Optional[str] = current_user_email_dep()):
+    db = get_db()
     _require_self_or_admin(user_email, caller)
     db.user_preferences.update_one(
         {"user_email": user_email, "key": pref.key},
@@ -73,8 +70,8 @@ def save_user_pref(user_email: str, pref: UserPreference,
 
 @router.delete("/users/{user_email}/preferences/{key}")
 def delete_user_pref(user_email: str, key: str,
-                     caller: Optional[str] = _caller_email_dep()):
-    from main import db
+                     caller: Optional[str] = current_user_email_dep()):
+    db = get_db()
     _require_self_or_admin(user_email, caller)
     r = db.user_preferences.delete_one({"user_email": user_email, "key": key})
     return {"deleted": r.deleted_count}

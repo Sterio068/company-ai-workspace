@@ -6,6 +6,7 @@ ROADMAP §11.1 B-5 · 從 main.py 抽出
 - GET /design/recraft/status/{job_id} · pending 後續查詢
 - GET /design/history · 給 dropdown 重生用
 - _log_design_job · prompt SHA256 + preview · ROADMAP §11.11 PDPA
+v1.2 §11.1 B-1.5 · 改用 routers/_deps.py 共用 helper
 """
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -16,6 +17,8 @@ import asyncio
 import logging
 import hashlib
 import httpx
+
+from ._deps import get_db, require_user_dep
 
 
 router = APIRouter(prefix="/design", tags=["design"])
@@ -65,16 +68,14 @@ def _log_design_job(req_id: str, email: Optional[str], req: RecraftRequest,
 
 
 @router.post("/recraft")
-async def design_recraft(req: RecraftRequest, request: Request):
+async def design_recraft(req: RecraftRequest, request: Request,
+                         email: str = require_user_dep()):
     """生圖主端點 · Q2 決議每次 3 張 · 三態 done/pending/rejected
     rate limit 由 main.py app 級別 limiter 套用(SlowAPIMiddleware)
     Codex R6#3 · 必須登入 · 防匿名爆 Fal 預算
+    v1.2 §11.1 B-1.5 · 用 require_user_dep · email 由 dep 保證 non-None
     """
-    from main import db, current_user_email
-    # R6#3 · 強制要 trusted email · 無則 403
-    email = current_user_email(request, request.headers.get("X-User-Email"))
-    if not email:
-        raise HTTPException(403, "未識別使用者 · 設計助手必須登入")
+    db = get_db()
 
     fal_key = _fal_key()
     if not fal_key:
@@ -162,7 +163,7 @@ async def design_recraft(req: RecraftRequest, request: Request):
 @router.get("/recraft/status/{job_id}")
 async def design_recraft_status(job_id: str):
     """Pending 後續查詢 · 查到 done 時 update DB · ROADMAP R5#5"""
-    from main import db
+    db = get_db()
     fal_key = _fal_key()
     if not fal_key:
         raise HTTPException(503, "Fal.ai 未設定")
@@ -196,14 +197,13 @@ async def design_recraft_status(job_id: str):
 
 
 @router.get("/history")
-def design_history(request: Request, limit: int = 20):
+def design_history(request: Request, limit: int = 20,
+                   email: str = require_user_dep()):
     """設計助手歷史 · 給 dropdown 重生用 · 含舊 doc backfill
     Codex R6#3 · 必須登入 · 防匿名拿全體 history(洩客戶名 / 案件)
+    v1.2 §11.1 B-1.5 · email dep 保證 non-None
     """
-    from main import db, current_user_email
-    email = current_user_email(request, request.headers.get("X-User-Email"))
-    if not email:
-        raise HTTPException(403, "未識別使用者 · 請從 launcher 登入")
+    db = get_db()
     # R6#3 · 只回自己的 history(admin 看別人改走 admin endpoint · v1.2 加)
     q = {"user": email}
     docs = list(db.design_jobs.find(

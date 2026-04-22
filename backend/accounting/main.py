@@ -2111,15 +2111,20 @@ def _path_is_excluded(rel_path: str, excludes: list[str]) -> bool:
 
 @app.get("/knowledge/list")
 def knowledge_list(source_id: Optional[str] = None, project: Optional[str] = None,
+                   conversation_id: Optional[str] = None,
                    request: Request = None):
     """列資料源 / 列某 source 下的 top-level 資料夾 / 列某資料夾下的檔
 
-    Round 9 Q3 · 無 source_id 時依 X-Agent-Num 過濾
+    Round 9 Q3 · 無 source_id 時依 agent_num 過濾
     未授權 Agent 連 source 名稱都看不到(PR 公司客戶名單本身就是機敏)
+
+    ROADMAP §10.3 · agent_num 改 server-side derive 自 conversation_id
+    防 user 改 X-Agent-Num: 11 拿到投標機敏
     """
     # 無 source_id · 回所有 enabled sources(依 agent_access 過濾)
     if not source_id:
-        agent_num = (request.headers.get("X-Agent-Num") if request else None)
+        # §10.3 · server-side derive · 不再信 X-Agent-Num(prod)
+        agent_num = _resolve_agent_num(request, conversation_id)
         docs = list(knowledge_sources_col.find(
             {"enabled": True},
             {"_id": 1, "name": 1, "type": 1, "path": 1, "last_index_stats": 1,
@@ -2152,9 +2157,9 @@ def knowledge_list(source_id: Optional[str] = None, project: Optional[str] = Non
     if not src:
         raise HTTPException(404, "資料源不存在或已停用")
 
-    # Agent 存取權限檢查
-    agent_num = (request.headers.get("X-Agent-Num") if request else None)
-    # Codex R3.3 · source 有 agent_access 白名單時 · 缺 X-Agent-Num 預設拒絕
+    # Agent 存取權限檢查 · ROADMAP §10.3 · server-side derive 防 X-Agent-Num spoof
+    agent_num = _resolve_agent_num(request, conversation_id)
+    # Codex R3.3 · source 有 agent_access 白名單時 · 缺 agent_num 預設拒絕
     # 否則直接呼叫 API 不帶 header 可繞過限制 · 看到「只給投標助手」的機敏資料
     if src.get("agent_access") and (not agent_num or agent_num not in src["agent_access"]):
         raise HTTPException(403, f"此資料源未開放給 #{agent_num} 助手")
@@ -2205,11 +2210,13 @@ def knowledge_read(
     source_id: str,
     rel_path: str,
     request: Request,
+    conversation_id: Optional[str] = None,
 ):
     """讀某 source 內某檔的 metadata + 前 2000 字預覽。
 
     E-1 只做 metadata(size/modified/mime 猜測)· 真正抽字在 E-2 做。
     安全:path traversal 強制 · agent_access 白名單 · audit log 寫進 knowledge_audit
+    ROADMAP §10.3 · agent_num 改 server-side derive
     """
     try:
         _id = ObjectId(source_id)
@@ -2219,9 +2226,9 @@ def knowledge_read(
     if not src:
         raise HTTPException(404, "資料源不存在或已停用")
 
-    # Agent 存取權限
-    agent_num = request.headers.get("X-Agent-Num")
-    # Codex R3.3 · source 有 agent_access 白名單時 · 缺 X-Agent-Num 預設拒絕
+    # Agent 存取權限 · §10.3 server-side derive
+    agent_num = _resolve_agent_num(request, conversation_id)
+    # Codex R3.3 · source 有 agent_access 白名單時 · 缺 agent_num 預設拒絕
     # 否則直接呼叫 API 不帶 header 可繞過限制 · 看到「只給投標助手」的機敏資料
     if src.get("agent_access") and (not agent_num or agent_num not in src["agent_access"]):
         raise HTTPException(403, f"此資料源未開放給 #{agent_num} 助手")
@@ -2345,17 +2352,117 @@ def _invalidate_sources_cache():
     _AGENT_FORBIDDEN_CACHE["version"] = None
 
 
+# ============================================================
+# Codex R7#11 + R8#9 · X-Agent-Num server-side derivation · ROADMAP §10.3
+# 防 user 改 X-Agent-Num: 11 拿到投標 Workspace 機敏 source
+# 真實 agent_num 從 conversationId → LibreChat agents collection 反推
+# ============================================================
+import re
+
+_AGENT_NUM_FROM_CONVO_CACHE: "OrderedDict[str, tuple[Optional[str], float]]" = OrderedDict()
+_AGENT_NUM_CACHE_TTL = 300.0  # 5 min(agent 不太換 · convo 也只跟一個 agent)
+_AGENT_NUM_CACHE_MAX = 500
+# Match `#01` `#1` `#11` 等 · agent name 慣例 `🎯 投標 #11 · 招標須知解析器`
+_AGENT_NUM_PATTERN = re.compile(r"#(\d{1,2})\b")
+
+
+def _derive_agent_num(request: Request, conversation_id: Optional[str] = None) -> Optional[str]:
+    """ROADMAP §10.3 · server-side derive agent_num · 防 X-Agent-Num spoof
+
+    流程:
+    1. 從 query/header 拿 conversation_id(launcher 必送)
+    2. convos.find_one({_id}) → agent_id(string `agent_xxxx`)
+    3. agents.find_one({id: agent_id}) → name/description(含 `#NN`)
+    4. parse `#NN` → return "01"-"29"
+
+    失敗時(無 conversation_id / convo 不存在 / agent 沒對應 #NN):
+    → return None · caller 必須視為「沒 agent · 只給 agent_access=[] 的公開 source」
+
+    cache 5min TTL · convo 一旦綁定 agent 不會變
+    """
+    # 優先從 query 拿(launcher 主路徑)· header fallback(舊版前端)
+    if not conversation_id:
+        conversation_id = (request.query_params.get("conversation_id") if request else None)
+    if not conversation_id:
+        conversation_id = (request.headers.get("X-Conversation-Id") if request else None)
+    if not conversation_id:
+        return None
+
+    import time
+    now = time.time()
+    cached = _AGENT_NUM_FROM_CONVO_CACHE.get(conversation_id)
+    if cached and now - cached[1] < _AGENT_NUM_CACHE_TTL:
+        _AGENT_NUM_FROM_CONVO_CACHE.move_to_end(conversation_id)
+        return cached[0]
+
+    agent_num: Optional[str] = None
+    try:
+        # LibreChat conversations · _id 可能是 ObjectId 或 string conversationId
+        # LibreChat 用 `conversationId` 欄位(string UUID-like)
+        convo = convos_col.find_one(
+            {"$or": [{"conversationId": conversation_id}, {"_id": conversation_id}]},
+            {"agent_id": 1, "agentOptions": 1},
+        )
+        # 失敗時試 ObjectId
+        if not convo:
+            try:
+                convo = convos_col.find_one({"_id": ObjectId(conversation_id)},
+                                            {"agent_id": 1, "agentOptions": 1})
+            except Exception:
+                pass
+        if convo:
+            agent_id = convo.get("agent_id") or (convo.get("agentOptions") or {}).get("agent")
+            if agent_id:
+                # LibreChat agents collection · LibreChat uses `id` field (string)
+                agent = db.agents.find_one(
+                    {"$or": [{"id": agent_id}, {"_id": agent_id}]},
+                    {"description": 1, "name": 1},
+                )
+                if agent:
+                    for field in ("description", "name"):
+                        text = agent.get(field) or ""
+                        m = _AGENT_NUM_PATTERN.search(text)
+                        if m:
+                            agent_num = m.group(1).zfill(2)  # "1" → "01"
+                            break
+    except Exception as e:
+        logger.debug("[auth] _derive_agent_num conv=%s · %s", conversation_id, e)
+
+    # 寫 cache(包含 None 結果 · 避免反覆嘗試 expensive lookup)
+    while len(_AGENT_NUM_FROM_CONVO_CACHE) >= _AGENT_NUM_CACHE_MAX:
+        _AGENT_NUM_FROM_CONVO_CACHE.popitem(last=False)
+    _AGENT_NUM_FROM_CONVO_CACHE[conversation_id] = (agent_num, now)
+    return agent_num
+
+
+def _resolve_agent_num(request: Request, conversation_id: Optional[str] = None) -> Optional[str]:
+    """合併入口 · prod 走 server-side derive · dev mode 仍接受 X-Agent-Num header(過渡)
+
+    過渡期(launcher 還沒切到 conversation_id 路徑)允許 dev mode 信 header
+    prod 必走 derive · header 完全忽略(且應由 nginx strip)
+    """
+    derived = _derive_agent_num(request, conversation_id)
+    if derived is not None:
+        return derived
+    # Dev mode + ALLOW_LEGACY_AUTH_HEADERS 才接受 header fallback
+    if _legacy_auth_headers_enabled():
+        return (request.headers.get("X-Agent-Num") if request else None) or None
+    return None
+
+
 @app.get("/knowledge/search")
 def knowledge_search(
     q: str = Query(min_length=2),
     source_id: Optional[str] = None,
     project: Optional[str] = None,
+    conversation_id: Optional[str] = None,
     limit: int = Query(default=20, ge=1, le=100),
     request: Request = None,
 ):
     """全文搜尋 · 經 Meili · source_id / project 可過濾
 
-    Round 9 Q3 · 依 X-Agent-Num 過濾結果(連 hit 都不能透露)
+    Round 9 Q3 · 依 agent_num 過濾結果(連 hit 都不能透露)
+    ROADMAP §10.3 · agent_num 改 server-side derive 自 conversation_id
     """
     meili = _get_meili_client()
     if not meili:
@@ -2369,7 +2476,8 @@ def knowledge_search(
 
     # Q3 + Codex R3.3 · 過濾 hit · 無 agent_num 時也要擋 agent_access 限定的 source
     # ROADMAP §11.5 · 5min TTL cache · 避免每次 search 都掃 sources collection
-    agent_num = request.headers.get("X-Agent-Num") if request else None
+    # §10.3 · server-side derive 防 X-Agent-Num spoof
+    agent_num = _resolve_agent_num(request, conversation_id)
     if isinstance(result, dict) and result.get("hits"):
         forbidden_ids = _agent_forbidden_sources(agent_num)
         if forbidden_ids:

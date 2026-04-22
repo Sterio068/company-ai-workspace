@@ -307,8 +307,10 @@ def test_design_recraft_without_api_key(client, monkeypatch):
 
 
 def test_design_recraft_rejects_short_prompt(client):
-    """prompt < 4 字 → 422 pydantic validation"""
-    r = client.post("/design/recraft", json={"prompt": "abc"})
+    """prompt < 4 字 → 422 pydantic validation
+    v1.2 §11.1 B-1.5 · design.py 改 require_user_dep · 必須帶 X-User-Email 才到 validation"""
+    r = client.post("/design/recraft", json={"prompt": "abc"},
+                    headers={"X-User-Email": "test@chengfu.local"})
     assert r.status_code == 422
 
 
@@ -317,7 +319,7 @@ def test_design_recraft_rejects_bad_size(client):
     r = client.post("/design/recraft", json={
         "prompt": "a reasonable prompt here",
         "image_size": "ultra_wide_xyz",
-    })
+    }, headers={"X-User-Email": "test@chengfu.local"})
     assert r.status_code == 422
 
 
@@ -631,6 +633,78 @@ def test_knowledge_list_empty_agent_access_visible_to_all(client, tmp_source_dir
     r = client.get("/knowledge/list", headers={"X-Agent-Num": "99"})
     names = [s["name"] for s in r.json()["sources"]]
     assert "公開資料" in names
+
+
+# ============================================================
+# ROADMAP §10.3 · X-Agent-Num server-side derivation(R7#11 + R8#9)
+# ============================================================
+def test_agent_num_derive_from_conversation_id(client, tmp_source_dir):
+    """§10.3 · 給 conversation_id · server 反查 LibreChat agent → derive #NN"""
+    import main as main_mod
+    # 建一個有 agent_access 限制的 source
+    r = client.post(
+        "/admin/sources",
+        json={"name": "投標機敏", "path": tmp_source_dir, "agent_access": ["11"]},
+        headers=ADMIN_HEADERS,
+    )
+
+    # 手動 seed mongomock convos + agents
+    main_mod.convos_col.insert_one({
+        "conversationId": "test-convo-001",
+        "agent_id": "agent_xxx_test",
+    })
+    main_mod.db.agents.insert_one({
+        "id": "agent_xxx_test",
+        "name": "🎯 投標 #11 · 招標須知解析器",
+        "description": "投標 Workspace 第 11 號助手",
+    })
+
+    # 清 cache 防干擾
+    main_mod._AGENT_NUM_FROM_CONVO_CACHE.clear()
+
+    # 帶 conversation_id 的 user · derive 應拿到 "11" · 看得到 source
+    r = client.get("/knowledge/list?conversation_id=test-convo-001")
+    assert r.status_code == 200
+    names = [s["name"] for s in r.json()["sources"]]
+    assert "投標機敏" in names
+
+
+def test_agent_num_spoof_via_header_blocked_in_prod(client, tmp_source_dir, monkeypatch):
+    """§10.3 · prod mode + 沒 conversation_id · X-Agent-Num header 被忽略
+    user 改 header = 11 也拿不到 source"""
+    import main as main_mod
+    r = client.post(
+        "/admin/sources",
+        json={"name": "機敏勿擾", "path": tmp_source_dir, "agent_access": ["11"]},
+        headers=ADMIN_HEADERS,
+    )
+
+    # 強制 prod mode · _legacy_auth_headers_enabled() → False
+    monkeypatch.setenv("ECC_ENV", "production")
+    monkeypatch.setenv("ALLOW_LEGACY_AUTH_HEADERS", "0")
+    main_mod._AGENT_NUM_FROM_CONVO_CACHE.clear()
+    main_mod._AGENT_FORBIDDEN_CACHE["ts"] = 0.0  # 清 cache
+
+    # 攻擊者只送 X-Agent-Num · 沒 conversation_id · prod mode 完全忽略 header
+    r = client.get("/knowledge/list", headers={"X-Agent-Num": "11"})
+    names = [s["name"] for s in r.json()["sources"]]
+    # spoof header 沒效 · agent_num=None · 機敏 source 仍藏起
+    assert "機敏勿擾" not in names
+
+
+def test_agent_num_derive_unknown_conversation_returns_none(client, tmp_source_dir):
+    """§10.3 · conversation_id 不存在 · derive 回 None · 沒 agent_access 的 source 仍可見"""
+    import main as main_mod
+    r = client.post(
+        "/admin/sources",
+        json={"name": "公開測試 §10.3", "path": tmp_source_dir, "agent_access": []},
+        headers=ADMIN_HEADERS,
+    )
+    main_mod._AGENT_NUM_FROM_CONVO_CACHE.clear()
+    r = client.get("/knowledge/list?conversation_id=nonexistent-xyz")
+    assert r.status_code == 200
+    names = [s["name"] for s in r.json()["sources"]]
+    assert "公開測試 §10.3" in names
 
 
 # ============================================================

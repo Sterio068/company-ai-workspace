@@ -3,12 +3,15 @@ Feedback router · 👍👎 集中收集 + stats(per-agent 滿意率)
 
 ROADMAP §11.1 B-2 · 從 main.py 抽出
 Codex R6#4 · list/stats 改 admin-only · create 用 trusted email
+Codex R7#4 · create 完全不信 fb.user_email · 必 trusted_email
+v1.2 §11.1 B-1.5 · 改用 routers/_deps.py 共用 helper
 """
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional, Literal
 from datetime import datetime
-from bson import ObjectId
+
+from ._deps import _serialize, require_admin_dep
 
 
 router = APIRouter(tags=["feedback"])
@@ -21,24 +24,6 @@ class Feedback(BaseModel):
     verdict: Literal["up", "down"]
     note: Optional[str] = None
     user_email: Optional[str] = None
-
-
-def _admin_dep():
-    from main import require_admin
-    return Depends(require_admin)
-
-
-def _serialize(doc):
-    """從 main.py 暫時複製 serialize · v1.2 全 router 抽完後改 _deps.py 共用"""
-    if isinstance(doc, list):
-        return [_serialize(d) for d in doc]
-    if isinstance(doc, dict):
-        return {k: _serialize(v) for k, v in doc.items()}
-    if isinstance(doc, ObjectId):
-        return str(doc)
-    if isinstance(doc, datetime):
-        return doc.isoformat()
-    return doc
 
 
 @router.post("/feedback")
@@ -64,7 +49,7 @@ def create_feedback(fb: Feedback, request: Request):
 @router.get("/feedback")
 def list_feedback(
     verdict: Optional[str] = None, agent: Optional[str] = None, limit: int = 100,
-    _admin: str = _admin_dep(),  # R6#4 · admin-only
+    _admin: str = require_admin_dep(),  # R6#4 · admin-only · v1.2 用 _deps.py
 ):
     """R6#4 · admin-only · 防匿名讀全部 user_email/note"""
     from main import feedback_col
@@ -97,8 +82,8 @@ def _compute_feedback_stats():
 
 
 @router.get("/feedback/stats")
-def feedback_stats(_admin: str = _admin_dep()):
-    """R6#4 · admin-only endpoint wrapper"""
+def feedback_stats(_admin: str = require_admin_dep()):
+    """R6#4 · admin-only endpoint wrapper · v1.2 用 _deps.py"""
     return _compute_feedback_stats()
 
 
