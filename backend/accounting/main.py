@@ -592,12 +592,14 @@ app.include_router(_tenders_router.router)
 # ============================================================
 from services import admin_metrics
 
-# Settings · 從 env 讀 · 傳進 service
-_USD_TO_NTD = float(os.getenv("USD_TO_NTD", "32.5"))
-_MONTHLY_BUDGET_NTD = float(os.getenv("MONTHLY_BUDGET_NTD", "12000"))
-_USER_SOFT_CAP_DEFAULT = float(os.getenv("USER_SOFT_CAP_NTD", "1200"))
-QUOTA_MODE = os.getenv("QUOTA_MODE", "soft_warn")  # hard_stop | soft_warn | off
-QUOTA_OVERRIDE_EMAILS = {e.strip().lower() for e in os.getenv("QUOTA_OVERRIDE_EMAILS", "").split(",") if e.strip()}
+# Settings · R14#6 · 改從 config.py 集中 · 保留 alias 向後相容
+# 舊 code / test_main.py 仍用 main._USD_TO_NTD 等 · 改指向 config.settings
+from config import settings as _settings
+_USD_TO_NTD = _settings.usd_to_ntd
+_MONTHLY_BUDGET_NTD = _settings.monthly_budget_ntd
+_USER_SOFT_CAP_DEFAULT = _settings.user_soft_cap_ntd
+QUOTA_MODE = _settings.quota_mode
+QUOTA_OVERRIDE_EMAILS = set(_settings.quota_override_emails)
 
 
 
