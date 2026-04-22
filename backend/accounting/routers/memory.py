@@ -17,7 +17,9 @@ Feature #1 · 會議速記自動化(R14 · FEATURE-PROPOSALS v1.2):
 import hashlib
 import logging
 import os
-from datetime import datetime
+import threading
+import time
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, UploadFile
@@ -128,6 +130,70 @@ def summarize_conversation(req: SummarizeRequest):
 # ============================================================
 # Feature #1 · 會議速記自動化
 # ============================================================
+def _retry(label: str, fn, attempts: int = 3):
+    """R20#4 · OpenAI / Anthropic network 抖 · retry with exponential backoff
+    1s · 2s · 4s · 最後 raise · attempts 太多會超 BackgroundTask 時限"""
+    last = None
+    for i in range(attempts):
+        try:
+            return fn()
+        except Exception as e:
+            last = e
+            logger.warning("[meeting] %s retry %s/%s · %s", label, i + 1, attempts, str(e)[:100])
+            time.sleep(2 ** i)
+    raise last
+
+
+def _cleanup_tmp(meeting_id: str, path: Optional[str]):
+    """R20#6 · 保證刪 raw audio · 失敗也刪 · PDPA"""
+    if not path:
+        return
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        logger.error("[meeting] tmp cleanup failed id=%s path=%s · %s", meeting_id, path, e)
+        try:
+            from main import db
+            db.meetings.update_one(
+                {"_id": ObjectId(meeting_id)},
+                {"$set": {"cleanup_error": str(e)[:200]}},
+            )
+        except Exception:
+            pass
+
+
+def recover_stale_meetings(max_stale_minutes: int = 10):
+    """R20#1 · startup 時掃 stuck meeting · 有 tmp audio 則重跑 · 無則標 failed
+    · lifespan 每次啟動跑一次 · container restart 不會孤兒"""
+    try:
+        from main import db
+        cutoff = datetime.utcnow() - timedelta(minutes=max_stale_minutes)
+        q = {"status": {"$in": ["transcribing", "structuring"]},
+             "updated_at": {"$lt": cutoff}}
+        stale = list(db.meetings.find(q))
+        if not stale:
+            return
+        logger.info("[meeting] recover %d stale meeting(s)", len(stale))
+        for m in stale:
+            mid = str(m["_id"])
+            path = m.get("_tmp_audio_path")
+            if path and os.path.exists(path):
+                # 有 tmp · 背景重跑(thread 避免 lifespan 卡住)
+                threading.Thread(
+                    target=_process_meeting, args=(mid,), daemon=True,
+                ).start()
+            else:
+                db.meetings.update_one(
+                    {"_id": m["_id"]},
+                    {"$set": {"status": "failed",
+                              "error": "recovery · tmp audio missing after restart"}},
+                )
+    except Exception as e:
+        logger.error("[meeting] recover_stale_meetings 失敗(非致命): %s", e)
+
+
 def _openai_key_for_stt() -> str:
     """Whisper STT key · 跟 design router 同 pattern(先 Mongo · fallback env)"""
     try:
@@ -145,11 +211,14 @@ def _anthropic_key() -> str:
 
 
 def _process_meeting(meeting_id_str: str):
-    """BackgroundTasks 跑的 STT + Haiku 結構化 pipeline
+    """BackgroundTasks 跑的 STT + Haiku 結構化 pipeline · R20 修全
 
-    不 raise(background 錯沒人收)· 失敗寫 meeting.status=failed + error 欄位
+    - retry 外部 API 3 次(OpenAI / Anthropic 任一抖)
+    - finally 保證刪 tmp audio(PDPA · 即使失敗)
+    - recover_stale_meetings() 啟動時會重跑孤兒
     """
     from main import db
+    audio_path: Optional[str] = None
     try:
         meeting = db.meetings.find_one({"_id": ObjectId(meeting_id_str)})
         if not meeting:
@@ -177,12 +246,14 @@ def _process_meeting(meeting_id_str: str):
 
         client = openai.OpenAI(api_key=_openai_key_for_stt())
         try:
-            with open(audio_path, "rb") as af:
-                tr = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=af,
-                    language="zh",  # 承富繁中
-                )
+            def _stt():
+                with open(audio_path, "rb") as af:
+                    # R20#3 · 不寫死 language='zh' · Whisper 自動偵測(支援中英混雜)
+                    return client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=af,
+                    )
+            tr = _retry("Whisper", _stt, attempts=3)
             transcript = tr.text
         except Exception as e:
             logger.error("[meeting] Whisper 失敗 id=%s · %s", meeting_id_str, e)
@@ -224,11 +295,13 @@ def _process_meeting(meeting_id_str: str):
 逐字稿:
 {transcript[:15000]}"""  # 限 15k 字避免 context 爆
 
-            resp = a_client.messages.create(
-                model="claude-haiku-4-5",
-                max_tokens=2000,
-                messages=[{"role": "user", "content": prompt}],
-            )
+            def _haiku():
+                return a_client.messages.create(
+                    model="claude-haiku-4-5",
+                    max_tokens=2000,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+            resp = _retry("Haiku", _haiku, attempts=3)
             raw = resp.content[0].text
 
             # Parse JSON · 容忍 ```json fence
@@ -246,12 +319,6 @@ def _process_meeting(meeting_id_str: str):
             )
             return
 
-        # Step 3 · 刪除 tmp audio(PDPA · 不留 raw 錄音)
-        try:
-            os.remove(audio_path)
-        except Exception:
-            pass
-
         db.meetings.update_one(
             {"_id": ObjectId(meeting_id_str)},
             {"$set": {
@@ -267,6 +334,9 @@ def _process_meeting(meeting_id_str: str):
                     len(structured.get("action_items", [])))
     except Exception as e:
         logger.error("[meeting] 非預期失敗 id=%s · %s", meeting_id_str, e)
+    finally:
+        # R20#6 · 保證刪 raw audio · 成功 / 失敗 / 例外都刪
+        _cleanup_tmp(meeting_id_str, audio_path)
 
 
 @router.post("/memory/transcribe")

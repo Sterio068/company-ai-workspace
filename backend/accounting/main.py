@@ -147,6 +147,17 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         # 真正意外(非 IndexSame)· 要 loud 警告 · 不能靜默
         logger.error("[ttl] knowledge_audit TTL failed · data bloat risk: %s", e)
+    # R20#8 · meetings transcript TTL · Feature #1 · 10 人 × 週 10 × 年 = 5000 doc
+    # 留 365 天(年度回顧需要)· 之後自動清 · PDPA
+    try:
+        db.meetings.create_index([("owner", 1), ("created_at", -1)])
+        db.meetings.create_index(
+            [("created_at", 1)],
+            expireAfterSeconds=365 * 24 * 3600,
+            name="ttl_365d",
+        )
+    except Exception as e:
+        logger.warning("[ttl] meetings TTL: %s", e)
     # design_jobs 同樣加 TTL · 圖檔留 Fal CDN · log 純查詢 ROI 用 · 留 180 天
     try:
         db.design_jobs.create_index(
@@ -212,6 +223,12 @@ async def lifespan(app: FastAPI):
         logger.info("OCR probe · available=%s · langs=%s", ocr.get("available"), ocr.get("langs"))
     except Exception as e:
         logger.warning("OCR startup probe fail: %s", e)
+    # R20#1 · Feature #1 recover stuck meeting(container restart 期間 transcribing)
+    try:
+        from routers.memory import recover_stale_meetings
+        recover_stale_meetings(max_stale_minutes=10)
+    except Exception as e:
+        logger.warning("[meeting] recover_stale 啟動失敗(非致命): %s", e)
     yield
     # Shutdown
     logger.info("app shutting down")
