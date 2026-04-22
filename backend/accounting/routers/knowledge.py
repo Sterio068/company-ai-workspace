@@ -143,25 +143,26 @@ _AGENT_FORBIDDEN_CACHE: dict = {"data": {}, "ts": 0.0, "version": None}
 _AGENT_FORBIDDEN_TTL = 300.0  # 5 分鐘
 
 
-def _sources_max_updated_at() -> Optional[datetime]:
-    """Codex R5#3 · 取所有 sources 最大 updated_at · 給 cache version 用"""
-    from main import knowledge_sources_col
+def _sources_cache_version() -> str:
+    """R10#2 修 R5#3 · 用 sentinel doc 取代 max(updated_at)
+    · max(updated_at) 在 delete source 時不變 · 其他 worker 不會 invalidate(等 TTL)
+    · sentinel doc 在 _invalidate 時 bump version · 其他 worker 立即看到變
+    """
+    from main import db
     try:
-        doc = knowledge_sources_col.find_one(
-            {}, sort=[("updated_at", -1)], projection={"updated_at": 1}
-        )
-        return doc.get("updated_at") if doc else None
+        doc = db.knowledge_meta.find_one({"name": "sources_cache_version"}, {"v": 1})
+        return doc.get("v", "init") if doc else "init"
     except Exception:
-        return None
+        return "fallback"
 
 
 def _agent_forbidden_sources(agent_num: Optional[str]) -> set:
-    """ROADMAP §11.5 · cache 用 updated_at 跨 worker 一致"""
+    """ROADMAP §11.5 + R10#2 · cache version 用 sentinel doc · CRUD 立即跨 worker 失效"""
     from main import knowledge_sources_col
     import time
     now = time.time()
     cache = _AGENT_FORBIDDEN_CACHE
-    current_version = _sources_max_updated_at()
+    current_version = _sources_cache_version()
     if cache["version"] != current_version or (now - cache["ts"]) > _AGENT_FORBIDDEN_TTL:
         cache["data"] = {}
         cache["ts"] = now
@@ -181,7 +182,17 @@ def _agent_forbidden_sources(agent_num: Optional[str]) -> set:
 
 
 def _invalidate_sources_cache():
-    """source CRUD 後呼叫"""
+    """source CRUD 後呼叫 · R10#2 · upsert sentinel doc → 其他 worker 下次 request 看到 version 變"""
+    from main import db
+    import uuid as _uuid
+    try:
+        db.knowledge_meta.update_one(
+            {"name": "sources_cache_version"},
+            {"$set": {"v": _uuid.uuid4().hex, "ts": datetime.utcnow()}},
+            upsert=True,
+        )
+    except Exception as e:
+        logger.warning("[knowledge] cache version bump fail · 退回 local clear: %s", e)
     _AGENT_FORBIDDEN_CACHE["ts"] = 0.0
     _AGENT_FORBIDDEN_CACHE["data"] = {}
     _AGENT_FORBIDDEN_CACHE["version"] = None
@@ -530,7 +541,9 @@ def knowledge_list(source_id: Optional[str] = None, project: Optional[str] = Non
                 "size": os.path.getsize(full) if not is_dir else None,
             })
     except PermissionError as e:
-        raise HTTPException(403, f"權限不足 · {e}")
+        # R10#1 · 不洩漏 OS error 訊息 / 實體路徑(原行為)
+        logger.warning("[knowledge] list permission denied · src=%s · %s", source_id, e)
+        raise HTTPException(403, "資料夾讀取權限不足")
 
     return {
         "source_id": source_id,
