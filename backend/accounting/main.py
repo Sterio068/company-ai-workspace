@@ -98,16 +98,18 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.debug("[index] conversations.chengfu_summarized_at skip: %s", e)
     logger.info("indexes ensured · app ready")
-    # ROADMAP §11.12 · JWT secret 啟動檢查 · 沒設明示警告(production 必要)
-    _jwt_set = os.getenv("JWT_SECRET", "")
-    if not _jwt_set or _jwt_set.startswith("<GENERATE"):
+    # ROADMAP §11.12 + Codex R6#1 · JWT secret 啟動檢查
+    # 注意:LibreChat v0.8.4 access token 在 JSON · 不發 token cookie
+    # 我們改驗 refreshToken cookie · 用 JWT_REFRESH_SECRET 簽
+    _jwt_refresh = os.getenv("JWT_REFRESH_SECRET", "")
+    if not _jwt_refresh or _jwt_refresh.startswith("<GENERATE"):
         logger.warning(
-            "[auth] JWT_SECRET 未設或為 placeholder · "
+            "[auth] JWT_REFRESH_SECRET 未設或為 placeholder · "
             "Cookie 驗 OFF · admin endpoint 走 X-User-Email 相容路徑(可被偽造)· "
             "production 必設 · 見 docs/05-SECURITY.md"
         )
     else:
-        logger.info("[auth] JWT_SECRET 已設 · cookie 驗 ON · admin 強制 trusted")
+        logger.info("[auth] JWT_REFRESH_SECRET 已設 · cookie 驗 ON · admin 強制 trusted")
     # Codex Round 10.5 · 啟動時主動探 OCR · /healthz 立刻看得到真狀態
     try:
         from services.knowledge_extract import probe_ocr_startup
@@ -147,17 +149,21 @@ from slowapi.middleware import SlowAPIMiddleware
 
 
 def _user_or_ip(request: Request) -> str:
-    """Codex R5#7 · 限速 key 優先用 trusted user · IP fallback
-    nginx/Cloudflare 後 IP 可能全員共用 · trusted email 才能精準擋濫用者"""
-    # Cookie 驗過的 trusted user 優先
-    trusted = getattr(request.state, "email_trusted", False) if hasattr(request, "state") else False
-    if trusted:
-        email = (request.headers.get("X-User-Email") or "").strip().lower()
-        if email:
-            return f"u:{email}"
-    # Internal token(cron)
+    """Codex R5#7 + R6#2 · 限速 key 優先 trusted user · IP fallback
+
+    R6#2 抓:SlowAPIMiddleware 在 endpoint dependency 前跑 · request.state 還沒設
+    修正:在 key_func 內直接驗 cookie · 不依賴 state
+    """
+    # Internal token(cron)優先
     if request.headers.get("X-Internal-Token"):
         return "u:internal"
+    # 直接呼叫 _verify_librechat_cookie · 不靠 request.state(middleware 順序問題)
+    try:
+        verified_email = _verify_librechat_cookie(request)
+        if verified_email:
+            return f"u:{verified_email}"
+    except Exception:
+        pass
     # Fallback · IP(nginx X-Forwarded-For 已被 chengfu-proxy.conf 設)
     return f"ip:{get_remote_address(request)}"
 
@@ -267,32 +273,39 @@ _admin_allowlist = {e.strip().lower() for e in (
 
 
 def _verify_librechat_cookie(request: Request) -> Optional[str]:
-    """ROADMAP §11.12 + Codex R5#1 · 只接 access token cookie
+    """Codex R6#1 · 修正 R5#1 錯誤前提
 
-    Codex R5 抓:原本 refreshToken 也接 · 等同長效 token 可打 admin
-    現在:
-    1. 只驗 `token` cookie(LibreChat access · 短效 15min)
-    2. `refreshToken` 完全拒絕(只給 LibreChat /api/auth/refresh 用)
-    3. 失敗 → None · 走 X-User-Email legacy(若 JWT_SECRET 未設)
+    R5#1 假設 LibreChat 發 `token` cookie · 但 v0.8.4 原始碼:
+    - login/refresh 回 JSON {token, user} · access 只在 response body
+    - cookie 只設 refreshToken + token_provider
+    所以 R5#1 cookie 路徑「永遠 None · admin 永遠走 X-User-Email legacy」
+    = 等於沒做認證強化 · production 仍可偽造
+
+    新策略:
+    1. 驗 refreshToken cookie(LibreChat 實際發 · JWT_REFRESH_SECRET 簽)
+    2. refreshToken 雖長效(7d) · 有 LibreChat httpOnly + SameSite 保護
+    3. require_admin 仍要白名單 · refreshToken 只證 user 是誰 · 不直接 = admin
+    4. 失敗 → None · 走 X-User-Email legacy(JWT_REFRESH_SECRET 未設時)
     """
     try:
         import jwt as _jwt
-        access_token = request.cookies.get("token")
-        if not access_token:
+        # R6#1 · LibreChat 實際發 refreshToken · 不發 token cookie
+        refresh_token = request.cookies.get("refreshToken")
+        if not refresh_token:
             return None
-        sec = os.getenv("JWT_SECRET", "")
+        sec = os.getenv("JWT_REFRESH_SECRET", "")
         if not sec or sec.startswith("<GENERATE"):
             return None
         try:
-            payload = _jwt.decode(access_token, sec, algorithms=["HS256"])
+            payload = _jwt.decode(refresh_token, sec, algorithms=["HS256"])
             email = (payload.get("email") or "").strip().lower()
             if email:
                 return email
         except _jwt.ExpiredSignatureError:
-            logger.debug("[auth] access token expired · client should /api/auth/refresh")
+            logger.debug("[auth] refreshToken expired · user should re-login")
             return None
         except _jwt.InvalidTokenError as e:
-            logger.debug("[auth] access token invalid · %s", e)
+            logger.debug("[auth] refreshToken invalid · %s", e)
             return None
         return None
     except Exception as e:
@@ -340,8 +353,9 @@ def require_admin(request: Request,
         raise HTTPException(403, "未識別使用者 · 請從 launcher 進入登入")
 
     trusted = getattr(request.state, "email_trusted", False)
-    jwt_configured = bool(os.getenv("JWT_SECRET", "")) and \
-                     not os.getenv("JWT_SECRET", "").startswith("<GENERATE")
+    # R6#1 · 改檢查 JWT_REFRESH_SECRET(cookie 用這個簽)
+    _refresh_sec = os.getenv("JWT_REFRESH_SECRET", "")
+    jwt_configured = bool(_refresh_sec) and not _refresh_sec.startswith("<GENERATE")
 
     if not trusted and jwt_configured:
         logger.warning(
@@ -831,9 +845,9 @@ def admin_dashboard(_admin: str = Depends(require_admin)):
     active_projects = projects_col.count_documents({"status": "active"})
     total_projects = projects_col.count_documents({})
 
-    # 回饋(ROADMAP §11.1 · feedback router 抽出後改 import)
-    from routers.feedback import feedback_stats as _feedback_stats
-    fb_stats = _feedback_stats()
+    # 回饋(ROADMAP §11.1 + R6#4 · 用內部 helper · 跳過 admin Depends)
+    from routers.feedback import _compute_feedback_stats
+    fb_stats = _compute_feedback_stats()
     total_feedback = feedback_col.count_documents({})
     up_count = feedback_col.count_documents({"verdict": "up"})
 
@@ -1160,7 +1174,7 @@ def monthly_report(month: Optional[str] = None, _admin: str = Depends(require_ad
             "top_complaints": sorted(complaint_keywords.items(), key=lambda x: -x[1])[:5],
             "top_praises": sorted(praise_keywords.items(), key=lambda x: -x[1])[:5],
         },
-        "agents": (lambda: __import__("routers.feedback", fromlist=["feedback_stats"]).feedback_stats())(),
+        "agents": (lambda: __import__("routers.feedback", fromlist=["_compute_feedback_stats"])._compute_feedback_stats())(),
         "action_items": _generate_action_items(month_fb),
     }
 

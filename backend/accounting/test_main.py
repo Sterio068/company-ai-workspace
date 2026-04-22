@@ -201,10 +201,17 @@ def test_create_feedback(client):
 
 
 def test_feedback_stats(client):
+    """R6#4 · /feedback/stats 改 admin-only"""
     client.post("/feedback", json={"message_id": "m2", "agent_name": "A", "verdict": "up"})
     client.post("/feedback", json={"message_id": "m3", "agent_name": "A", "verdict": "down"})
-    r = client.get("/feedback/stats")
+    r = client.get("/feedback/stats", headers={"X-User-Email": "sterio068@gmail.com"})
     assert r.status_code == 200
+
+
+def test_feedback_stats_requires_admin(client):
+    """R6#4 · 無 admin header → 403"""
+    r = client.get("/feedback/stats")
+    assert r.status_code == 403
 
 
 # ============================================================
@@ -278,12 +285,13 @@ def test_l3_classifier_detects_unit_internal(client):
 # ============================================================
 def test_design_recraft_without_api_key(client, monkeypatch):
     """FAL_API_KEY 未設 → 503 + friendly_message
-    ROADMAP §11.1 B-5 · router 改 _fal_key() 讀 env · test 用 monkeypatch.setenv"""
+    ROADMAP §11.1 B-5 · router 改 _fal_key() 讀 env · test 用 monkeypatch.setenv
+    R6#3 · 必須帶 X-User-Email · 否則先被 403 擋"""
     monkeypatch.setenv("FAL_API_KEY", "")
-    r = client.post("/design/recraft", json={
-        "prompt": "中秋節品牌主視覺 · 橘黃色調 · 現代簡潔",
-        "image_size": "square_hd",
-    })
+    r = client.post("/design/recraft",
+        json={"prompt": "中秋節品牌主視覺 · 橘黃色調 · 現代簡潔", "image_size": "square_hd"},
+        headers={"X-User-Email": "user@chengfu.local"},  # R6#3
+    )
     assert r.status_code == 503
     body = r.json()
     detail = body.get("detail", {})
@@ -352,10 +360,10 @@ def test_design_recraft_success_mocked(client, monkeypatch):
     async def _nop(x): return
     monkeypatch.setattr(design_mod.asyncio, "sleep", _nop)
 
-    r = client.post("/design/recraft", json={
-        "prompt": "中秋節品牌主視覺 橘黃調",
-        "image_size": "square_hd",
-    })
+    r = client.post("/design/recraft",
+        json={"prompt": "中秋節品牌主視覺 橘黃調", "image_size": "square_hd"},
+        headers={"X-User-Email": "user@chengfu.local"},  # R6#3
+    )
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "done"
@@ -680,10 +688,49 @@ def test_design_history_empty(client):
 def test_design_history_after_failed_call(client):
     """先呼叫一次 design/recraft (無 key 503)· 不會留 log
     確認 history 仍為空 · 真實 API call 才會記
-    """
-    r = client.get("/design/history")
+    R6#3 · history 必須登入"""
+    r = client.get("/design/history", headers={"X-User-Email": "user@chengfu.local"})
     assert r.status_code == 200
     assert isinstance(r.json()["history"], list)
+
+
+def test_design_history_requires_login(client):
+    """R6#3 · 無 X-User-Email → 403"""
+    r = client.get("/design/history")
+    assert r.status_code == 403
+
+
+# ============================================================
+# Codex R6#5 · auth contract tests · 防 R5/R6 風險回歸
+# ============================================================
+def test_auth_design_recraft_blocks_anonymous(client):
+    """R6#3 · 任何人 curl /design/recraft 不帶 email → 403 · 不能爆 Fal 預算"""
+    r = client.post("/design/recraft", json={
+        "prompt": "anonymous attempt to burn fal credits",
+        "image_size": "square_hd",
+    })
+    assert r.status_code == 403
+
+
+def test_auth_tenders_blocks_anonymous(client):
+    """R6#4 · /tender-alerts 改 require user · 防外部偵察承富業務"""
+    r = client.get("/tender-alerts")
+    assert r.status_code == 403
+
+
+def test_auth_feedback_create_uses_trusted_email(client):
+    """R6#4 · POST /feedback 即使 body 偽造 user_email · 仍以 X-User-Email 為準
+    這個測試在 mongomock + JWT_SECRET 未設場景 · trusted=False · X-User-Email 仍會覆蓋"""
+    r = client.post("/feedback",
+        json={"message_id": "spy_msg", "verdict": "down", "user_email": "victim@chengfu.local"},
+        headers={"X-User-Email": "real_attacker@chengfu.local"},
+    )
+    assert r.status_code == 200
+    # 驗:DB 內存的 user_email 是 header 帶來的 trusted · 不是 body 偽造的
+    import main as main_mod
+    fb = main_mod.feedback_col.find_one({"message_id": "spy_msg"})
+    assert fb is not None
+    assert fb["user_email"] == "real_attacker@chengfu.local"
 
 
 def test_healthz_includes_ocr_status(client):
@@ -831,10 +878,10 @@ def test_design_recraft_moderation_rejected(client, monkeypatch):
     monkeypatch.setenv("FAL_API_KEY", "fake-key-for-test")
     monkeypatch.setattr(design_mod.httpx, "AsyncClient", FakeClient)
 
-    r = client.post("/design/recraft", json={
-        "prompt": "真人總統肖像 寫實",  # 被 moderation 的假例
-        "image_size": "square_hd",
-    })
+    r = client.post("/design/recraft",
+        json={"prompt": "真人總統肖像 寫實", "image_size": "square_hd"},
+        headers={"X-User-Email": "user@chengfu.local"},  # R6#3
+    )
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "rejected"

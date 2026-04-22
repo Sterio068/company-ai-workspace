@@ -31,8 +31,22 @@ def _caller_email_dep():
     return Depends(current_user_email)
 
 
+def _user_required_dep():
+    """R6#4 · 一般 user 必登入"""
+    from main import current_user_email
+    def _check(caller: Optional[str] = Depends(current_user_email)) -> str:
+        if not caller:
+            raise HTTPException(403, "未識別使用者 · 請從 launcher 登入")
+        return caller
+    return Depends(_check)
+
+
 @router.get("/tender-alerts")
-def list_tender_alerts(status: Optional[str] = None, keyword: Optional[str] = None, limit: int = 50):
+def list_tender_alerts(
+    status: Optional[str] = None, keyword: Optional[str] = None, limit: int = 50,
+    _user: str = _user_required_dep(),  # R6#4 · 至少要登入
+):
+    """R6#4 · 標案 list 不再匿名可讀(防外部偵察承富業務興趣)"""
     from main import db
     q = {}
     if status:

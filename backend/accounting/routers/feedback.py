@@ -2,10 +2,9 @@
 Feedback router · 👍👎 集中收集 + stats(per-agent 滿意率)
 
 ROADMAP §11.1 B-2 · 從 main.py 抽出
-- 對應 Champion 一週日誌「Top 滿意度低 agent」資料來源
-- /feedback/stats 給 admin dashboard 用
+Codex R6#4 · list/stats 改 admin-only · create 用 trusted email
 """
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional, Literal
 from datetime import datetime
@@ -24,6 +23,11 @@ class Feedback(BaseModel):
     user_email: Optional[str] = None
 
 
+def _admin_dep():
+    from main import require_admin
+    return Depends(require_admin)
+
+
 def _serialize(doc):
     """從 main.py 暫時複製 serialize · v1.2 全 router 抽完後改 _deps.py 共用"""
     if isinstance(doc, list):
@@ -38,12 +42,17 @@ def _serialize(doc):
 
 
 @router.post("/feedback")
-def create_feedback(fb: Feedback):
-    from main import feedback_col
+def create_feedback(fb: Feedback, request: Request):
+    """R6#4 · user_email 從 trusted identity 取 · 不信前端 body
+    若 trusted email 取不到 · 才 fallback 到 fb.user_email"""
+    from main import feedback_col, current_user_email
     data = fb.model_dump()
+    trusted_email = current_user_email(request, request.headers.get("X-User-Email"))
+    if trusted_email:
+        data["user_email"] = trusted_email  # 覆蓋 body 內的 · 防偽造他人回饋
     data["created_at"] = datetime.utcnow()
     feedback_col.update_one(
-        {"message_id": fb.message_id, "user_email": fb.user_email},
+        {"message_id": fb.message_id, "user_email": data.get("user_email")},
         {"$set": data},
         upsert=True,
     )
@@ -51,7 +60,11 @@ def create_feedback(fb: Feedback):
 
 
 @router.get("/feedback")
-def list_feedback(verdict: Optional[str] = None, agent: Optional[str] = None, limit: int = 100):
+def list_feedback(
+    verdict: Optional[str] = None, agent: Optional[str] = None, limit: int = 100,
+    _admin: str = _admin_dep(),  # R6#4 · admin-only
+):
+    """R6#4 · admin-only · 防匿名讀全部 user_email/note"""
     from main import feedback_col
     q = {}
     if verdict:
@@ -61,9 +74,8 @@ def list_feedback(verdict: Optional[str] = None, agent: Optional[str] = None, li
     return _serialize(list(feedback_col.find(q).sort("created_at", -1).limit(limit)))
 
 
-@router.get("/feedback/stats")
-def feedback_stats():
-    """👍 / 👎 比率 by agent。"""
+def _compute_feedback_stats():
+    """純資料 helper · 給內部 admin_dashboard 用 · 不過 Depends"""
     from main import feedback_col
     pipeline = [
         {"$group": {
@@ -80,3 +92,13 @@ def feedback_stats():
          "score": round(s["up"] / s["total"] * 100, 1) if s["total"] > 0 else 0}
         for s in stats
     ]
+
+
+@router.get("/feedback/stats")
+def feedback_stats(_admin: str = _admin_dep()):
+    """R6#4 · admin-only endpoint wrapper"""
+    return _compute_feedback_stats()
+
+
+# 向後相容(main.py 的 admin_dashboard / monthly_report 透過 import 直接呼叫)
+feedback_stats_internal = _compute_feedback_stats

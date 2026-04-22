@@ -68,9 +68,13 @@ def _log_design_job(req_id: str, email: Optional[str], req: RecraftRequest,
 async def design_recraft(req: RecraftRequest, request: Request):
     """生圖主端點 · Q2 決議每次 3 張 · 三態 done/pending/rejected
     rate limit 由 main.py app 級別 limiter 套用(SlowAPIMiddleware)
+    Codex R6#3 · 必須登入 · 防匿名爆 Fal 預算
     """
-    from main import db
-    email = (request.headers.get("X-User-Email") or "").strip().lower() or None
+    from main import db, current_user_email
+    # R6#3 · 強制要 trusted email · 無則 403
+    email = current_user_email(request, request.headers.get("X-User-Email"))
+    if not email:
+        raise HTTPException(403, "未識別使用者 · 設計助手必須登入")
 
     fal_key = _fal_key()
     if not fal_key:
@@ -193,10 +197,15 @@ async def design_recraft_status(job_id: str):
 
 @router.get("/history")
 def design_history(request: Request, limit: int = 20):
-    """設計助手歷史 · 給 dropdown 重生用 · 含舊 doc backfill"""
-    from main import db
-    email = (request.headers.get("X-User-Email") or "").strip().lower() or None
-    q = {"user": email} if email else {}
+    """設計助手歷史 · 給 dropdown 重生用 · 含舊 doc backfill
+    Codex R6#3 · 必須登入 · 防匿名拿全體 history(洩客戶名 / 案件)
+    """
+    from main import db, current_user_email
+    email = current_user_email(request, request.headers.get("X-User-Email"))
+    if not email:
+        raise HTTPException(403, "未識別使用者 · 請從 launcher 登入")
+    # R6#3 · 只回自己的 history(admin 看別人改走 admin endpoint · v1.2 加)
+    q = {"user": email}
     docs = list(db.design_jobs.find(
         q,
         {"_id": 0, "request_id": 1, "prompt": 1, "prompt_preview": 1, "prompt_hash": 1,
