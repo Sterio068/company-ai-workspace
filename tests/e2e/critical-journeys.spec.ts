@@ -23,16 +23,37 @@ test.describe('承富 AI · 關鍵流程', () => {
     await expect(agentCards).toHaveCount(10);
   });
 
-  test('Hero 輸入框 · L3 警告', async ({ page }) => {
+  test('Hero 輸入框 · L3 警告(ROADMAP §11.13 真 assert)', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#app')).toBeVisible();
     await page.fill('#hero-input', '幫我分析選情,候選人策略要怎麼定');
 
-    // 送出前 L3 classifier 應該跳 modal confirm
+    // 送出前 L3 classifier 應該跳 modal/dialog 警告
+    // 兩種可能 UI · 任一觸發即視為通過:
+    //   (a) window.confirm dialog
+    //   (b) 自製 modal2-box(目前實作)
     const submitBtn = page.locator('.hero-submit').first();
-    const dialogPromise = page.waitForEvent('dialog').catch(() => null);
+
+    // Race · 任一條件先滿足都算通過
+    const dialogPromise = page.waitForEvent('dialog', { timeout: 3000 }).catch(() => null);
+    const modalPromise = page.locator('.modal2-box.open, [role="dialog"]')
+      .first()
+      .waitFor({ state: 'visible', timeout: 3000 })
+      .then(() => 'modal')
+      .catch(() => null);
+
     await submitBtn.click();
-    // window.confirm 可能發生 · 至少不會靜默送出
+
+    const [dialogResult, modalResult] = await Promise.all([dialogPromise, modalPromise]);
+    const triggered = !!dialogResult || !!modalResult;
+
+    // 真 assert:必至少一個警告 UI 出現 · 不能靜默送出
+    expect(triggered, 'L3 classifier 必觸發 dialog 或 modal 警告 · 不可靜默送出').toBe(true);
+
+    // 若是 native dialog · 取消(避免阻塞後續 test)
+    if (dialogResult) {
+      await dialogResult.dismiss();
+    }
   });
 
   test('Projects · 建立 · 看到卡片', async ({ page }) => {

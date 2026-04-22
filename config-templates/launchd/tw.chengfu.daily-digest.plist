@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  承富 AI · 每工作日 08:30 寄晨間 digest 給 admin(ROADMAP §11.8)
+
+  安裝:./scripts/install-launchd.sh
+  卸載:launchctl unload ~/Library/LaunchAgents/tw.chengfu.daily-digest.plist
+  驗證:tail -f ~/Library/Logs/chengfu-daily-digest.log
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>tw.chengfu.daily-digest</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>export PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin &amp;&amp; cd "__REPO_ROOT__" &amp;&amp; python3 scripts/daily-digest.py</string>
+    </array>
+
+    <!-- 工作日(週一到週五)08:30 跑 -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>8</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>8</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>8</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>8</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>8</integer><key>Minute</key><integer>30</integer></dict>
+    </array>
+
+    <key>StandardOutPath</key>
+    <string>/Users/USERNAME/Library/Logs/chengfu-daily-digest.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/USERNAME/Library/Logs/chengfu-daily-digest.err.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+    <key>KeepAlive</key>
+    <false/>
+</dict>
+</plist>

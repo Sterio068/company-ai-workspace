@@ -152,6 +152,8 @@ def send_digest_email(activity, priorities, advice):
 </p>
 </body></html>"""
 
+    # ROADMAP §11.8 · 加 X-User-Email · 通過 require_admin
+    # ADMIN_EMAIL 預設 sterio068@gmail.com · env 可覆蓋
     req = urllib.request.Request(
         f"{ACCOUNTING_BASE}/admin/email/send",
         data=json.dumps({
@@ -160,7 +162,10 @@ def send_digest_email(activity, priorities, advice):
             "body": body,
             "body_type": "html",
         }).encode(),
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "X-User-Email": ADMIN_EMAIL,  # cron 走 admin 身分
+        },
     )
     try:
         with urllib.request.urlopen(req, timeout=15) as r:
