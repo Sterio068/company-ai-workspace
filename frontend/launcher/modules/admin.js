@@ -39,7 +39,15 @@ export const admin = {
     try {
       const r = await authFetch(`${BASE}/feedback/stats`);
       const stats = await r.json();
-      if (!stats.length) { root.innerHTML = '<div class="chip-empty">尚無足夠回饋資料</div>'; return; }
+      if (!stats.length) {
+        root.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">👍</div>
+            <div class="empty-state-title">尚無回饋資料</div>
+            <div class="empty-state-hint">同仁在對話按 👍 👎 累積一段時間後才會有統計</div>
+          </div>`;
+        return;
+      }
       stats.sort((a, b) => b.score - a.score);
       root.innerHTML = stats.map(s => {
         const color = s.score >= 80 ? "#34C759" : s.score >= 60 ? "#FF9500" : "#FF3B30";
@@ -52,7 +60,13 @@ export const admin = {
         `;
       }).join("");
     } catch {
-      root.innerHTML = '<div class="chip-empty">❌ 無法連線 API</div>';
+      root.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">🔌</div>
+          <div class="empty-state-title">無法連線 API</div>
+          <div class="empty-state-hint">檢查 <code>docker compose ps</code> accounting 是否 up</div>
+          <button class="btn-ghost" onclick="window.admin?.loadAgentStats()" style="margin-top:12px">重試</button>
+        </div>`;
     }
   },
 
@@ -63,7 +77,12 @@ export const admin = {
       const r = await authFetch(`${BASE}/admin/cost?days=30`);
       const d = await r.json();
       if (d.error || !d.by_model) {
-        root.innerHTML = '<div class="chip-empty">LibreChat transactions 尚無資料(還沒對話累積)</div>';
+        root.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📊</div>
+            <div class="empty-state-title">尚無成本資料</div>
+            <div class="empty-state-hint">LibreChat transactions 尚未累積 · 有對話後才有統計</div>
+          </div>`;
         return;
       }
       root.innerHTML = d.by_model.map(m => `
@@ -74,7 +93,13 @@ export const admin = {
         </div>
       `).join("");
     } catch {
-      root.innerHTML = '<div class="chip-empty">❌ 無法連線 API</div>';
+      root.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">🔌</div>
+          <div class="empty-state-title">無法載入成本</div>
+          <div class="empty-state-hint">檢查 accounting 服務是否啟動</div>
+          <button class="btn-ghost" onclick="window.admin?.loadCost()" style="margin-top:12px">重試</button>
+        </div>`;
     }
   },
 };

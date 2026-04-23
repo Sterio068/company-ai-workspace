@@ -46,15 +46,23 @@ export const knowledge = {
       this._sources = await r.json();
       this._renderAdmin(root);
     } catch (e) {
-      root.innerHTML = `<div class="chip-empty">❌ 無法載入:${escapeHtml(e.message)}</div>`;
+      root.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">😓</div>
+          <div class="empty-state-title">無法載入資料源</div>
+          <div class="empty-state-hint">${escapeHtml(e.message || "後端 API 可能未啟動")}</div>
+          <button class="btn-ghost" onclick="window.knowledge?.loadAdmin()" style="margin-top:12px">重試</button>
+        </div>`;
     }
   },
 
   _renderAdmin(root) {
     if (!this._sources.length) {
       root.innerHTML = `
-        <div class="chip-empty">
-          還沒有資料源 · <a href="#" class="link" data-new-source>新增第一個</a>
+        <div class="empty-state">
+          <div class="empty-state-icon">📂</div>
+          <div class="empty-state-title">尚無資料源</div>
+          <div class="empty-state-hint"><a href="#" class="link" data-new-source>+ 新增第一個資料源</a></div>
         </div>`;
       root.querySelector("[data-new-source]")?.addEventListener("click", e => {
         e.preventDefault();
@@ -467,7 +475,12 @@ export const knowledge = {
       const body = await r.json();
       const hits = body.hits || [];
       if (!hits.length) {
-        root.innerHTML = `<div class="chip-empty">沒結果${body.message ? ' · ' + escapeHtml(body.message) : ''}</div>`;
+        root.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🔍</div>
+            <div class="empty-state-title">找不到結果</div>
+            <div class="empty-state-hint">${body.message ? escapeHtml(body.message) : "試試其他關鍵字 · 或縮短搜尋"}</div>
+          </div>`;
         return;
       }
       root.innerHTML = `

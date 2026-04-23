@@ -41,7 +41,12 @@ export const accounting = {
       const txs = await r.json();
       setText("accounting-tx-count", txs.length);
       if (!txs.length) {
-        root.innerHTML = '<div class="chip-empty">尚無交易 · 找財務試算助手記第一筆</div>';
+        root.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">💰</div>
+            <div class="empty-state-title">尚無會計交易</div>
+            <div class="empty-state-hint">找「財務試算助手」記第一筆(收入 / 支出 / 發票)</div>
+          </div>`;
         return;
       }
       root.innerHTML = txs.map(tx => `
@@ -52,7 +57,12 @@ export const accounting = {
         </div>
       `).join("");
     } catch {
-      root.innerHTML = '<div class="chip-empty">❌ 會計服務未就緒 · 檢查 docker compose ps accounting</div>';
+      root.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">⚠️</div>
+          <div class="empty-state-title">會計服務未就緒</div>
+          <div class="empty-state-hint">執行 <code>docker compose ps accounting</code> 檢查</div>
+        </div>`;
     }
   },
 
@@ -62,7 +72,15 @@ export const accounting = {
     try {
       const r = await fetch(`${BASE}/invoices`);
       const invs = await r.json();
-      if (!invs.length) { root.innerHTML = '<div class="chip-empty">尚無發票</div>'; return; }
+      if (!invs.length) {
+        root.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🧾</div>
+            <div class="empty-state-title">尚無發票</div>
+            <div class="empty-state-hint">找「財務試算助手」開第一張統編發票</div>
+          </div>`;
+        return;
+      }
       root.innerHTML = invs.slice(0, 6).map(inv => `
         <article class="project-card">
           <div class="project-card-name">${inv.invoice_no}</div>
