@@ -168,8 +168,9 @@ scripts/
 
 ## 7. commit 摘要
 
-從 v1.1(`d3c01a9`)到 v1.2(本次 `31aaf0f`)· 25+ commit:
+從 v1.1(`d3c01a9`)到 v1.2.0 tag(`ab0af11`)· 50+ commits:
 
+### 7.1 Sprint + 4 新功能(R17-R23)
 ```
 6307c41 · Sprint 1 紅線(feedback/crm/event/docker/nginx)
 56af2f0 · R17 修(crm.js shape / probability / AbortError)
@@ -187,6 +188,74 @@ e849480 · R22 修(lease/race/timezone)
 31aaf0f · R23 修(memory/recovery/GPS/handoff)
 ```
 
+### 7.2 Day 1-3 整合 + R24-R27(2026-04-23 上半)
+```
+9de181c · v1.2 Day 1 · 4 新功能前端整合
+62d95d3 · R24 修(social timezone / site memory / hash whitelist)
+a91cdb0 · v1.2 Day 2 · #2 LINE → webhook + #3 PII + HEIC + social cron
+ce01112 · R25 修(LINE token preview-only + HEIC streaming tmp)
+f8dd062 · v1.2 Day 3 · installer .app + EXTERNAL-REVIEW v9.1
+5893046 · R26 修(ECC_INTERNAL_TOKEN export + LINE Notify EOL → webhook)
+c44ad04 · R27 修(prod compose / router-wide auth / webhook mask + SSRF)
+```
+
+### 7.3 18 件技術債清整 + R29-R32 PDPA 4 連修(2026-04-23 下半 · 自主迴圈)
+```
+4834791 · 12 件技術債清整(datetime aware / dead code / PDPA / system router / cron / CSP)
+9e77320 · 技術債#15 docs(knowledge_indexer 三層 fallback)
+332a607 · R29 修(safety pii-audit 真寫 + PDPA 補 5 collection)
+cdbfcd5 · self-audit 修(PDPA audit 寫錯 collection · main.audit_col)
+bd7753d · R30 修(PDPA 補 8 個漏網欄位 · 真徹底切人 email)
+5abf7e4 · librechat_warning(PDPA response 提醒對話資料另一 DB)
+3c8a36b · R31 修(tender_alerts + race-safe notes + case-insensitive)
+ab0af11 · docs/05-SECURITY.md §5.4 加 PDPA delete-all curl 範例
+v1.2.0 tag · R32 全綠 0/0 真收工
+```
+
+---
+
+## 8. v1.2 vs v1.1 對照
+
+| 維度 | v1.1 | v1.2 | 增量 |
+|---|---|---|---|
+| Routers | 11 | 15 | +4(media · social · site_survey · system) |
+| Services | 3 | 4 | -1+1(刪 line_notify · 加 webhook_notify) |
+| Endpoints | ~75 | ~100 | +25(4 新功能 + PDPA + system) |
+| Frontend modules | 22 | 29 | +7 |
+| Cron(launchd) | 4 | 6 | +2(social-scheduler · dr-drill) |
+| Tests | 110 | **160** | +50 |
+| Codex 對抗審查輪次 | 16 | **32** | +16(R17-R32) |
+| 修紅黃累計 | ~50 | **95+** | +45 |
+| 技術債盤點 | — | **18 件** | 13 件處理 · 5 件 v1.3 |
+
+---
+
+## 9. PDPA 法遵深度(R29-R32 4 連修成果)
+
+`POST /admin/users/{email}/delete-all` 跨 **20 個 collection / 欄位**:
+
+**刪除類(該 user 私有資料 · 9 個 collection)**:
+user_preferences · feedback · meetings · site_surveys · scheduled_posts · knowledge_audit · chengfu_quota_overrides · design_jobs · agent_overrides
+
+**切人關聯類(資料留 · 個人欄清 None · 11 個欄位)**:
+crm_leads.owner · media_pitch_history.pitched_by · media_contacts.created_by · knowledge_sources.created_by · projects.owner · projects.handoff.updated_by · crm_stage_history.changed_by · agent_overrides.editor · system_settings.updated_by · tender_alerts.reviewed_by · crm_leads.notes[].by(arrayFilter race-safe)
+
+**保留類(法規要求保留)**:
+audit_log(PDPA §11 + admin 操作 audit · 不可刪)
+
+**安全護欄**:
+- require admin · 不開放自助
+- confirm_email 必須等於 user_email(防 mis-click)
+- dry_run=true 預設 · 寫 `pdpa_delete_dryrun` audit
+- dry_run=false 真刪 · 寫 `pdpa_delete` audit
+- admin 不能刪自己(防 lockout)
+- case-insensitive(legacy mixed-case 'Leaving@ChengFu.Local' 也清)
+- response 帶 `librechat_warning` 提醒對話 DB 是另一個
+
+**操作流程**:見 `docs/05-SECURITY.md §5.4` 完整 curl 範例
+
 ---
 
 **簽收欄:** ☐ 老闆確認 v1.2 已 review · 同意 Day 0 部署
+**Tag:** `v1.2.0` pushed to GitHub Sterio068/chengfu-ai
+**狀態:** R32 codex 全綠 0 紅 0 黃 · ship-ready
