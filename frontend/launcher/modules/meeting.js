@@ -18,6 +18,93 @@ const BASE = "/api-accounting";
 export const meeting = {
   _currentId: null,
   _pollTimer: null,
+  _meetings: [],
+
+  async init() {
+    await this.loadList();
+    this.renderView();
+  },
+
+  async loadList() {
+    try {
+      const r = await authFetch(`${BASE}/memory/meetings?limit=30`);
+      const body = await r.json();
+      this._meetings = body.items || [];
+    } catch (e) {
+      this._meetings = [];
+    }
+  },
+
+  renderView() {
+    const root = document.getElementById("view-meeting-content");
+    if (!root) return;
+    root.innerHTML = `
+      <div class="meeting-toolbar">
+        <h2>🎤 會議速記</h2>
+        <button class="btn-primary" id="meeting-upload-btn">+ 上傳音檔</button>
+      </div>
+
+      <p class="meeting-help">
+        音檔(m4a/mp3/wav · ≤ 25MB)→ Whisper STT → Haiku 整理 → 自動填 Handoff<br>
+        🔒 PDPA · 處理完音檔自動刪 · 只留逐字稿 + 結構化
+      </p>
+
+      <h3>📋 我的會議</h3>
+      ${this._meetings.length === 0 ? `
+        <p class="meeting-empty">沒會議 · 點上面「上傳音檔」開始</p>
+      ` : `
+        <div class="meeting-list">
+          ${this._meetings.map(m => `
+            <div class="meeting-item meeting-status-${m.status}" data-id="${m.meeting_id}">
+              <div class="meeting-title">${escapeHtml(m.title)}</div>
+              <div class="meeting-meta">
+                <span>${this._statusBadge(m.status)}</span>
+                ${m.action_items_count > 0 ? `<span>✓ ${m.action_items_count} 待辦</span>` : ""}
+                ${m.project_id ? `<span>📁 ${escapeHtml(m.project_id.substring(0,8))}...</span>` : ""}
+                <span class="meeting-time">${this._formatTime(m.created_at)}</span>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `}
+    `;
+    document.getElementById("meeting-upload-btn")?.addEventListener("click", () => this.openUpload());
+    document.querySelectorAll("[data-id]").forEach(el => {
+      el.addEventListener("click", () => this._openDetail(el.dataset.id));
+    });
+  },
+
+  _statusBadge(s) {
+    const m = {
+      transcribing: "🎤 轉錄中",
+      structuring: "🤖 整理中",
+      done: "✅ 完成",
+      failed: "❌ 失敗",
+    };
+    return m[s] || s;
+  },
+
+  _formatTime(iso) {
+    if (!iso) return "—";
+    try {
+      return new Date(iso).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch { return iso; }
+  },
+
+  async _openDetail(id) {
+    try {
+      const r = await authFetch(`${BASE}/memory/meetings/${id}`);
+      if (!r.ok) {
+        toast.error("讀取失敗");
+        return;
+      }
+      const body = await r.json();
+      this._currentId = id;
+      this._showResult(body);
+    } catch (e) {
+      toast.error(`網路錯:${String(e)}`);
+    }
+  },
 
   async openUpload() {
     // 建 modal · 簡單版:上傳 + project 選

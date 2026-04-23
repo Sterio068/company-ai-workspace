@@ -3053,3 +3053,84 @@ button:focus-visible,
   padding: 2px 6px;
   border-radius: 4px;
 }
+
+/* ============================================================
+ * v1.2 Day 1.5 · 4 新功能 view styles
+ * ============================================================ */
+.view-meeting, .view-media, .view-social, .view-site { padding: var(--s-6) var(--s-8); }
+
+/* Meeting */
+.meeting-toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--s-4); }
+.meeting-help { color:var(--text-tertiary); font-size:13px; padding:var(--s-3); background:var(--surface-2); border-radius:var(--r-md); margin-bottom:var(--s-6); }
+.meeting-empty { text-align:center; padding:var(--s-6); color:var(--text-tertiary); }
+.meeting-list { display:flex; flex-direction:column; gap:8px; }
+.meeting-item { padding:var(--s-3); background:var(--surface-2); border-radius:var(--r-md); cursor:pointer; transition:all .15s; }
+.meeting-item:hover { background:var(--surface-3); }
+.meeting-status-failed { border-left:3px solid #ef4444; }
+.meeting-status-done { border-left:3px solid #22c55e; }
+.meeting-title { font-weight:600; margin-bottom:4px; }
+.meeting-meta { font-size:12px; color:var(--text-tertiary); display:flex; gap:12px; }
+.meeting-time { margin-left:auto; }
+
+/* Media */
+.media-toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--s-4); flex-wrap:wrap; gap:var(--s-3); }
+.media-stats { display:flex; gap:var(--s-4); }
+.media-stat-item { font-size:13px; color:var(--text-secondary); }
+.media-actions { display:flex; gap:8px; }
+.media-filters { display:flex; gap:var(--s-3); margin-bottom:var(--s-4); }
+.media-filters input, .media-filters select { padding:8px; border:1px solid var(--border); border-radius:var(--r-md); }
+.media-filters input { flex:1; }
+.media-table { width:100%; border-collapse:collapse; font-size:13px; }
+.media-table th, .media-table td { padding:8px; border-bottom:1px solid var(--border); text-align:left; }
+.media-table th { background:var(--surface-2); font-weight:600; }
+.media-empty { text-align:center; color:var(--text-tertiary); padding:var(--s-6); }
+.media-beat { display:inline-block; padding:1px 6px; background:var(--surface-3); border-radius:8px; font-size:11px; margin-right:2px; }
+.btn-tiny { padding:3px 8px; font-size:11px; border:1px solid var(--border); background:var(--surface-1); border-radius:var(--r-sm); cursor:pointer; margin-right:4px; }
+.btn-tiny:hover { background:var(--blue); color:white; }
+.btn-tiny.btn-danger:hover { background:#ef4444; }
+
+/* Social */
+.social-toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--s-4); flex-wrap:wrap; gap:var(--s-3); }
+.social-stats { display:flex; gap:var(--s-4); }
+.social-stat-item { font-size:13px; }
+.social-actions { display:flex; gap:8px; }
+.social-section-title { margin:var(--s-5) 0 var(--s-3); font-size:14px; color:var(--text-secondary); }
+.social-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:var(--s-3); }
+.social-card { background:var(--surface-2); border-radius:var(--r-md); padding:var(--s-3); }
+.social-card-head { display:flex; justify-content:space-between; font-size:12px; margin-bottom:8px; }
+.social-platform { font-weight:600; }
+.social-status { font-weight:600; }
+.social-content { font-size:13px; line-height:1.5; min-height:40px; margin-bottom:8px; }
+.social-meta { font-size:11px; color:var(--text-tertiary); display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+.social-error { color:#f59e0b; }
+.social-card-actions { display:flex; gap:4px; }
+
+/* Site Survey */
+.site-warn { background:rgba(245, 158, 11, .1); border-left:3px solid #f59e0b; padding:var(--s-3); margin-bottom:var(--s-4); border-radius:var(--r-md); font-size:13px; }
+.site-toolbar { margin-bottom:var(--s-5); }
+.site-desc { color:var(--text-secondary); font-size:14px; }
+.site-form { background:var(--surface-2); padding:var(--s-5); border-radius:var(--r-lg); }
+.site-section { margin-bottom:var(--s-5); }
+.site-section h3 { font-size:14px; margin-bottom:var(--s-2); }
+.site-section input[type=text] { width:100%; padding:8px; border:1px solid var(--border); border-radius:var(--r-md); }
+.site-photo-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:8px; }
+.site-photo { position:relative; aspect-ratio:1; background:var(--surface-3); border-radius:var(--r-md); overflow:hidden; }
+.site-photo img { width:100%; height:100%; object-fit:cover; }
+.site-photo-del { position:absolute; top:4px; right:4px; width:24px; height:24px; border-radius:50%; background:rgba(0,0,0,.6); color:white; border:0; cursor:pointer; }
+.site-photo-add { aspect-ratio:1; display:flex; align-items:center; justify-content:center; background:var(--surface-3); border:2px dashed var(--border); border-radius:var(--r-md); cursor:pointer; color:var(--text-tertiary); font-size:14px; }
+.site-photo-add:hover { background:var(--surface-1); }
+.site-gps-ok { padding:8px; background:rgba(34,197,94,.08); border-radius:var(--r-md); display:flex; gap:var(--s-3); align-items:center; }
+.site-help { color:var(--text-tertiary); display:block; margin-top:4px; }
+.site-actions { text-align:center; margin-top:var(--s-5); }
+.site-actions button { padding:12px 32px; font-size:15px; }
+.site-history { margin-top:var(--s-6); }
+.site-history-item { display:grid; grid-template-columns:auto auto auto 1fr auto; gap:var(--s-3); padding:8px; border-bottom:1px solid var(--border); font-size:13px; }
+.site-history-time { color:var(--text-tertiary); margin-left:auto; }
+.site-history-status { padding:2px 8px; border-radius:8px; font-size:11px; }
+.status-done { background:rgba(34,197,94,.1); color:#22c55e; }
+.status-processing { background:rgba(59,130,246,.1); color:var(--blue); }
+.status-failed { background:rgba(239,68,68,.1); color:#ef4444; }
+.site-empty { text-align:center; color:var(--text-tertiary); padding:var(--s-4); }
+
+/* Modal2 form select default */
+.modal2-form select { padding:8px; border:1px solid var(--border); border-radius:var(--r-md); width:100%; font-size:14px; }

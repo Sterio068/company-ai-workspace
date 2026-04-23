@@ -43,6 +43,9 @@ import { knowledge } from "./modules/knowledge.js";
 import { design } from "./modules/design.js";
 import { help } from "./modules/help.js";
 import { meeting } from "./modules/meeting.js";
+import { media } from "./modules/media.js";
+import { social } from "./modules/social.js";
+import { siteSurvey } from "./modules/site_survey.js";
 // ROADMAP §11.2 · single source of truth · 取代 cross-module currentProject 散處
 import { projectStore, KEYS as STATE_KEYS } from "./modules/state/project-store.js";
 import { tenders } from "./modules/tenders.js";
@@ -224,6 +227,12 @@ export const app = {
       const isAdmin = this.user?.role === "ADMIN";
       help.init(isAdmin);
     }
+    // v1.2 Day 1.5 · 4 個新功能 view init
+    const isAdmin = this.user?.role === "ADMIN";
+    if (view === "meeting") meeting.init();
+    if (view === "media") media.init(isAdmin);
+    if (view === "social") social.init();
+    if (view === "site") siteSurvey.init();
   },
 
   openCreateSource() { knowledge.openCreateModal(); },

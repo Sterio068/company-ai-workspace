@@ -35,6 +35,7 @@ export const help = {
       <div class="help-container">
         <aside class="help-nav">
           <a href="#help-quickstart" class="help-nav-item active" data-section="quickstart">🚀 快速開始</a>
+          <a href="#help-newfeatures" class="help-nav-item" data-section="newfeatures">🆕 v1.2 新功能</a>
           <a href="#help-workspaces" class="help-nav-item" data-section="workspaces">🎯 5 個工作區</a>
           <a href="#help-agents" class="help-nav-item" data-section="agents">🤖 10 個助手</a>
           <a href="#help-shortcuts" class="help-nav-item" data-section="shortcuts">⌨️ 快捷鍵</a>
@@ -44,6 +45,7 @@ export const help = {
 
         <div class="help-main">
           ${this._renderQuickstart()}
+          ${this._renderNewFeatures()}
           ${this._renderWorkspaces()}
           ${this._renderAgents()}
           ${this._renderShortcuts()}
@@ -134,6 +136,72 @@ export const help = {
             <h3>遇到問題?</h3>
             <p>左下 Champion 聯絡 → Sterio sterio068@gmail.com</p>
             <p>或 Uptime Kuma(http://localhost:3001) · 看 6 容器哪個沒亮綠。</p>
+          </div>
+        </div>
+      </section>
+    `;
+  },
+
+  // ============================================================
+  // 1.5 v1.2 新功能(2026-04-23)
+  // ============================================================
+  _renderNewFeatures() {
+    return `
+      <section id="help-newfeatures" class="help-section">
+        <h2>🆕 v1.2 新功能 · 4 個</h2>
+        <p>2026-04-23 上線 · 全部在左側 sidebar 有入口 · 月省合計 ≥ 120 小時 / 10 人</p>
+
+        <div class="help-step">
+          <div class="help-step-num">🎤</div>
+          <div>
+            <h3>會議速記自動化</h3>
+            <p>左側「會議速記」· 上傳音檔(m4a/mp3/wav · ≤ 25MB)· Whisper STT + Haiku 整理 · 一鍵推到 Handoff。</p>
+            <ul>
+              <li>每週 10 場客戶會議 · 手打 40 分/場 → AI 整理 < 20 秒</li>
+              <li>結構化:標題 / 與會者 / 決議 / 待辦 / 關鍵數字 / 下次會議</li>
+              <li>PDPA · 處理完音檔自動刪 · 只留逐字稿 + 結構化</li>
+              <li>Slash:<code>/meet</code> 或 <code>/會議</code></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-num">📇</div>
+          <div>
+            <h3>媒體 CRM</h3>
+            <p>左側「媒體 CRM」· 記者資料庫 + 主題推薦 + CSV 匯入。寫完新聞稿 → 推薦 top 10 記者。</p>
+            <ul>
+              <li>承富記者建檔(初次匯入 100 筆 CSV)· admin 才可改</li>
+              <li>推薦公式:beats 重疊 + 接受率 + 距上次 pitched 時間</li>
+              <li>非 admin 看不到 phone(PDPA)· 推薦只 admin 可用</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-num">📅</div>
+          <div>
+            <h3>社群貼文排程</h3>
+            <p>左側「社群排程」· FB / IG / LinkedIn 排程發布(目前 mock · 真 API 等審核)。</p>
+            <ul>
+              <li>排定時間用本地時區 · 內部自動轉 UTC</li>
+              <li>失敗 3 次 retry · 第 3 次寫 audit_log 給 admin</li>
+              <li>真 Meta/LinkedIn 接入 · 等承富老闆走 developer app(1-2 週)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-num">📸</div>
+          <div>
+            <h3>場勘 PWA</h3>
+            <p>左側「場勘」· iPhone 開瀏覽器到 launcher · 拍 1-5 張照片 + GPS · Claude Vision 自動結構化。</p>
+            <ul>
+              <li>會 AI 描述每張 + 彙整成 場地類型 / 入口 / 洗手間 / 停車 / 問題</li>
+              <li><b>iPhone 用戶:</b> 設定 → 相機 → 格式 → 改「最相容」(否則拍出來是 HEIC 會被擋)</li>
+              <li>一鍵推到 project.handoff(獨立 site_issues 不覆寫人工)</li>
+              <li>2 年後自動 TTL 清(活動週期 + 復盤)</li>
+            </ul>
           </div>
         </div>
       </section>
