@@ -181,6 +181,19 @@ export const chat = {
     const text = input.value.trim();
     if (!text) return;
 
+    // v1.3 batch5 · L3 機敏 · 送雲前再次確認(分類 badge 已 pulse · 但要實心擋)
+    const levelBadge = document.getElementById("chat-level-hint");
+    if (levelBadge?.classList.contains("l3")) {
+      const ok = await modal.confirm(
+        `⚠️ 偵測到「L3 機敏」內容<br><br>
+         此內容可能含選情 / 客戶機敏 / 未公告標案內情。<br>
+         <strong>送出後會傳到雲端 Claude API。</strong><br><br>
+         是否繼續?`,
+        { title: "機敏內容確認", icon: "🔒", primary: "我知道,送出", cancel: "回去修改", danger: true }
+      );
+      if (!ok) return;
+    }
+
     // v1.2 Feature #3 · PII 偵測 · 送前掃一次身分證/電話/email/信用卡
     try {
       const piiR = await authFetch("/api-accounting/safety/pii-detect", {
@@ -192,30 +205,25 @@ export const chat = {
         const pii = await piiR.json();
         if (pii.total > 0) {
           const kinds = pii.hits.map(h => h.label).filter((v, i, a) => a.indexOf(v) === i);
-          const choice = await new Promise(resolve => {
-            if (confirm(
-              `⚠️ 偵測到 ${pii.total} 個 PII:${kinds.join("、")}\n\n` +
-              `按「確定」用打碼版送(推薦)\n按「取消」回去修改`
-            )) {
-              resolve("redact");
-            } else {
-              resolve("cancel");
-            }
-          });
-          if (choice === "cancel") return;
-          if (choice === "redact") {
-            // 寫 audit + 用 redacted text 送
-            try {
-              await authFetch("/api-accounting/safety/pii-audit", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text }),
-              });
-            } catch {}
-            input.value = pii.redacted;
-            // 重新讀取打碼後的 text 繼續送
-            return this.send(e);
-          }
+          // v1.3 batch5 · 用 modal.confirm 取代 window.confirm · 更友善
+          const ok = await modal.confirm(
+            `偵測到 <strong>${pii.total} 個 PII</strong>:${escapeHtml(kinds.join("、"))}<br><br>
+             按「用打碼版送」會把身分證 / 電話等敏感資料先打 ★ 再送雲端。<br>
+             <small style="color:var(--text-secondary)">建議:打碼版能達成大多數任務 · 不需原始資料時優先選</small>`,
+            { title: "PII 偵測", icon: "🛡️", primary: "用打碼版送", cancel: "回去修改" }
+          );
+          if (!ok) return;
+          // 寫 audit + 用 redacted text 送
+          try {
+            await authFetch("/api-accounting/safety/pii-audit", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ text }),
+            });
+          } catch {}
+          input.value = pii.redacted;
+          // 重新讀取打碼後的 text 繼續送
+          return this.send(e);
         }
       }
     } catch (e) {

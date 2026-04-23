@@ -1165,6 +1165,19 @@ kbd {
   gap: 8px;
   z-index: 500;
 }
+/* v1.3 batch5 · 行動端 toast 不擋 bottom nav · 改置中上提 */
+@media (max-width: 768px) {
+  .toast-container {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0));
+    right: 12px;
+    left: 12px;
+    align-items: stretch;
+  }
+  .toast {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+}
 .toast {
   background: var(--bg-content);
   border: 1px solid var(--border);
@@ -1840,8 +1853,34 @@ kbd {
 }
 
 /* 按鈕 · 按下回饋 */
-button:active { transform: scale(0.96); }
+button:active:not(:disabled) { transform: scale(0.96); }
 button { transition: transform 0.1s ease-out, background 0.15s; }
+button:disabled { cursor: not-allowed; }
+/* v1.3 batch5 · WCAG 2.2 · focus visible · 鍵盤使用者看得到 */
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+/* v1.3 batch5 · prefers-reduced-motion · 不喜歡動畫的人 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* Lead card 拖拉 · spring */
 .lead-card.dragging {
@@ -2341,8 +2380,18 @@ body.has-banner .main-header { margin-top: 44px; }
   font-weight: 500;
 }
 .chat-input-hints .hint-level.l1 { background: color-mix(in srgb, var(--green) 12%, transparent); color: var(--green); }
-.chat-input-hints .hint-level.l2 { background: color-mix(in srgb, var(--orange) 12%, transparent); color: var(--orange); }
-.chat-input-hints .hint-level.l3 { background: color-mix(in srgb, var(--red) 12%, transparent); color: var(--red); font-weight: 600; }
+.chat-input-hints .hint-level.l2 { background: color-mix(in srgb, var(--orange) 14%, transparent); color: var(--orange); }
+.chat-input-hints .hint-level.l3 {
+  background: color-mix(in srgb, var(--red) 18%, transparent);
+  color: var(--red);
+  font-weight: 700;
+  border: 1px solid color-mix(in srgb, var(--red) 50%, transparent);
+  animation: l3-pulse 1.6s ease-in-out infinite;
+}
+@keyframes l3-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--red) 35%, transparent); }
+  50%      { box-shadow: 0 0 0 4px color-mix(in srgb, var(--red) 0%, transparent); }
+}
 
 /* ---------- 附件按鈕 disabled 狀態(v1.0 先關) ---------- */
 .chat-attach-btn.disabled,
