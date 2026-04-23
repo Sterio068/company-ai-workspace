@@ -604,9 +604,9 @@ def knowledge_read(
         raise HTTPException(413, f"檔案超過 {src.get('max_size_mb', 50)}MB 上限")
 
     # Audit log · fail-closed(Codex Round 10.5 紅 · PDPA)
-    # v1.3 batch6 · H-1 · 優先驗證 cookie · 避免未驗 header 偽造 audit
-    from main import current_user_email
-    user_email = current_user_email(request)
+    # v1.3 batch6 · H-1 · 優先驗 cookie · 避免未驗 header 偽造 audit
+    from main import _verify_librechat_cookie
+    user_email = _verify_librechat_cookie(request)
     if not user_email:
         # ALLOW_LEGACY_AUTH_HEADERS=1 的 dev fallback · 明確 log 不驗
         user_email = (request.headers.get("X-User-Email") or "").strip().lower() or None

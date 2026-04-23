@@ -127,9 +127,9 @@ def audit_pii(payload: PIIDetectRequest, request: Request):
     redacted, hits = _redact_pii(payload.text or "")
     if hits:
         try:
-            from main import audit_col, current_user_email
-            # v1.3 batch6 · H-1 · 優先驗證 cookie · 避免未驗 header 偽造 audit
-            user = current_user_email(request)
+            from main import audit_col, _verify_librechat_cookie
+            # v1.3 batch6 · H-1 · 優先驗 cookie · 避免未驗 header 偽造 audit
+            user = _verify_librechat_cookie(request)
             if not user:
                 user = (request.headers.get("X-User-Email") or "").strip().lower() or None
                 if user:

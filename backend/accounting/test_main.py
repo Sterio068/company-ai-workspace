@@ -22,6 +22,9 @@ def client():
     import os
     os.environ["ALLOW_LEGACY_AUTH_HEADERS"] = "1"
     os.environ["ECC_ENV"] = "development"  # 防 prod startup 強制 JWT_REFRESH_SECRET
+    # v1.3 batch6 · 移除 sterio068@gmail.com hardcode fallback 後 · test 必須明確設
+    # 只給 sterio068@gmail.com · test@chengfu.local 用來測 non-admin → 403 場景
+    os.environ["ADMIN_EMAILS"] = "sterio068@gmail.com"
     with patch("pymongo.MongoClient", mongomock.MongoClient):
         import importlib
         import main
@@ -269,7 +272,9 @@ def test_l3_classifier_detects_selection(client):
     })
     assert r.status_code == 200
     assert r.json()["level"] == "03"
-    assert len(r.json()["triggers"]) > 0
+    # v1.3 batch6 · M-1 · response 不再回 triggers list(防 attacker enumerate pattern)
+    # 改驗 hit_count
+    assert r.json()["hit_count"] > 0
 
 
 def test_l3_classifier_detects_phone(client):
