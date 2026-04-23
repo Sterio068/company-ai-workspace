@@ -554,10 +554,11 @@ def monthly_report(month: Optional[str] = None, _admin: str = require_admin_dep(
 @router.get("/admin/cost")
 def cost_summary(days: int = Query(default=30, ge=1, le=365),
                  _admin: str = require_admin_dep()):
-    """粗估 API cost by model · R37 · 加 days 上下限防裸 int 探勘"""
-    from main import db
+    """粗估 API cost by model · R37 · 加 days 上下限防裸 int 探勘
+    B2(v1.3)· 含 Whisper(OpenAI STT)分項 · 從 meetings + site_audio 計"""
+    from main import db, _USD_TO_NTD
     from services import admin_metrics
-    return admin_metrics.cost_by_model(db, days)
+    return admin_metrics.cost_by_model(db, days, usd_to_ntd=_USD_TO_NTD)
 
 
 @router.get("/admin/adoption")

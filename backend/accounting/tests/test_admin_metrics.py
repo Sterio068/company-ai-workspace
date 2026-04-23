@@ -274,3 +274,68 @@ def test_quota_soft_warn_fail_safe_passes_with_warning(db, users_col):
     assert r["allowed"] is True
     assert "warning" in r
     assert "資料來源" in r["warning"]
+
+
+# ============================================================
+# B2(v1.3)· Whisper 月成本監控
+# ============================================================
+def test_whisper_cost_from_meetings(db):
+    """meetings.transcript_seconds 加總算成 NT$"""
+    from datetime import datetime, timezone, timedelta
+    db.meetings.insert_many([
+        {"transcript_seconds": 600, "created_at": datetime.now(timezone.utc)},  # 10 min
+        {"transcript_seconds": 300, "created_at": datetime.now(timezone.utc)},  # 5 min
+        # 30 days ago · 應排除
+        {"transcript_seconds": 1000,
+         "created_at": datetime.now(timezone.utc) - timedelta(days=31)},
+    ])
+    r = admin_metrics.whisper_cost_by_audio_seconds(db, days=7, usd_to_ntd=32.5)
+    assert r["total_seconds"] == 900  # 600 + 300
+    assert r["total_minutes"] == 15
+    # 15 min × $0.006 × 32.5 = NT$ 2.925 → banker's rounding 2.92
+    assert r["ntd"] == 2.92
+    assert r["sources"]["meetings"]["count"] == 2
+
+
+def test_whisper_cost_from_site_audio(db):
+    """site_surveys.audio_notes[].duration_sec 加總"""
+    from datetime import datetime, timezone
+    db.site_surveys.insert_one({
+        "owner": "pm@x.com",
+        "created_at": datetime.now(timezone.utc),
+        "audio_notes": [
+            {"duration_sec": 30.5, "transcript": "x"},
+            {"duration_sec": 25.0, "transcript": "y"},
+        ],
+    })
+    r = admin_metrics.whisper_cost_by_audio_seconds(db, days=7)
+    assert r["total_seconds"] == 55.5
+    assert r["sources"]["site_audio"]["count"] == 2
+
+
+def test_whisper_cost_combined_meetings_and_site(db):
+    """meetings + site_audio 都算 · sources 兩項都列"""
+    from datetime import datetime, timezone
+    db.meetings.insert_one({
+        "transcript_seconds": 60, "created_at": datetime.now(timezone.utc),
+    })
+    db.site_surveys.insert_one({
+        "created_at": datetime.now(timezone.utc),
+        "audio_notes": [{"duration_sec": 30}],
+    })
+    r = admin_metrics.whisper_cost_by_audio_seconds(db, days=7)
+    assert r["total_seconds"] == 90
+    assert "meetings" in r["sources"]
+    assert "site_audio" in r["sources"]
+
+
+def test_cost_by_model_includes_whisper_section(db):
+    """B2 · /admin/cost 回 result 必含 whisper key"""
+    from datetime import datetime, timezone
+    db.meetings.insert_one({
+        "transcript_seconds": 120, "created_at": datetime.now(timezone.utc),
+    })
+    r = admin_metrics.cost_by_model(db, days=30, usd_to_ntd=32.5)
+    assert "whisper" in r
+    assert r["whisper"]["total_minutes"] == 2.0
+    assert r["whisper"]["ntd"] > 0

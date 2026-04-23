@@ -243,26 +243,97 @@ def tender_funnel(db) -> dict:
     }
 
 
-def cost_by_model(db, days: int = 30) -> dict:
-    """API cost 分 model(LibreChat 私有 schema · 用 adapter 降級)"""
-    schema = probe_tx_schema(db)
-    if not schema["ok"]:
-        return {"error": schema["issue"], "note": "LibreChat transactions schema 異常 · 找工程師"}
+# B2(v1.3)· Whisper 計費 · 官方 $0.006/min(2026-04 確認)
+WHISPER_USD_PER_MINUTE = 0.006
+
+
+def whisper_cost_by_audio_seconds(db, days: int = 30, usd_to_ntd: float = 32.5) -> dict:
+    """B2(v1.3)· Whisper(OpenAI STT)月成本
+    來源:
+      - meetings.transcript_seconds(會議速記 · Feature #1)
+      - site_surveys.audio_notes[].duration_sec(場勘音檔 · v1.3 B4)
+
+    OpenAI 沒給 token 帳單 · Whisper 計費按音檔秒數
+    跟 cost_by_model 互補(那邊只算 Anthropic)
+    """
+    from_dt = datetime.now(timezone.utc) - timedelta(days=days)
+    total_seconds = 0.0
+    sources = {}
+
+    # 1. meetings · transcript_seconds 欄位
     try:
-        from_dt = datetime.now(timezone.utc) - timedelta(days=days)
-        pipeline = [
-            {"$match": {"createdAt": {"$gte": from_dt}}},
-            {"$group": {
-                "_id": "$model",
-                "input_tokens":  {"$sum": "$rawAmount.prompt"},
-                "output_tokens": {"$sum": "$rawAmount.completion"},
-                "count":         {"$sum": 1},
-            }},
-        ]
-        stats = list(db.transactions.aggregate(pipeline))
-        return {"period_days": days, "by_model": stats}
+        agg = list(db.meetings.aggregate([
+            {"$match": {"created_at": {"$gte": from_dt},
+                        "transcript_seconds": {"$exists": True, "$ne": None, "$gt": 0}}},
+            {"$group": {"_id": None, "total": {"$sum": "$transcript_seconds"},
+                        "count": {"$sum": 1}}},
+        ]))
+        if agg:
+            sources["meetings"] = {
+                "seconds": agg[0]["total"], "count": agg[0]["count"],
+            }
+            total_seconds += agg[0]["total"]
     except Exception as e:
-        return {"error": str(e), "note": "需 LibreChat transactions collection 存在"}
+        sources["meetings"] = {"error": str(e)[:100]}
+
+    # 2. site_surveys.audio_notes[].duration_sec(B4 加)
+    try:
+        agg2 = list(db.site_surveys.aggregate([
+            {"$match": {"created_at": {"$gte": from_dt},
+                        "audio_notes": {"$exists": True, "$ne": []}}},
+            {"$unwind": "$audio_notes"},
+            {"$match": {"audio_notes.duration_sec": {"$exists": True, "$ne": None, "$gt": 0}}},
+            {"$group": {"_id": None,
+                        "total": {"$sum": "$audio_notes.duration_sec"},
+                        "count": {"$sum": 1}}},
+        ]))
+        if agg2:
+            sources["site_audio"] = {
+                "seconds": agg2[0]["total"], "count": agg2[0]["count"],
+            }
+            total_seconds += agg2[0]["total"]
+    except Exception as e:
+        sources["site_audio"] = {"error": str(e)[:100]}
+
+    minutes = total_seconds / 60.0
+    usd = minutes * WHISPER_USD_PER_MINUTE
+    return {
+        "period_days": days,
+        "total_seconds": round(total_seconds, 1),
+        "total_minutes": round(minutes, 1),
+        "usd": round(usd, 4),
+        "ntd": round(usd * usd_to_ntd, 2),
+        "rate_usd_per_minute": WHISPER_USD_PER_MINUTE,
+        "sources": sources,
+    }
+
+
+def cost_by_model(db, days: int = 30, usd_to_ntd: float = 32.5) -> dict:
+    """API cost 分 model(LibreChat 私有 schema · 用 adapter 降級)
+    B2(v1.3)· 加 whisper 段(OpenAI STT 從 meetings + site_surveys.audio_notes)"""
+    schema = probe_tx_schema(db)
+    result = {"period_days": days}
+    if not schema["ok"]:
+        result["anthropic_error"] = schema["issue"]
+    else:
+        try:
+            from_dt = datetime.now(timezone.utc) - timedelta(days=days)
+            pipeline = [
+                {"$match": {"createdAt": {"$gte": from_dt}}},
+                {"$group": {
+                    "_id": "$model",
+                    "input_tokens":  {"$sum": "$rawAmount.prompt"},
+                    "output_tokens": {"$sum": "$rawAmount.completion"},
+                    "count":         {"$sum": 1},
+                }},
+            ]
+            stats = list(db.transactions.aggregate(pipeline))
+            result["by_model"] = stats
+        except Exception as e:
+            result["anthropic_error"] = str(e)
+    # B2 · Whisper 段
+    result["whisper"] = whisper_cost_by_audio_seconds(db, days=days, usd_to_ntd=usd_to_ntd)
+    return result
 
 
 def adoption_metrics(db, users_col, projects_col, feedback_col,
