@@ -138,3 +138,133 @@ def test_push_to_handoff(client):
     refs = proj["handoff"]["asset_refs"]
     assert len(refs) == 1
     assert "室內" in refs[0]["ref"]
+
+
+# ============================================================
+# B4(v1.3)· audio_note · MediaRecorder + Whisper STT
+# ============================================================
+def test_audio_rejects_wrong_mime(client):
+    """B4 · 上傳 text/plain · 應 400(白名單擋)"""
+    import main
+    sid = main.db.site_surveys.insert_one({
+        "owner": "pm@chengfu.local", "status": "done",
+        "audio_notes": [],
+    }).inserted_id
+    r = client.post(
+        f"/site-survey/{sid}/audio",
+        files={"audio": ("fake.txt", b"x" * 2048, "text/plain")},
+        headers=USER,
+    )
+    assert r.status_code == 400
+    assert "mime 不接受" in r.json()["detail"]
+
+
+def test_audio_rejects_too_small(client):
+    """B4 · audio < 1KB · 八成空檔 · 400"""
+    import main
+    sid = main.db.site_surveys.insert_one({
+        "owner": "pm@chengfu.local", "status": "done", "audio_notes": [],
+    }).inserted_id
+    r = client.post(
+        f"/site-survey/{sid}/audio",
+        files={"audio": ("tiny.webm", b"x" * 100, "audio/webm")},
+        headers=USER,
+    )
+    assert r.status_code == 400
+
+
+def test_audio_rejects_oversized(client):
+    """B4 · > 5 MB · 413"""
+    import main
+    sid = main.db.site_surveys.insert_one({
+        "owner": "pm@chengfu.local", "status": "done", "audio_notes": [],
+    }).inserted_id
+    big = b"x" * (6 * 1024 * 1024)
+    r = client.post(
+        f"/site-survey/{sid}/audio",
+        files={"audio": ("big.webm", big, "audio/webm")},
+        headers=USER,
+    )
+    assert r.status_code == 413
+
+
+def test_audio_rejects_not_owner(client):
+    """B4 · 別人 owner 的 survey · 403"""
+    import main
+    sid = main.db.site_surveys.insert_one({
+        "owner": "alice@chengfu.local", "status": "done", "audio_notes": [],
+    }).inserted_id
+    r = client.post(
+        f"/site-survey/{sid}/audio",
+        files={"audio": ("a.webm", b"x" * 2048, "audio/webm")},
+        headers=USER,  # pm@chengfu.local
+    )
+    assert r.status_code == 403
+
+
+def test_audio_caps_at_max_per_survey(client):
+    """B4 · 已有 10 個 audio note · 第 11 個 429"""
+    import main
+    sid = main.db.site_surveys.insert_one({
+        "owner": "pm@chengfu.local", "status": "done",
+        "audio_notes": [{"_id": __import__("bson").ObjectId(), "transcript": f"n{i}"}
+                         for i in range(10)],
+    }).inserted_id
+    r = client.post(
+        f"/site-survey/{sid}/audio",
+        files={"audio": ("a.webm", b"x" * 2048, "audio/webm")},
+        headers=USER,
+    )
+    assert r.status_code == 429
+
+
+def test_audio_success_processing(client, monkeypatch):
+    """B4 · 成功上傳 · 回 processing · 背景跑 STT
+    mock Whisper · 驗 audio_notes[].transcript 寫入
+    本機沒裝 openai 時 skip(prod requirements.txt 含)"""
+    openai = pytest.importorskip("openai")
+    import main
+
+    # mock Whisper · 同 test_meeting pattern
+    from unittest.mock import MagicMock
+    fake_resp = MagicMock()
+    fake_resp.text = "這裡有 3 根柱子擋光線"
+
+    class FakeClient:
+        def __init__(self, *a, **kw): pass
+        @property
+        def audio(self):
+            class _A:
+                @property
+                def transcriptions(self_):
+                    class _T:
+                        def create(__, **kw): return fake_resp
+                    return _T()
+            return _A()
+
+    monkeypatch.setattr(openai, "OpenAI", FakeClient)
+    monkeypatch.setenv("OPENAI_API_KEY", "fake")
+
+    sid = main.db.site_surveys.insert_one({
+        "owner": "pm@chengfu.local", "status": "done", "audio_notes": [],
+    }).inserted_id
+    r = client.post(
+        f"/site-survey/{sid}/audio",
+        data={"duration_sec": "12.5"},
+        files={"audio": ("a.webm", b"x" * 2048, "audio/webm")},
+        headers=USER,
+    )
+    assert r.status_code == 200
+    assert r.json()["status"] == "processing"
+
+    # 背景 task 應 push 到 audio_notes
+    import time
+    for _ in range(20):
+        doc = main.db.site_surveys.find_one({"_id": sid})
+        notes = doc.get("audio_notes", [])
+        if notes and notes[0].get("status") == "done":
+            break
+        time.sleep(0.1)
+    assert notes[0]["status"] == "done"
+    assert notes[0]["transcript"] == "這裡有 3 根柱子擋光線"
+    assert notes[0]["duration_sec"] == 12.5

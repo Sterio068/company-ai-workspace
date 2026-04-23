@@ -43,6 +43,14 @@ MAX_IMAGE_BYTES = 5 * 1024 * 1024
 MAX_IMAGES_PER_SURVEY = 5
 ALLOWED_IMAGE_MIMES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
 
+# B4(v1.3)· audio_note 限制
+MAX_AUDIO_BYTES = 5 * 1024 * 1024  # 5 MB · 30s opus < 500KB / 30s webm < 1.5MB · 留 buffer
+MAX_AUDIO_PER_SURVEY = 10  # 一張 survey 最多 10 個 audio note
+ALLOWED_AUDIO_MIMES = {
+    "audio/webm", "audio/ogg", "audio/mpeg", "audio/mp4",
+    "audio/wav", "audio/x-wav", "audio/m4a", "audio/x-m4a",
+}
+
 
 def _oid(survey_id: str) -> ObjectId:
     try:
@@ -477,3 +485,142 @@ def push_to_handoff(survey_id: str, email: str = require_user_dep()):
     if r.matched_count == 0:
         raise HTTPException(404, "project 不存在")
     return {"pushed": True, "issues_count": len(issues)}
+
+
+# ============================================================
+# B4(v1.3)· audio_note · 現場 PM 錄音 → Whisper STT → 存 db
+# ============================================================
+def _process_audio_note(survey_id_str: str, audio_path: str, mime: str,
+                         duration_sec: Optional[float]):
+    """背景 task · 跑 Whisper STT · 結果 push 到 site_surveys.audio_notes[]
+    重用 routers/memory.py 同 Whisper chain · 失敗回 status:failed 不 raise"""
+    from main import db
+    from routers.memory import _retry, _openai_key_for_stt
+    note_id = ObjectId()  # 預先產 · 給前端引用
+    try:
+        try:
+            import openai
+        except ImportError:
+            logger.error("[site-audio] OpenAI SDK 未裝 · 跳 STT")
+            return
+
+        client = openai.OpenAI(api_key=_openai_key_for_stt())
+        try:
+            def _stt():
+                with open(audio_path, "rb") as af:
+                    return client.audio.transcriptions.create(
+                        model="whisper-1", file=af,
+                    )
+            tr = _retry("Whisper", _stt, attempts=3)
+            transcript = tr.text
+        except Exception as e:
+            logger.error("[site-audio] Whisper 失敗 sid=%s · %s", survey_id_str, e)
+            db.site_surveys.update_one(
+                {"_id": ObjectId(survey_id_str)},
+                {"$push": {"audio_notes": {
+                    "_id": note_id,
+                    "status": "failed",
+                    "error": f"STT 失敗: {str(e)[:200]}",
+                    "mime": mime,
+                    "duration_sec": duration_sec,
+                    "created_at": datetime.now(timezone.utc),
+                }}},
+            )
+            return
+
+        db.site_surveys.update_one(
+            {"_id": ObjectId(survey_id_str)},
+            {"$push": {"audio_notes": {
+                "_id": note_id,
+                "status": "done",
+                "transcript": transcript,
+                "mime": mime,
+                "duration_sec": duration_sec,
+                "created_at": datetime.now(timezone.utc),
+            }},
+             "$set": {"updated_at": datetime.now(timezone.utc)}},
+        )
+        logger.info("[site-audio] sid=%s · transcript len=%d", survey_id_str, len(transcript or ""))
+    finally:
+        # PDPA · 一律刪 tmp · 防原始音檔留盤
+        try:
+            os.remove(audio_path)
+        except OSError:
+            pass
+
+
+@router.post("/site-survey/{survey_id}/audio")
+async def upload_audio_note(
+    survey_id: str,
+    background_tasks: BackgroundTasks,
+    audio: UploadFile = File(...),
+    duration_sec: Optional[float] = Form(default=None),
+    email: str = require_user_dep(),
+):
+    """B4 · 加 audio note 給該 survey · STT 背景跑
+
+    Returns
+    -------
+    { note_id, status: "processing" }
+    前端 polling /site-survey/{id} 看 audio_notes[] 內 status 變 done
+
+    Limits:
+    - 5 MB(預期 30s opus < 500KB · 留 buffer)
+    - mime 必白名單(防上傳非 audio)
+    - 一張 survey 最多 10 個 audio note(防 DoS)
+    """
+    from main import db
+    oid = _oid(survey_id)
+    survey = db.site_surveys.find_one({"_id": oid}, {"owner": 1, "audio_notes": 1})
+    if not survey:
+        raise HTTPException(404, "survey 不存在")
+    # 只 owner 能加 audio
+    if survey.get("owner") != email:
+        raise HTTPException(403, "只能加自己場勘的 audio")
+
+    # 限制 audio 數
+    existing = len(survey.get("audio_notes") or [])
+    if existing >= MAX_AUDIO_PER_SURVEY:
+        raise HTTPException(429, f"超過 audio note 上限 {MAX_AUDIO_PER_SURVEY}")
+
+    # mime 驗
+    if audio.content_type not in ALLOWED_AUDIO_MIMES:
+        raise HTTPException(400, f"audio mime 不接受:{audio.content_type}")
+
+    # 寫 tmp(streaming · 64KB chunk · 防大檔吃光記憶體)
+    fd, tmp_path = tempfile.mkstemp(prefix=f"chengfu-site-audio-{survey_id}-", suffix=".bin")
+    raw_size = 0
+    try:
+        while True:
+            chunk = await audio.read(64 * 1024)
+            if not chunk:
+                break
+            raw_size += len(chunk)
+            if raw_size > MAX_AUDIO_BYTES:
+                os.close(fd)
+                os.remove(tmp_path)
+                raise HTTPException(
+                    413,
+                    f"audio > {MAX_AUDIO_BYTES // 1024 // 1024}MB · 縮短或 transcode",
+                )
+            os.write(fd, chunk)
+        os.close(fd)
+    except HTTPException:
+        raise
+    except Exception as e:
+        os.close(fd)
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+        raise HTTPException(500, f"audio 寫 tmp 失敗:{e}")
+
+    if raw_size < 1024:  # < 1KB · 八成是空檔
+        os.remove(tmp_path)
+        raise HTTPException(400, "audio 太小 · 至少 1KB(可能錄到空)")
+
+    # 背景跑 STT(同 memory.py pattern)
+    background_tasks.add_task(
+        _process_audio_note, survey_id, tmp_path, audio.content_type, duration_sec,
+    )
+    return {"status": "processing", "size_bytes": raw_size}
