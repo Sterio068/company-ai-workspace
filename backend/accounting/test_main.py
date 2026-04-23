@@ -294,6 +294,53 @@ def test_l3_classifier_detects_unit_internal(client):
 
 
 # ============================================================
+# v1.3 A3 · CRITICAL C-3 · L3 server-side wall + audit
+# ============================================================
+def test_l3_preflight_safe_content_passes(client):
+    """L1/L2 內容 · preflight 直接 allowed=True · 不 audit"""
+    r = client.post("/safety/l3-preflight", json={"text": "幫我寫一段中秋節祝福"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["allowed"] is True
+    assert body["hit_count"] == 0
+
+
+def test_l3_preflight_l3_audit_only_default(client):
+    """L3 內容 · 預設 audit-only · 回 200 + warning · 不擋"""
+    import os
+    os.environ.pop("L3_HARD_STOP", None)  # 確保關
+    r = client.post("/safety/l3-preflight", json={"text": "請分析選情 · 候選人策略"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["allowed"] is True
+    assert body["level"] == "03"
+    assert body["hit_count"] > 0
+    assert "warning" in body
+
+
+def test_l3_preflight_hard_stop_blocks(client, monkeypatch):
+    """L3_HARD_STOP=1 + L3 內容 · 回 403 擋送"""
+    monkeypatch.setenv("L3_HARD_STOP", "1")
+    r = client.post("/safety/l3-preflight", json={"text": "內定廠商評審名單"})
+    assert r.status_code == 403
+    body = r.json()
+    assert body["detail"]["reason"] == "L3_HARD_STOP_ENABLED"
+
+
+def test_l3_preflight_writes_audit_log(client):
+    """L3 偵測時 audit_log 必寫(用 verified cookie or fallback header)"""
+    from main import audit_col
+    before = audit_col.count_documents({"action": "l3_send_attempt"})
+    r = client.post("/safety/l3-preflight",
+        json={"text": "客戶機敏帳戶資料"},
+        headers={"X-User-Email": "user@chengfu.local"},
+    )
+    assert r.status_code == 200
+    after = audit_col.count_documents({"action": "l3_send_attempt"})
+    assert after == before + 1
+
+
+# ============================================================
 # F · Fal.ai 設計助手(V1.1-SPEC §A · Q2 num_images=3)
 # ============================================================
 def test_design_recraft_without_api_key(client, monkeypatch):
@@ -1605,6 +1652,59 @@ def test_oauth_start_redirects_when_creds_present(client, monkeypatch):
         {"user_email": "alice@chengfu.local", "platform": "facebook"}
     )
     assert state_doc is not None
+
+
+# v1.3 A3 · CRITICAL C-8 · OAuth URL encode + 不信 forwarded-host
+def test_oauth_start_url_encodes_query_params(client, monkeypatch):
+    """A3 · 含特殊字元的 app_id 不能破壞 query string · urlencode"""
+    monkeypatch.setenv("FACEBOOK_APP_ID", "test+app&special=chars")
+    monkeypatch.setenv("FACEBOOK_APP_SECRET", "secret")
+    r = client.get("/social/oauth/start?platform=facebook",
+                   headers=USER_HEADERS, follow_redirects=False)
+    assert r.status_code == 302
+    loc = r.headers["location"]
+    # urlencode 後 + 變 %2B · & 變 %26 · = 變 %3D
+    assert "client_id=test%2Bapp%26special%3Dchars" in loc
+    # 確認 state 仍是獨立 query 參數(沒被 inject 破壞)
+    assert "&state=" in loc
+
+
+def test_oauth_redirect_uri_uses_env_whitelist(client, monkeypatch):
+    """A3 · OAUTH_REDIRECT_BASE_URL 設了就用 env · 不從 X-Forwarded-Host 取"""
+    monkeypatch.setenv("FACEBOOK_APP_ID", "test-id")
+    monkeypatch.setenv("FACEBOOK_APP_SECRET", "secret")
+    monkeypatch.setenv("OAUTH_REDIRECT_BASE_URL", "https://chengfu-ai.com")
+    # 必須 reload module 因為 _OAUTH_BASE_URL 在 import 時讀
+    import importlib
+    from routers import social_oauth
+    importlib.reload(social_oauth)
+    r = client.get(
+        "/social/oauth/start?platform=facebook",
+        headers={**USER_HEADERS, "X-Forwarded-Host": "evil.attacker.com"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 302
+    loc = r.headers["location"]
+    # redirect_uri 必須是 env 設的 chengfu-ai.com · 不是 evil.attacker.com
+    assert "chengfu-ai.com" in loc
+    assert "evil.attacker.com" not in loc
+
+
+def test_oauth_redirect_uri_rejects_bad_env_format(client, monkeypatch):
+    """A3 · OAUTH_REDIRECT_BASE_URL 設 javascript:alert 等惡意值 · 500"""
+    monkeypatch.setenv("FACEBOOK_APP_ID", "test-id")
+    monkeypatch.setenv("FACEBOOK_APP_SECRET", "secret")
+    monkeypatch.setenv("OAUTH_REDIRECT_BASE_URL", "javascript:alert(1)")
+    import importlib
+    from routers import social_oauth
+    importlib.reload(social_oauth)
+    r = client.get("/social/oauth/start?platform=facebook",
+                   headers=USER_HEADERS, follow_redirects=False)
+    assert r.status_code == 500
+    assert "OAUTH_REDIRECT_BASE_URL" in r.json()["detail"]
+    # cleanup · 否則影響後續 test
+    monkeypatch.delenv("OAUTH_REDIRECT_BASE_URL")
+    importlib.reload(social_oauth)
 
 
 def test_oauth_callback_stores_token_mock(client, monkeypatch):

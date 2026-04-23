@@ -22,6 +22,7 @@ import logging
 import os
 import secrets
 from typing import Literal, Optional
+from urllib.parse import urlencode, urlparse
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
@@ -33,6 +34,10 @@ router = APIRouter(tags=["social-oauth"])
 logger = logging.getLogger("chengfu")
 
 ALLOWED_PLATFORMS = {"facebook", "instagram", "linkedin"}
+
+# v1.3 A3 · CRITICAL C-8 · OAUTH_REDIRECT_BASE_URL 白名單
+# 不再信任 request 的 X-Forwarded-Host(可被偽造做 open-redirect)
+_OAUTH_BASE_URL = os.getenv("OAUTH_REDIRECT_BASE_URL", "").strip().rstrip("/")
 
 
 def _app_creds(platform: str) -> tuple[str, str]:
@@ -51,9 +56,34 @@ def _app_creds(platform: str) -> tuple[str, str]:
 
 def _redirect_uri(request: Request) -> str:
     """callback URL · scheme + host + /api-accounting/social/oauth/callback
-    behind nginx 用 X-Forwarded-Proto + X-Forwarded-Host"""
+
+    v1.3 A3 · CRITICAL C-8 · 不再信任 X-Forwarded-Host(可偽造)
+    優先順序:
+    1. OAUTH_REDIRECT_BASE_URL env 白名單(prod 強制)
+    2. (dev fallback) request.headers x-forwarded-host
+
+    Open-redirect 防護:OAuth provider(Meta/LinkedIn)會比對註冊的 redirect_uri,
+    若被偽造為攻擊者 host,provider 端會拒絕。但加 env 白名單做雙重保險,
+    避免依賴 provider 行為。
+    """
+    # Prod 強制走 env
+    if _OAUTH_BASE_URL:
+        # 驗證白名單格式 · 防 env 設成 javascript:alert 等
+        parsed = urlparse(_OAUTH_BASE_URL)
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            raise HTTPException(
+                500,
+                "OAUTH_REDIRECT_BASE_URL 設定錯 · 必須 https://domain.com 格式",
+            )
+        return f"{_OAUTH_BASE_URL}/api-accounting/social/oauth/callback"
+
+    # Dev fallback · 容 X-Forwarded-Host(本機 / 測試)
     scheme = request.headers.get("x-forwarded-proto", "http")
     host = request.headers.get("x-forwarded-host", request.headers.get("host", "localhost"))
+    logger.warning(
+        "[oauth] OAUTH_REDIRECT_BASE_URL 未設 · 退化從 request header 取 host=%s · prod 必設 env",
+        host,
+    )
     return f"{scheme}://{host}/api-accounting/social/oauth/callback"
 
 
@@ -102,14 +132,16 @@ def oauth_start(
         "linkedin": "r_liteprofile,w_member_social",
     }
     redirect_uri = _redirect_uri(request)
-    auth_url = (
-        f"{auth_urls[platform]}?"
-        f"client_id={app_id}&"
-        f"redirect_uri={redirect_uri}&"
-        f"state={state}&"
-        f"scope={scopes[platform]}&"
-        f"response_type=code"
-    )
+    # v1.3 A3 · CRITICAL C-8 · urlencode 防 app_id / redirect_uri / state 含特殊字元
+    # 注入 query 參數(原本 f-string 拼接 · `&` `=` 在 redirect_uri 會破壞 query)
+    params = urlencode({
+        "client_id": app_id,
+        "redirect_uri": redirect_uri,
+        "state": state,
+        "scope": scopes[platform],
+        "response_type": "code",
+    })
+    auth_url = f"{auth_urls[platform]}?{params}"
     return RedirectResponse(url=auth_url, status_code=302)
 
 

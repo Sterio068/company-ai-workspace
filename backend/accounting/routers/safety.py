@@ -4,11 +4,16 @@ Safety router · L3 機敏內容分級檢查
 ROADMAP §11.1 · 從 main.py 抽出的第一個 router(最孤立 · 證明 pattern)
 - 老闆 Q3 答「先不考慮 L3 硬擋」· 但這個 endpoint 仍可用為 prompt 預掃
 - 前端 chat.js 在送出前可選擇呼叫 /safety/classify · 跳警告 modal(Playwright §11.13)
+
+v1.3 A3 · CRITICAL C-3 · /safety/l3-preflight server-side wall
+- 前端 confirm 可被 curl 繞過 · 此 endpoint 強制 audit 任何 L3 送出嘗試
+- L3_HARD_STOP=1 env 開啟強制 block(預設 audit-only)
 """
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from datetime import datetime, timezone
 import logging
+import os
 import re
 
 logger = logging.getLogger("chengfu")
@@ -147,3 +152,77 @@ def audit_pii(payload: PIIDetectRequest, request: Request):
         except Exception as e:
             logger.warning("[pii-audit] write fail: %s", e)
     return {"audited": True, "hit_count": len(hits)}
+
+
+# ============================================================
+# v1.3 A3 · CRITICAL C-3 · L3 server-side wall · 防 curl 繞前端 confirm
+# ============================================================
+def _l3_hard_stop_enabled() -> bool:
+    """env 開啟才硬擋 L3 · 預設 audit-only(老闆 Q3 答暫不擋)
+    當公司資料分級政策正式啟用,設 L3_HARD_STOP=1 強制擋送雲
+    """
+    return os.getenv("L3_HARD_STOP", "0").lower() in ("1", "true", "yes")
+
+
+@router.post("/l3-preflight")
+def l3_preflight(payload: ContentCheck, request: Request):
+    """送雲前 L3 強制 audit · 可選擇硬擋
+
+    流程:
+    1. classifier 跑 → 算出 level
+    2. 若 L3 · 寫 audit_log(用 verified cookie email · 可追責)
+    3. L3_HARD_STOP=1 → 回 403 擋送
+    4. L3_HARD_STOP=0 (預設) → 回 200 + warning · 由前端 confirm 流程繼續
+
+    前端 chat.js send() 必呼叫此 endpoint · 若 403 直接擋下
+    curl 直接打 /api/ask/agents 不過此 endpoint · 但會留 LibreChat layer audit
+    """
+    text = payload.text or ""
+    hits = []
+    for pattern in LEVEL_3_PATTERNS:
+        matches = re.findall(pattern, text)
+        if matches:
+            hits.extend(matches if isinstance(matches[0], str) else [str(m) for m in matches])
+    is_l3 = bool(hits)
+
+    if not is_l3:
+        return {"allowed": True, "level": "01_or_02", "hit_count": 0}
+
+    # L3 → audit log(verified cookie 優先 · 不信 X-User-Email)
+    try:
+        from main import audit_col, _verify_librechat_cookie
+        user = _verify_librechat_cookie(request)
+        if not user:
+            user = (request.headers.get("X-User-Email") or "").strip().lower() or "anonymous"
+            logger.warning("[l3-audit] user from unverified source: %s", user)
+        audit_col.insert_one({
+            "action": "l3_send_attempt",
+            "user": user,
+            "details": {
+                "hit_count": len(hits),
+                "text_length": len(text),
+                "hard_stop_enforced": _l3_hard_stop_enabled(),
+            },
+            "created_at": datetime.now(timezone.utc),
+        })
+    except Exception as e:
+        logger.error("[l3-audit] write fail: %s", e)
+
+    if _l3_hard_stop_enabled():
+        # 硬擋 mode · 回 403 · 前端會看到「機敏內容禁止送雲」
+        raise HTTPException(
+            403,
+            detail={
+                "reason": "L3_HARD_STOP_ENABLED",
+                "message": "偵測到 L3 機敏內容 · 公司政策禁止送雲 · 請改人工或本地處理",
+                "hit_count": len(hits),
+            },
+        )
+
+    # 預設 audit-only · 由前端 confirm 流程繼續(已 modal 警告)
+    return {
+        "allowed": True,
+        "level": "03",
+        "hit_count": len(hits),
+        "warning": "L3 機敏內容已記錄 · 請確認再送",
+    }

@@ -192,6 +192,30 @@ export const chat = {
         { title: "機敏內容確認", icon: "🔒", primary: "我知道,送出", cancel: "回去修改", danger: true }
       );
       if (!ok) return;
+
+      // v1.3 A3 · CRITICAL C-3 · server-side L3 audit + (可選)硬擋
+      // 即使 user 同意 · 仍打 backend 留可追責 audit log
+      try {
+        const lr = await authFetch("/api-accounting/safety/l3-preflight", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+        if (lr.status === 403) {
+          const err = await lr.json().catch(() => ({}));
+          toast.error("L3 機敏禁止送雲", {
+            detail: err.detail?.message || "公司政策禁止 · 請改人工或本地處理",
+          });
+          return;
+        }
+        // 200 · 已 audit · 繼續送
+      } catch (e) {
+        // server preflight 掛 · 保守擋(類似 quota fail-closed)
+        toast.error("L3 audit 服務無回應 · 為合規暫停送出", {
+          detail: "請找 Champion 或稍後重試",
+        });
+        return;
+      }
     }
 
     // v1.2 Feature #3 · PII 偵測 · 送前掃一次身分證/電話/email/信用卡
