@@ -32,6 +32,7 @@ import { Projects } from "./modules/projects.js";
 import { modal } from "./modules/modal.js";
 import { toast } from "./modules/toast.js";
 import { palette } from "./modules/palette.js";
+import { theme } from "./modules/theme.js";  // v1.3 A2 · 從 app.js 抽出
 import { shortcuts } from "./modules/shortcuts.js";
 import { health } from "./modules/health.js";
 import { mobile } from "./modules/mobile.js";
@@ -829,18 +830,9 @@ export const app = {
     }, 400);
   },
 
-  // ---------- Theme ----------
-  applyTheme() {
-    const saved = localStorage.getItem("chengfu-theme") || "auto";
-    document.documentElement.dataset.theme = saved;
-  },
-
-  toggleTheme() {
-    const cur = document.documentElement.dataset.theme || "auto";
-    const next = { auto: "light", light: "dark", dark: "auto" }[cur] || "light";
-    document.documentElement.dataset.theme = next;
-    localStorage.setItem("chengfu-theme", next);
-  },
+  // ---------- Theme(v1.3 A2 · 拆到 modules/theme.js · 此 thin wrapper 不破壞既有 caller) ----------
+  applyTheme() { theme.apply(); },
+  toggleTheme() { theme.toggle(); },
 
   // ---------- Palette data source ----------
   _paletteItems() {
