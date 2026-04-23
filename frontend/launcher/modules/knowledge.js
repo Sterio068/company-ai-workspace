@@ -505,7 +505,12 @@ export const knowledge = {
     } catch (e) {
       // R17#3 · AbortError 是 debounce/新輸入觸發的主動 abort · 不是真錯 · 不閃紅
       if (e?.name === "AbortError") return;
-      root.innerHTML = `<div class="chip-empty">❌ 搜尋失敗</div>`;
+      root.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">😓</div>
+          <div class="empty-state-title">搜尋失敗</div>
+          <div class="empty-state-hint">${escapeHtml(e?.message || "Meilisearch 可能未啟動")}</div>
+        </div>`;
     }
   },
 

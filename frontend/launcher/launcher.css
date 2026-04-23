@@ -1377,6 +1377,39 @@ kbd {
   line-height: 1.6;
 }
 
+/* v1.3 P1#15 · 建議 prompt 按鈕 · AI 小白起步友善 */
+.chat-welcome-suggestions {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 340px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.chat-suggestion {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.chat-suggestion:hover {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-1);
+}
+.chat-suggestion:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .chat-msg {
   display: flex;
   gap: 12px;

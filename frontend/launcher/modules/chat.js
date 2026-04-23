@@ -20,6 +20,23 @@ export const chat = {
   bind({ agents, user }) {
     this._agentsStore = agents;
     this._userStore = user;
+    this._bindSuggestions();
+  },
+
+  // v1.3 P1#15 · 空對話建議 prompt · AI 小白起步友善
+  _bindSuggestions() {
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".chat-suggestion");
+      if (!btn) return;
+      const prompt = btn.dataset.prompt;
+      if (!prompt) return;
+      const input = document.getElementById("chat-input");
+      if (!input) return;
+      input.value = prompt;
+      input.dispatchEvent(new Event("input"));  // 觸發 L1/L2/L3 classifier
+      // 自動送?先填入讓用戶看 · 按 Enter 再送
+      input.focus();
+    });
   },
 
   _findAgentByNum(num) {
@@ -487,7 +504,12 @@ export const chat = {
 
       container.innerHTML = "";  // 清 welcome + 舊訊息
       if (!Array.isArray(msgs) || msgs.length === 0) {
-        container.innerHTML = '<div class="chat-welcome"><div class="chat-welcome-title">對話無訊息</div><div class="chat-welcome-sub">這串對話還沒內容</div></div>';
+        container.innerHTML = `
+          <div class="chat-welcome">
+            <div class="chat-welcome-emoji">💭</div>
+            <div class="chat-welcome-title">對話無訊息</div>
+            <div class="chat-welcome-sub">這串對話還沒內容 · 輸入問題開始吧</div>
+          </div>`;
         return;
       }
       // 依時間序 append

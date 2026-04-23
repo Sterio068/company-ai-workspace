@@ -41,7 +41,12 @@ export const tenders = {
       const count = document.getElementById("tender-count");
       if (count) count.textContent = items.filter(i => i.status === "new").length;
       if (!items.length) {
-        root.innerHTML = '<div class="chip-empty">尚無標案符合條件 · 可能 cron 還沒跑</div>';
+        root.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🎯</div>
+            <div class="empty-state-title">尚無符合標案</div>
+            <div class="empty-state-hint">每日 06:00 自動抓 · 或按上方「🔄 重新抓取」立即跑</div>
+          </div>`;
         return;
       }
       // v4.6 · 分批 render(Round 6 reviewer 紅線:舊 Intel 機長列表掉幀)
@@ -83,8 +88,14 @@ export const tenders = {
           this.mark(btn.dataset.tenderKey, btn.dataset.tenderAction);
         });
       }
-    } catch {
-      root.innerHTML = '<div class="chip-empty">❌ 無法載入標案</div>';
+    } catch (e) {
+      root.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">😓</div>
+          <div class="empty-state-title">無法載入標案</div>
+          <div class="empty-state-hint">${(e?.message || "政府電子採購網可能暫時連不上")}</div>
+          <button class="btn-ghost" onclick="window.tenders?.refresh?.()" style="margin-top:12px">重試</button>
+        </div>`;
     }
   },
 

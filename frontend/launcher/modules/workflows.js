@@ -13,7 +13,15 @@ export const workflows = {
     try {
       const r = await fetch(`${BASE}/workflow/presets`);
       const list = await r.json();
-      if (!list.length) { root.innerHTML = '<div class="chip-empty">無 workflow</div>'; return; }
+      if (!list.length) {
+        root.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">⚡</div>
+            <div class="empty-state-title">尚無 workflow</div>
+            <div class="empty-state-hint">v2.0 會加預設流程(投標全閉環 / 活動企劃 / 新聞發布)</div>
+          </div>`;
+        return;
+      }
       root.innerHTML = list.map(w => `
         <article class="workspace-card" style="--ws-color:#AF52DE;cursor:pointer"
                  data-workflow-id="${escapeHtml(w.id)}">
@@ -31,8 +39,14 @@ export const workflows = {
       root.querySelectorAll("[data-workflow-id]").forEach(card => {
         card.addEventListener("click", () => this.run(card.dataset.workflowId));
       });
-    } catch {
-      root.innerHTML = '<div class="chip-empty">❌ Orchestrator API 未就緒(需 httpx 安裝)</div>';
+    } catch (e) {
+      root.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">🧪</div>
+          <div class="empty-state-title">Orchestrator 未就緒</div>
+          <div class="empty-state-hint">v2.0 實驗功能 · 需 httpx 安裝(後端 requirements.txt)</div>
+          <button class="btn-ghost" onclick="window.workflows?.load?.()" style="margin-top:12px">重試</button>
+        </div>`;
     }
   },
 
