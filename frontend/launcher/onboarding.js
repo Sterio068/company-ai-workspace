@@ -8,7 +8,7 @@
 
 const STEPS = [
   {
-    title: "🎨 任務 1/3:設計 Brief 一鍵到位",
+    title: "🎨 任務 1/5:設計 Brief 一鍵到位",
     body: `資深設計師 90 分鐘寫 Brief、你 3 分鐘搞定。<br><br>
       <strong>試試:</strong>按 <kbd>⌘3</kbd> 進設計協作,告訴助手:<br>
       <code>「幫我想 3 個中秋節 FB / IG / LINE 主視覺方向,
@@ -21,7 +21,7 @@ const STEPS = [
     },
   },
   {
-    title: "🎯 任務 2/3:貼一段招標看值不值得投",
+    title: "🎯 任務 2/5:貼一段招標看值不值得投",
     body: `60 頁招標須知,10 分鐘判斷 Go / No-Go。<br><br>
       <strong>試試:</strong>按 <kbd>⌘1</kbd> 進投標,把招標須知整段貼進對話,說:<br>
       <code>「幫我 Go/No-Go · 我們有 8 週準備」</code><br><br>
@@ -33,17 +33,51 @@ const STEPS = [
     },
   },
   {
-    title: "🎪 任務 3/3:廠商比價信一鍵產",
+    title: "🎪 任務 3/5:廠商比價信一鍵產",
     body: `發 10 家廠商問報價,不用再複製貼上 10 次。<br><br>
       <strong>試試:</strong>按 <kbd>⌘2</kbd> 進活動執行,說:<br>
       <code>「請 5 家音響廠商報『200 人記者會 · 3 小時 · 台北』,
       給我比價信範本」</code><br><br>
-      送前人工看一次,再手動送(v1.1 會加自動群發)。<br><br>
-      <strong>⌨️ 按 ? 看所有快捷鍵 · 按 ⌘K 全域搜尋</strong>`,
-    next: "開始工作 🚀",
+      送前人工看一次,再手動送(v1.1 會加自動群發)。`,
+    next: "下一步 · 看 v1.3 新功能 →",
     action: () => {
       document.querySelector('[data-ws="2"]')?.scrollIntoView({ block: "center" });
       highlight('[data-ws="2"]');
+    },
+  },
+  {
+    title: "🎤 任務 4/5:會議速記(v1.3 新)",
+    body: `週會錄音 1 小時 → 30 秒看完摘要 + action_items。<br><br>
+      <strong>試試:</strong>左側 sidebar「🎤 會議速記」<br>
+      <ol>
+        <li>上傳 m4a/mp3/wav(≤ 25MB)</li>
+        <li>等 1-3 分鐘 · Whisper 轉文字 + Haiku 結構化</li>
+        <li>看到摘要 / 決策 / action_items / 風險</li>
+        <li>「推到 Handoff」一鍵 append 到 project</li>
+      </ol>
+      <strong>📱 iPhone 用戶 · 4 設定必看 → 教學 → user-guide</strong>`,
+    next: "下一步 · 場勘 PWA →",
+    action: () => {
+      document.querySelector('[data-view="meeting"]')?.scrollIntoView({ block: "center" });
+      highlight('[data-view="meeting"]');
+    },
+  },
+  {
+    title: "📸 任務 5/5:場勘 PWA · iPhone 拍 + audio note(v1.3 新)",
+    body: `場勘照片留你手機沒人看到 · 設計師回去問東問西<br>v1.3 解法:iPhone 拍 1-5 張 + 30s 語音補述 + GPS · AI 自動結構化<br><br>
+      <strong>iPhone 場勘流程:</strong>
+      <ol>
+        <li>iPhone 開 launcher · 加到主畫面(Safari → 分享 → 加入主畫面)</li>
+        <li>跳「📸 場勘」 view · 拍照 + GPS</li>
+        <li>每張照片旁可錄 🎙 30 秒語音(光線/客戶口頭備忘)</li>
+        <li>Whisper STT 轉文字 · 設計師事後逐字看</li>
+        <li>「推到 Handoff」 · site_issues 進 project</li>
+      </ol>
+      <strong>⌨️ 按 ? 看所有快捷 · ⌘K 全域搜 · ❓教學 看完整 13 份手冊</strong>`,
+    next: "開始工作 🚀",
+    action: () => {
+      document.querySelector('[data-view="site"]')?.scrollIntoView({ block: "center" });
+      highlight('[data-view="site"]');
     },
   },
 ];

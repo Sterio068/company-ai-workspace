@@ -3286,3 +3286,55 @@ button:focus-visible,
   box-shadow: 0 1px 0 var(--border);
 }
 
+
+/* v1.3 UX · spinner animation(meeting/site upload progress 用) */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* v1.3 UX · 統一空狀態 · 替「尚無 / 沒...」用 */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+.empty-state-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+.empty-state-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.empty-state-hint {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* v1.3 UX · banner(processing / warning / info)統一樣式 */
+.banner-info,
+.banner-processing {
+  padding: 14px 18px;
+  background: var(--surface-2);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-md);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+.banner-warning {
+  border-color: var(--orange, #FF9500);
+  background: color-mix(in srgb, var(--orange, #FF9500) 8%, transparent);
+}
+.banner-error {
+  border-color: var(--red, #FF3B30);
+  background: color-mix(in srgb, var(--red, #FF3B30) 8%, transparent);
+}
+
