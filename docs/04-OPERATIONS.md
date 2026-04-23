@@ -53,8 +53,13 @@ docker run -d --name uptime-kuma -p 3001:3001 \
 - **頻率**:每日 02:00(cron)
 - **保留**:每日 30 天 + 每週日 12 週
 - **位置**:`~/chengfu-backups/`(daily 與 weekly)
-- **加密**:建議 GPG(見 `docs/05-SECURITY.md` 第 6 節)
-- **異地備份(v1.1)**:rsync 到 iCloud Drive 或 NAS
+- **加密**:GPG · 'chengfu' key(見 `docs/05-SECURITY.md` 第 6 節)
+- **異地備份(v1.3)**:Backblaze B2 · 自動 rclone copy 加密檔
+  - 設定:`./scripts/setup-rclone-b2.sh`(互動式 · 需 B2 keyID + applicationKey + bucket)
+  - 已 GPG 加密的檔才上傳 · 明文不出門
+  - 異地端保留 60 天 · 跟本地 30 天雙保險
+  - B2 5 GB 內 0 cost(承富 1 年估 ~5 GB)
+  - 還原:`./scripts/dr-drill.sh --from-offsite`
 
 ### 3.2 RTO / RPO(災難恢復目標)
 
@@ -63,7 +68,7 @@ docker run -d --name uptime-kuma -p 3001:3001 \
 | 容器損壞(compose down 恢復) | 0 | 5 分鐘 |
 | Mac mini SSD 損壞 | 24 小時(最近備份) | 4-8 小時(硬體送修 + 還原) |
 | Mac mini 徹底報廢(機殼損壞) | 24 小時 | 1-2 天(重新採購 + 設定) |
-| 火災 / 水災(整機遺失) | 1 週(異地週備份) | 2-3 天 |
+| 火災 / 水災(整機遺失) | **24 小時**(B2 異機 daily) | 2-3 天(新機 + `dr-drill.sh --from-offsite`) |
 
 ### 3.3 還原演練(每季一次)
 
@@ -98,6 +103,27 @@ gpg --decrypt "$LATEST.gpg" | gunzip -c | docker exec -i chengfu-mongo mongorest
 ```
 
 **驗收**:演練後寫入 `reports/dr-drill-YYYY-MM.md`,記錄還原時間與遇到的問題。
+
+### 3.3a · 異機災難演練(每半年一次 · v1.3 A4 加)
+
+**情境:模擬 Mac mini 整機沒了 · 要從 B2 還原**
+
+```bash
+# 1. 確認 B2 已配(否則先跑 setup-rclone-b2.sh)
+rclone listremotes | grep chengfu-offsite
+
+# 2. 假裝本機 backup 全沒(實際演練先備出來)
+mv ~/chengfu-backups ~/chengfu-backups.演練前備份
+
+# 3. 從 B2 抓 + 還原 + 全測一輪
+./scripts/dr-drill.sh --from-offsite
+
+# 4. 演練完恢復
+rm -rf ~/chengfu-backups
+mv ~/chengfu-backups.演練前備份 ~/chengfu-backups
+```
+
+**驗收**:`dr-drill.sh --from-offsite` 走完不報錯 + smoke test 全綠 + 對話歷史完整
 
 ---
 

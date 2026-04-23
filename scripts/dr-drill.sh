@@ -44,11 +44,46 @@ START=$(date +%s)
 # Codex R2.4 · 定義 BACKUP_DIR(原本後面 $BACKUP_DIR 未定義 · set -u 會炸)
 BACKUP_DIR="${HOME}/chengfu-backups/daily"
 
+# A4(v1.3)· --from-offsite · 從 B2 抓最新備份再還原
+# 用情境:本機 Mac mini 燒毀 / 被偷 · 本地 BACKUP_DIR 全沒
+FROM_OFFSITE=0
+for arg in "$@"; do
+    if [[ "$arg" == "--from-offsite" ]]; then
+        FROM_OFFSITE=1
+    fi
+done
+
+if [[ "$FROM_OFFSITE" == "1" ]]; then
+    OFFSITE_REMOTE="${CHENGFU_OFFSITE_REMOTE:-chengfu-offsite:chengfu-backup}"
+    echo -e "${BLUE}[0/6]${NC} --from-offsite · 從 ${OFFSITE_REMOTE} 抓最新備份"
+    if ! command -v rclone > /dev/null; then
+        echo -e "${RED}❌ rclone 未安裝 · 跑 scripts/setup-rclone-b2.sh${NC}"
+        exit 1
+    fi
+    if ! gpg --list-keys chengfu > /dev/null 2>&1; then
+        echo -e "${RED}❌ 缺 'chengfu' GPG key · 無法解密 offsite 檔${NC}"
+        exit 1
+    fi
+    mkdir -p "$BACKUP_DIR"
+    # 找 B2 最新檔案(by name · YYYY-MM-DD 排序)
+    LATEST_OFFSITE=$(rclone ls "${OFFSITE_REMOTE}/daily/" 2>/dev/null \
+        | awk '{print $2}' \
+        | grep -E "chengfu-[0-9]{4}-[0-9]{2}-[0-9]{2}.*\.gpg$" \
+        | sort -r | head -1)
+    if [[ -z "$LATEST_OFFSITE" ]]; then
+        echo -e "${RED}❌ B2 ${OFFSITE_REMOTE}/daily/ 找不到加密備份${NC}"
+        exit 1
+    fi
+    echo -e "   ${GREEN}↓${NC} 抓:$LATEST_OFFSITE"
+    rclone copy "${OFFSITE_REMOTE}/daily/${LATEST_OFFSITE}" "$BACKUP_DIR" --progress
+    echo -e "   ${GREEN}✅${NC} 已抓回 $BACKUP_DIR/$LATEST_OFFSITE"
+fi
+
 # ---------- Step 1: 找最新備份 ----------
 echo -e "${BLUE}[1/6]${NC} 找最新備份..."
 LATEST=$(ls -t "$BACKUP_DIR"/chengfu-*.archive.gz* 2>/dev/null | head -1)
 if [[ -z "$LATEST" ]]; then
-    echo -e "${RED}❌ 找不到備份!請先跑 scripts/backup.sh${NC}"
+    echo -e "${RED}❌ 找不到備份!請先跑 scripts/backup.sh 或 ./scripts/dr-drill.sh --from-offsite${NC}"
     exit 1
 fi
 SIZE=$(du -h "$LATEST" | cut -f1)
