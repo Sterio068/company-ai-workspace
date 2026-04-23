@@ -11,7 +11,7 @@ v1.2 §11.1 B-1.5 · 改用 routers/_deps.py 共用 helper
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from typing import Optional, Literal
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import asyncio
 import logging
@@ -105,7 +105,7 @@ def _log_design_job(req_id: str, email: Optional[str], req: RecraftRequest,
             "regenerate_of": req.regenerate_of,
             "status": status,
             "n_images": n_images,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
         })
     except Exception as e:
         logger.warning("[design] log fail: %s", e)
@@ -187,7 +187,7 @@ async def _openai_generate(req: "RecraftRequest", email: str) -> dict:
                 elif img.get("url"):
                     images.append({"url": img["url"], "b64": False})
             # OpenAI 無 request_id · 我們自產一個 placeholder(跟 Fal 欄位對齊)
-            req_id = f"openai-{data.get('created', int(datetime.utcnow().timestamp()))}"
+            req_id = f"openai-{data.get('created', int(datetime.now(timezone.utc).timestamp()))}"
             _log_design_job(req_id, email, req, "done", n_images=len(images))
             return {
                 "job_id": req_id,
@@ -328,7 +328,7 @@ async def design_recraft_status(job_id: str):
                         {"request_id": job_id},
                         {"$set": {
                             "status": "done", "n_images": len(images),
-                            "images": images, "completed_at": datetime.utcnow(),
+                            "images": images, "completed_at": datetime.now(timezone.utc),
                         }},
                     )
                 except Exception as e:

@@ -25,7 +25,7 @@ import logging
 import os
 import tempfile
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Query, UploadFile
@@ -69,7 +69,7 @@ def recover_stale_surveys(max_stale_minutes: int = 10):
     """R23#2 · startup 時掃 stuck survey · 有 tmp files 則重跑 · 無則 failed"""
     try:
         from main import db
-        cutoff = datetime.utcnow() - timedelta(minutes=max_stale_minutes)
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=max_stale_minutes)
         q = {"status": "processing", "updated_at": {"$lt": cutoff}}
         stale = list(db.site_surveys.find(q))
         if not stale:
@@ -149,7 +149,7 @@ def _process_survey(survey_id_str: str, image_b64_list: list, mime_list: list):
         db.site_surveys.update_one(
             {"_id": ObjectId(survey_id_str)},
             {"$set": {"status": "failed", "error": "Anthropic SDK 未裝",
-                      "updated_at": datetime.utcnow()}},
+                      "updated_at": datetime.now(timezone.utc)}},
         )
         return
 
@@ -224,7 +224,7 @@ def _process_survey(survey_id_str: str, image_b64_list: list, mime_list: list):
                 ],
                 "structured": structured,
                 "status": "done",
-                "updated_at": datetime.utcnow(),
+                "updated_at": datetime.now(timezone.utc),
             }},
         )
         logger.info("[site-survey] done id=%s · %d 張 · %d issues",
@@ -235,7 +235,7 @@ def _process_survey(survey_id_str: str, image_b64_list: list, mime_list: list):
         db.site_surveys.update_one(
             {"_id": ObjectId(survey_id_str)},
             {"$set": {"status": "failed", "error": str(e)[:200],
-                      "updated_at": datetime.utcnow()}},
+                      "updated_at": datetime.now(timezone.utc)}},
         )
 
 
@@ -371,8 +371,8 @@ async def create_survey(
         "status": "processing",
         "_tmp_image_paths": tmp_paths,  # R23#2 · recovery 用
         "_tmp_mime_list": mime_list,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     }
     r = db.site_surveys.insert_one(doc)
     sid = str(r.inserted_id)
@@ -449,7 +449,7 @@ def push_to_handoff(survey_id: str, email: str = require_user_dep()):
     venue = s.get("venue", {})
     survey_note = {
         "type": "note",
-        "label": "場勘彙整 · " + datetime.utcnow().strftime("%Y-%m-%d"),
+        "label": "場勘彙整 · " + datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "ref": f"{venue.get('type','')} · {venue.get('size_estimate','')} · "
                f"入口 {len(s.get('entrances',[]))} 處 · 洗手間 {s.get('toilets_count','未見')}",
     }
@@ -470,7 +470,7 @@ def push_to_handoff(survey_id: str, email: str = require_user_dep()):
                 "handoff.site_issues": issues,
                 "handoff.site_venue": venue,
                 "handoff.updated_by": email,
-                "handoff.updated_at": datetime.utcnow(),
+                "handoff.updated_at": datetime.now(timezone.utc),
             },
         },
     )

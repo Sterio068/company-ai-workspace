@@ -89,12 +89,13 @@ def test_get_meeting_not_owner_403(client):
     """別人 email 查不到自己會議 · 403"""
     import main
     from bson import ObjectId
+    from datetime import datetime, timezone
     # seed 一筆 meeting 給 alice
     mid = main.db.meetings.insert_one({
         "owner": "alice@chengfu.local",
         "status": "done",
         "structured": {"title": "alice 的會議"},
-        "created_at": __import__("datetime").datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
     }).inserted_id
 
     # bob 查
@@ -108,12 +109,12 @@ def test_get_meeting_not_owner_403(client):
 def test_list_meetings_owner_filter(client):
     """list · 只回自己的"""
     import main
-    from datetime import datetime
+    from datetime import datetime, timezone
     main.db.meetings.insert_many([
         {"owner": "c@chengfu.local", "status": "done",
-         "structured": {"title": "c 會 1"}, "created_at": datetime.utcnow()},
+         "structured": {"title": "c 會 1"}, "created_at": datetime.now(timezone.utc)},
         {"owner": "d@chengfu.local", "status": "done",
-         "structured": {"title": "d 會 1"}, "created_at": datetime.utcnow()},
+         "structured": {"title": "d 會 1"}, "created_at": datetime.now(timezone.utc)},
     ])
     r = client.get("/memory/meetings", headers={"X-User-Email": "c@chengfu.local"})
     assert r.status_code == 200
@@ -127,13 +128,13 @@ def test_push_to_handoff(client):
     """done 狀態的會議 · action_items 推到 project.handoff.next_actions"""
     import main
     from bson import ObjectId
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     # Seed project
     proj_id = main.projects_col.insert_one({
         "name": "push-handoff-test",
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     }).inserted_id
 
     mid = main.db.meetings.insert_one({
@@ -147,7 +148,7 @@ def test_push_to_handoff(client):
                 {"who": "Bob", "what": "聯絡廠商"},
             ],
         },
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
     }).inserted_id
 
     r = client.post(
@@ -171,11 +172,11 @@ def test_push_to_handoff(client):
 def test_push_to_handoff_not_done_400(client):
     """status != done 拒絕"""
     import main
-    from datetime import datetime
+    from datetime import datetime, timezone
     mid = main.db.meetings.insert_one({
         "owner": "pm@chengfu.local",
         "status": "transcribing",
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
     }).inserted_id
 
     r = client.post(

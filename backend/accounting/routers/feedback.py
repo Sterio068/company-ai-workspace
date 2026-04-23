@@ -9,7 +9,7 @@ v1.2 §11.1 B-1.5 · 改用 routers/_deps.py 共用 helper
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from typing import Optional, Literal
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ._deps import _serialize, require_admin_dep
 
@@ -37,7 +37,7 @@ def create_feedback(fb: Feedback, request: Request):
         raise HTTPException(403, "未識別使用者 · feedback 必須登入(R7#4)")
     data = fb.model_dump()
     data["user_email"] = trusted_email  # 覆蓋 body · 防偽造
-    data["created_at"] = datetime.utcnow()
+    data["created_at"] = datetime.now(timezone.utc)
     feedback_col.update_one(
         {"message_id": fb.message_id, "user_email": trusted_email},
         {"$set": data},

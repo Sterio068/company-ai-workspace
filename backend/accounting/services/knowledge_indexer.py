@@ -16,7 +16,7 @@ import fnmatch
 import hashlib
 import pathlib
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 
 from .knowledge_extract import extract
@@ -151,7 +151,7 @@ def reindex_source(source_id: str, knowledge_sources_col, meili_client=None) -> 
     if not src.get("enabled"):
         return {"ok": False, "skipped": True, "reason": "已停用"}
 
-    started = datetime.utcnow()
+    started = datetime.now(timezone.utc)
     # Round 9 Q4 · 兩階段時間戳(拆 scanned 與 search_indexed)
     # - last_scanned_at · 最近一次抽字到本地(即使 Meili 掛也前進)
     # - last_search_indexed_at · 最近一次成功寫入 Meili(搜尋可用)
@@ -168,7 +168,7 @@ def reindex_source(source_id: str, knowledge_sources_col, meili_client=None) -> 
     def _to_epoch(dt):
         if not isinstance(dt, datetime):
             return 0
-        # TZ · datetime.utcnow() 是 naive · .timestamp() 被當 local 轉 → 8h 偏差
+        # TZ · datetime.now(timezone.utc) 是 naive · .timestamp() 被當 local 轉 → 8h 偏差
         # 精度 · Mongo 存 datetime 只保 ms · st_mtime 有 μs · int 化對齊
         return calendar.timegm(dt.utctimetuple())
 
@@ -333,7 +333,7 @@ def reindex_source(source_id: str, knowledge_sources_col, meili_client=None) -> 
     stats = {
         "ok": True,
         "file_count": file_count,
-        "index_seconds": round((datetime.utcnow() - started).total_seconds(), 2),
+        "index_seconds": round((datetime.now(timezone.utc) - started).total_seconds(), 2),
         "errors": errors,
         "skipped": {
             "excluded": skipped_excluded,
@@ -347,7 +347,7 @@ def reindex_source(source_id: str, knowledge_sources_col, meili_client=None) -> 
         stats["meili_error"] = meili_error
 
     # Q4 · 寫回兩階段時間戳
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     update_doc = {
         "last_scanned_at": now,  # scanning 永遠前進(抽字已跑)
         "last_index_stats": stats,

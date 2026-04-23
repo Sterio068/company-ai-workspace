@@ -19,7 +19,7 @@ import logging
 import os
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, UploadFile
@@ -111,7 +111,7 @@ def summarize_conversation(req: SummarizeRequest):
             {"$set": {
                 "chengfu_summary": summary_text,
                 "chengfu_summary_up_to": str(to_summarize[-1].get("_id", "")),
-                "chengfu_summarized_at": datetime.utcnow(),
+                "chengfu_summarized_at": datetime.now(timezone.utc),
                 "chengfu_summarized_messages": len(to_summarize),
             }}
         )
@@ -169,7 +169,7 @@ def recover_stale_meetings(max_stale_minutes: int = 10):
     · lifespan 每次啟動跑一次 · container restart 不會孤兒"""
     try:
         from main import db
-        cutoff = datetime.utcnow() - timedelta(minutes=max_stale_minutes)
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=max_stale_minutes)
         q = {"status": {"$in": ["transcribing", "structuring"]},
              "updated_at": {"$lt": cutoff}}
         stale = list(db.meetings.find(q))
@@ -229,7 +229,7 @@ def _process_meeting(meeting_id_str: str):
             db.meetings.update_one(
                 {"_id": ObjectId(meeting_id_str)},
                 {"$set": {"status": "failed", "error": "tmp audio 不見",
-                          "updated_at": datetime.utcnow()}},
+                          "updated_at": datetime.now(timezone.utc)}},
             )
             return
 
@@ -240,7 +240,7 @@ def _process_meeting(meeting_id_str: str):
             db.meetings.update_one(
                 {"_id": ObjectId(meeting_id_str)},
                 {"$set": {"status": "failed", "error": "OpenAI SDK 未裝",
-                          "updated_at": datetime.utcnow()}},
+                          "updated_at": datetime.now(timezone.utc)}},
             )
             return
 
@@ -260,7 +260,7 @@ def _process_meeting(meeting_id_str: str):
             db.meetings.update_one(
                 {"_id": ObjectId(meeting_id_str)},
                 {"$set": {"status": "failed", "error": f"STT 失敗: {str(e)[:200]}",
-                          "updated_at": datetime.utcnow()}},
+                          "updated_at": datetime.now(timezone.utc)}},
             )
             return
 
@@ -269,7 +269,7 @@ def _process_meeting(meeting_id_str: str):
             {"$set": {
                 "transcript": transcript,
                 "status": "structuring",
-                "updated_at": datetime.utcnow(),
+                "updated_at": datetime.now(timezone.utc),
             }},
         )
 
@@ -315,7 +315,7 @@ def _process_meeting(meeting_id_str: str):
             db.meetings.update_one(
                 {"_id": ObjectId(meeting_id_str)},
                 {"$set": {"status": "failed", "error": f"結構化失敗: {str(e)[:200]}",
-                          "updated_at": datetime.utcnow()}},
+                          "updated_at": datetime.now(timezone.utc)}},
             )
             return
 
@@ -324,7 +324,7 @@ def _process_meeting(meeting_id_str: str):
             {"$set": {
                 "structured": structured,
                 "status": "done",
-                "updated_at": datetime.utcnow(),
+                "updated_at": datetime.now(timezone.utc),
             },
              "$unset": {"_tmp_audio_path": ""}},
         )
@@ -387,8 +387,8 @@ async def transcribe_audio(
         "structured": {},
         "status": "transcribing",
         "_tmp_audio_path": tmp_path,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     }
     r = db.meetings.insert_one(doc)
     mid = str(r.inserted_id)
@@ -485,7 +485,7 @@ def push_to_handoff(meeting_id: str, email: str = require_user_dep()):
             f"handoff.next_actions": next_actions,
             f"handoff.source_meeting_id": meeting_id,
             f"handoff.updated_by": email,
-            f"handoff.updated_at": datetime.utcnow(),
+            f"handoff.updated_at": datetime.now(timezone.utc),
         }},
     )
     if r.matched_count == 0:

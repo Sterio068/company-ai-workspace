@@ -23,7 +23,7 @@ import os
 import json
 import logging
 import pathlib
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from typing import Optional, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -181,7 +181,7 @@ def export_all_data(_admin: str = require_admin_dep()):
     )
 
     def _stream():
-        yield '{"exported_at":"' + datetime.utcnow().isoformat() + '",'
+        yield '{"exported_at":"' + datetime.now(timezone.utc).isoformat() + '",'
         yield '"version":"v1.0","collections":{'
         first_col = True
         cols = [
@@ -213,7 +213,7 @@ def export_all_data(_admin: str = require_admin_dep()):
     return StreamingResponse(
         _stream(),
         media_type="application/json",
-        headers={"Content-Disposition": f"attachment; filename=chengfu-export-{datetime.utcnow().strftime('%Y%m%d')}.json"},
+        headers={"Content-Disposition": f"attachment; filename=chengfu-export-{datetime.now(timezone.utc).strftime('%Y%m%d')}.json"},
     )
 
 
@@ -309,7 +309,7 @@ def log_action(action: str, user: str, resource: Optional[str] = None,
         "user": user,
         "resource": resource,
         "details": details or {},
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
     })
     return {"logged": True}
 
@@ -598,7 +598,7 @@ def update_agent_prompt(payload: AgentPromptUpdate, _admin: str = require_admin_
             "new_instructions": payload.new_instructions,
             "reason": payload.reason,
             "editor": payload.editor,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
         }},
         upsert=True,
     )
@@ -607,7 +607,7 @@ def update_agent_prompt(payload: AgentPromptUpdate, _admin: str = require_admin_
         "user": payload.editor,
         "resource": f"agent_{payload.agent_num}",
         "details": {"reason": payload.reason, "length": len(payload.new_instructions)},
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
     })
     return {"updated": True, "note": "變更已記錄,執行 create-agents.py --only <num> 即可生效"}
 
@@ -761,7 +761,7 @@ def update_secret(name: str, payload: SecretUpdate, _admin: str = require_admin_
             "action": "secret_clear",
             "user": _admin,
             "resource": name,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
         })
         return {"cleared": True, "name": name}
     db.system_settings.update_one(
@@ -769,7 +769,7 @@ def update_secret(name: str, payload: SecretUpdate, _admin: str = require_admin_
         {"$set": {
             "name": name,
             "value": value,
-            "updated_at": datetime.utcnow(),
+            "updated_at": datetime.now(timezone.utc),
             "updated_by": _admin,
         }},
         upsert=True,
@@ -779,6 +779,95 @@ def update_secret(name: str, payload: SecretUpdate, _admin: str = require_admin_
         "user": _admin,
         "resource": name,
         "details": {"length": len(value)},
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
     })
     return {"updated": True, "name": name, "note": "下次 request 生效(不用重啟容器)"}
+
+
+# ============================================================
+# 技術債#5(2026-04-23)· PDPA / GDPR 17 條 · 同仁離職全資料刪除
+# ============================================================
+class PdpaDeleteRequest(BaseModel):
+    confirm_email: str  # admin 必須 type 一次完整 email · 防 mis-click
+    dry_run: bool = True  # 預設 dry_run · 真刪要 explicit false
+
+
+@router.post("/admin/users/{user_email}/delete-all")
+def pdpa_delete_user(user_email: str, payload: PdpaDeleteRequest,
+                     _admin: str = require_admin_dep()):
+    """PDPA 17 條 · 同仁離職 / 自願刪除請求 · 把該 user 跨 collection 全刪
+
+    跨 collection 範圍(承富 v1.2):
+    - user_preferences(line_token / webhook_url / agent prefs)
+    - feedback(該 user 的 thumbs up/down)
+    - meetings(該 user 上傳的會議速記)
+    - site_surveys(該 user 拍的場勘照片 metadata)
+    - scheduled_posts(author = user_email)
+    - crm_leads(owner = user_email · note:不刪 lead 本身 · 改 owner=None)
+    - knowledge_audit(user 搜的 audit log)
+    - chengfu_quota_overrides(若有)
+
+    安全護欄:
+    1. require admin · 不開放自助
+    2. confirm_email 必須等於 user_email(防 mis-click 刪錯人)
+    3. dry_run=true 只算 count · 不真刪
+    4. dry_run=false 真刪 + 寫 audit 不可改
+    5. admin 不能刪自己(防誤操作 lock 自己出去)
+    """
+    from main import db, _admin_allowlist
+
+    if payload.confirm_email.strip().lower() != user_email.strip().lower():
+        raise HTTPException(400, "confirm_email 不匹配 · 防 mis-click · 請 type 一次完整 email")
+
+    if user_email.strip().lower() == _admin.strip().lower():
+        raise HTTPException(400, "admin 不能刪自己 · 請另一位 admin 操作")
+
+    target = user_email.strip().lower()
+    audit_col = db.knowledge_audit  # 借這個 col 紀錄 PDPA 操作
+
+    # collection → query
+    targets = [
+        ("user_preferences", {"user_email": target}),
+        ("feedback", {"user_email": target}),
+        ("meetings", {"owner": target}),
+        ("site_surveys", {"owner": target}),
+        ("scheduled_posts", {"author": target}),
+        ("knowledge_audit", {"user": target}),
+        ("chengfu_quota_overrides", {"email": target}),
+        # crm_leads 只清 owner · 不刪 lead 本身(資料屬於公司)
+        # 用 update_many 不在這裡 · 下面單獨處理
+    ]
+
+    counts = {}
+    for col_name, q in targets:
+        col = db[col_name]
+        if payload.dry_run:
+            counts[col_name] = col.count_documents(q)
+        else:
+            r = col.delete_many(q)
+            counts[col_name] = r.deleted_count
+
+    # crm_leads · owner 改 None(資料留 · 個人關聯切)
+    if payload.dry_run:
+        counts["crm_leads_owner_unset"] = db.crm_leads.count_documents({"owner": target})
+    else:
+        r = db.crm_leads.update_many({"owner": target}, {"$set": {"owner": None}})
+        counts["crm_leads_owner_unset"] = r.modified_count
+
+    # 寫 audit · 不論 dry_run 都記
+    audit_col.insert_one({
+        "action": "pdpa_delete" if not payload.dry_run else "pdpa_delete_dryrun",
+        "user": _admin,
+        "resource": target,
+        "details": counts,
+        "created_at": datetime.now(timezone.utc),
+    })
+
+    return {
+        "user_email": target,
+        "dry_run": payload.dry_run,
+        "counts": counts,
+        "total": sum(counts.values()),
+        "note": ("dry_run · 沒真刪 · 確認後 dry_run=false 重打"
+                 if payload.dry_run else "已刪 · 不可恢復 · audit 已紀錄"),
+    }

@@ -8,7 +8,7 @@ main.py 的 /admin/* 與 /quota/check handlers 呼叫這裡
 - test 前呼叫 reset_cache() 避免 _SCHEMA_CHECKED 汙染
 """
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from bson import ObjectId
 
@@ -114,7 +114,7 @@ def user_month_spend_ntd(db, users_col, email: str,
             return {"ok": True, "spent_ntd": 0.0, "user_found": False,
                     "reason": "user_not_in_librechat"}
         uid = u["_id"]
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         pipeline = [
             {"$match": {"createdAt": {"$gte": month_start}, "user": uid}},
@@ -139,7 +139,7 @@ def budget_status(db, monthly_budget_ntd: float,
                   usd_to_ntd: float = 32.5) -> dict:
     """本月預算進度 + schema probe 黃牌降級"""
     schema = probe_tx_schema(db)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     try:
         pipeline = [
@@ -174,7 +174,7 @@ def top_users(db, users_col, days: int = 30, limit: int = 10,
               usd_to_ntd: float = 32.5) -> dict:
     """Top N 用量同仁"""
     try:
-        from_dt = datetime.utcnow() - timedelta(days=days)
+        from_dt = datetime.now(timezone.utc) - timedelta(days=days)
         pipeline = [
             {"$match": {"createdAt": {"$gte": from_dt}}},
             {"$group": {
@@ -216,7 +216,7 @@ def top_users(db, users_col, days: int = 30, limit: int = 10,
 
 def tender_funnel(db) -> dict:
     """本月標案漏斗"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     try:
         new_count = db.tender_alerts.count_documents({"discovered_at": {"$gte": month_start}})
@@ -249,7 +249,7 @@ def cost_by_model(db, days: int = 30) -> dict:
     if not schema["ok"]:
         return {"error": schema["issue"], "note": "LibreChat transactions schema 異常 · 找工程師"}
     try:
-        from_dt = datetime.utcnow() - timedelta(days=days)
+        from_dt = datetime.now(timezone.utc) - timedelta(days=days)
         pipeline = [
             {"$match": {"createdAt": {"$gte": from_dt}}},
             {"$group": {
@@ -277,7 +277,7 @@ def adoption_metrics(db, users_col, projects_col, feedback_col,
     - Fal 本期成本(design_jobs count × n_images × USD 0.04 × 32.5)
     - first-win 標記(至少 1 次對話即視為已試)
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     from_dt = now - timedelta(days=days)
     result = {
         "period_days": days,

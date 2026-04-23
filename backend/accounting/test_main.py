@@ -1075,3 +1075,121 @@ def test_design_recraft_moderation_rejected(client, monkeypatch):
     body = r.json()
     assert body["status"] == "rejected"
     assert "抽象" in body["friendly_message"] or "敏感" in body["friendly_message"]
+
+
+# ============================================================
+# 技術債#5 · PDPA delete-on-request
+# ============================================================
+def test_pdpa_dry_run_counts(client):
+    """admin POST /admin/users/{email}/delete-all dry_run=true · 只算 count 不刪"""
+    import main as main_mod
+    from datetime import datetime, timezone
+    target = "leaving@chengfu.local"
+    # seed 跨 collection 假資料
+    main_mod.db.user_preferences.insert_one(
+        {"user_email": target, "key": "tone", "value": "formal",
+         "updated_at": datetime.now(timezone.utc)})
+    main_mod.feedback_col.insert_one(
+        {"message_id": "x", "user_email": target, "verdict": "up",
+         "created_at": datetime.now(timezone.utc)})
+    main_mod.db.scheduled_posts.insert_one(
+        {"author": target, "platform": "facebook", "content": "x",
+         "schedule_at": datetime.now(timezone.utc), "status": "queued"})
+    main_mod.db.crm_leads.insert_one(
+        {"title": "lead", "owner": target, "stage": "lead"})
+
+    r = client.post(
+        f"/admin/users/{target}/delete-all",
+        json={"confirm_email": target, "dry_run": True},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["dry_run"] is True
+    assert body["counts"]["user_preferences"] >= 1
+    assert body["counts"]["feedback"] >= 1
+    assert body["counts"]["scheduled_posts"] >= 1
+    assert body["counts"]["crm_leads_owner_unset"] >= 1
+    # dry_run · 資料應仍在
+    assert main_mod.db.user_preferences.count_documents({"user_email": target}) >= 1
+
+
+def test_pdpa_real_delete(client):
+    """admin POST dry_run=false · 真刪 + crm_leads owner unset · audit 記下"""
+    import main as main_mod
+    from datetime import datetime, timezone
+    target = "real-delete@chengfu.local"
+    main_mod.db.user_preferences.insert_one(
+        {"user_email": target, "key": "lang", "value": "tw"})
+    main_mod.db.crm_leads.insert_one(
+        {"title": "real lead", "owner": target, "stage": "lead"})
+
+    r = client.post(
+        f"/admin/users/{target}/delete-all",
+        json={"confirm_email": target, "dry_run": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["dry_run"] is False
+    # 真刪
+    assert main_mod.db.user_preferences.count_documents({"user_email": target}) == 0
+    # crm_lead 仍在但 owner 被清
+    leftover = main_mod.db.crm_leads.find_one({"title": "real lead"})
+    assert leftover is not None
+    assert leftover["owner"] is None
+    # audit 記下
+    audit = main_mod.db.knowledge_audit.find_one({"action": "pdpa_delete", "resource": target})
+    assert audit is not None
+
+
+def test_pdpa_confirm_email_mismatch(client):
+    """confirm_email 不匹配 → 400(防 mis-click)"""
+    r = client.post(
+        "/admin/users/oops@chengfu.local/delete-all",
+        json={"confirm_email": "wrong@chengfu.local", "dry_run": True},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+    assert "confirm_email" in r.json()["detail"]
+
+
+def test_pdpa_admin_cannot_self_delete(client):
+    """admin 不能刪自己 · 防 lockout"""
+    r = client.post(
+        "/admin/users/sterio068@gmail.com/delete-all",
+        json={"confirm_email": "sterio068@gmail.com", "dry_run": True},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+    assert "admin 不能刪自己" in r.json()["detail"]
+
+
+# ============================================================
+# 技術債#6 · router-wide auth contract tests · 防有人移除 dependencies 後沒人發現
+# (R27#2 加 require_user_dep · 沒對應測 · 將來改 deps 不會被擋)
+# ============================================================
+def test_anonymous_blocked_on_accounting(client):
+    """R27#2 · /accounts 沒登入 → 403"""
+    r = client.get("/accounts", headers={"X-User-Email": ""})
+    assert r.status_code == 403
+
+
+def test_anonymous_blocked_on_projects(client):
+    """R27#2 · /projects 沒登入 → 403"""
+    r = client.get("/projects", headers={"X-User-Email": ""})
+    assert r.status_code == 403
+
+
+def test_anonymous_blocked_on_crm(client):
+    """R27#2 · /crm/leads 沒登入 → 403"""
+    r = client.get("/crm/leads", headers={"X-User-Email": ""})
+    assert r.status_code == 403
+
+
+def test_healthz_remains_public(client):
+    """技術債#2 · /healthz 必須匿名(docker / nginx 每分鐘打)
+    抽 router 後不能誤套 require_user_dep"""
+    r = client.get("/healthz", headers={"X-User-Email": ""})
+    assert r.status_code == 200
+    assert r.json()["status"] == "ok"

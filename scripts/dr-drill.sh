@@ -27,10 +27,15 @@ echo "   2. 刪除 MongoDB 資料卷"
 echo "   3. 從最新備份還原"
 echo "   4. 驗證所有服務可用"
 echo ""
-read -p "確定執行?(輸入 'YES I UNDERSTAND' 確認): " confirm
-if [[ "$confirm" != "YES I UNDERSTAND" ]]; then
-    echo "已取消"
-    exit 0
+# 技術債#12(2026-04-23)· 月跑 cron 走 CHENGFU_DR_DRILL_AUTO=1 跳 prompt
+if [[ "${CHENGFU_DR_DRILL_AUTO:-}" == "1" ]]; then
+    echo "🤖 [auto mode] CHENGFU_DR_DRILL_AUTO=1 · 跳 confirm prompt(月跑 launchd 用)"
+else
+    read -p "確定執行?(輸入 'YES I UNDERSTAND' 確認): " confirm
+    if [[ "$confirm" != "YES I UNDERSTAND" ]]; then
+        echo "已取消"
+        exit 0
+    fi
 fi
 echo ""
 

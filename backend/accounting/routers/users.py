@@ -9,7 +9,7 @@ v1.2 §11.1 B-1.5 · 改用 routers/_deps.py 共用 helper
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ._deps import current_user_email_dep, get_db
 
@@ -74,7 +74,7 @@ def save_user_pref(user_email: str, pref: UserPreference,
             "value": pref.value,
             "learned_from": pref.learned_from,
             "confidence": pref.confidence,
-            "updated_at": datetime.utcnow(),
+            "updated_at": datetime.now(timezone.utc),
         }},
         upsert=True,
     )
@@ -119,7 +119,7 @@ def set_webhook(user_email: str, payload: WebhookSetup,
             "user_email": user_email,
             "key": "webhook_url",
             "value": url,
-            "updated_at": datetime.utcnow(),
+            "updated_at": datetime.now(timezone.utc),
         }},
         upsert=True,
     )

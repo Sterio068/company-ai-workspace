@@ -76,11 +76,11 @@ def test_survey_create_success_with_gps(client):
 
 def test_survey_get_not_owner_403(client):
     import main
-    from datetime import datetime
+    from datetime import datetime, timezone
     sid = main.db.site_surveys.insert_one({
         "owner": "alice@chengfu.local",
         "status": "done",
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
     }).inserted_id
     r = client.get(f"/site-survey/{sid}",
         headers={"X-User-Email": "bob@chengfu.local"})
@@ -89,13 +89,13 @@ def test_survey_get_not_owner_403(client):
 
 def test_survey_list_owner_filter(client):
     import main
-    from datetime import datetime
+    from datetime import datetime, timezone
     main.db.site_surveys.insert_many([
         {"owner": "c@x.com", "status": "done", "image_count": 2,
-         "created_at": datetime.utcnow(),
+         "created_at": datetime.now(timezone.utc),
          "structured": {"venue": {"type": "室外"}, "issues": ["入口窄"]}},
         {"owner": "d@x.com", "status": "done", "image_count": 3,
-         "created_at": datetime.utcnow()},
+         "created_at": datetime.now(timezone.utc)},
     ])
     r = client.get("/site-survey", headers={"X-User-Email": "c@x.com"})
     items = r.json()["items"]
@@ -106,11 +106,11 @@ def test_survey_list_owner_filter(client):
 
 def test_push_to_handoff(client):
     import main
-    from datetime import datetime
+    from datetime import datetime, timezone
     proj_id = main.projects_col.insert_one({
         "name": "場勘測試",
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     }).inserted_id
 
     sid = main.db.site_surveys.insert_one({
@@ -123,7 +123,7 @@ def test_push_to_handoff(client):
             "toilets_count": 3,
             "issues": ["入口有高差"],
         },
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
     }).inserted_id
 
     r = client.post(f"/site-survey/{sid}/push-to-handoff", headers=USER)

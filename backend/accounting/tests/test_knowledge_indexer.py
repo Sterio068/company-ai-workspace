@@ -10,7 +10,7 @@ import pathlib
 import tempfile
 import pytest
 import mongomock
-from datetime import datetime
+from datetime import datetime, timezone
 
 from services import knowledge_indexer
 from services.knowledge_extract import extract, EXTRACTORS
@@ -52,8 +52,8 @@ def tmp_src(sources_col):
         "max_size_mb": 10,
         "last_indexed_at": None,
         "last_index_stats": None,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     }).inserted_id
     yield {"id": str(sid), "path": d, "col": sources_col}
     import shutil

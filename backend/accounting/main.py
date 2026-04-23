@@ -177,11 +177,18 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("[index] site_surveys: %s", e)
     # Feature #6 · media_contacts email unique(R21#4 · partial 排除空字串)
+    # 技術債#9(2026-04-23)· 偵測舊 sparse 索引並 drop · 防 IndexKeySpecsConflict spam log
     try:
+        existing = db.media_contacts.index_information().get("email_1")
+        if existing and "partialFilterExpression" not in existing:
+            # 舊 sparse 配置 · drop 後重建 partialFilter
+            db.media_contacts.drop_index("email_1")
+            logger.info("[index] media_contacts.email_1 · 舊 sparse 已 drop · 重建 partialFilter")
         db.media_contacts.create_index(
             [("email", 1)],
             unique=True,
             partialFilterExpression={"email": {"$type": "string", "$gt": ""}},
+            name="email_1",
         )
         db.media_contacts.create_index([("outlet", 1), ("beats", 1)])
         db.media_pitch_history.create_index([("contact_id", 1), ("pitched_at", -1)])
@@ -655,79 +662,8 @@ QUOTA_OVERRIDE_EMAILS = set(_settings.quota_override_emails)
 
 
 
-@app.get("/quota/check")
-def quota_check(email: Optional[str] = Depends(current_user_email)):
-    """Launcher 送對話前先打 · 超 100% 直接擋送(hard_stop 模式)"""
-    return admin_metrics.quota_check(
-        db, _users_col, email,
-        mode=QUOTA_MODE,
-        override_emails=QUOTA_OVERRIDE_EMAILS,
-        admin_allowlist=_admin_allowlist,
-        user_soft_cap_ntd=_USER_SOFT_CAP_DEFAULT,
-        usd_to_ntd=_USD_TO_NTD,
-    )
-
-
-@app.get("/quota/preflight")
-@_limiter.limit(os.getenv("RATE_LIMIT_QUOTA_PREFLIGHT", "60/minute"))
-def quota_preflight(request: Request, email: Optional[str] = Depends(current_user_email)):
-    """Codex R7#9 + R8#3 · nginx auth_request 用 · 看 user 是否仍在預算內
-
-    回應 contract:
-    - 204 No Content · 通過(允許 LibreChat /api/ask)
-    - 429 Too Many Requests · 擋 · 帶 X-Quota-* response headers 給 nginx error_page 用
-    - 401 · 沒驗到身份(prod 嚴格擋 · dev 視為通過 · 給 launcher 開發空間)
-
-    使用方式(nginx):
-        location = /_quota_gate {
-            internal;
-            proxy_pass http://accounting:8000/quota/preflight;
-        }
-        location /api/ask {
-            auth_request /_quota_gate;
-            auth_request_set $quota_spent_ntd $upstream_http_x_quota_spent_ntd;
-            ...
-        }
-
-    R8#3 · 加 60/min 專屬 rate limit(防 user 連發 100 次 /api/ask 打死 quota_check)
-    """
-    from starlette.responses import Response
-    from fastapi.responses import JSONResponse
-    if not email:
-        # prod 嚴格 · dev 放行給 launcher 開發
-        if _is_prod():
-            raise HTTPException(401, "未識別使用者 · LibreChat 對話需登入")
-        return Response(status_code=204)
-    result = admin_metrics.quota_check(
-        db, _users_col, email,
-        mode=QUOTA_MODE,
-        override_emails=QUOTA_OVERRIDE_EMAILS,
-        admin_allowlist=_admin_allowlist,
-        user_soft_cap_ntd=_USER_SOFT_CAP_DEFAULT,
-        usd_to_ntd=_USD_TO_NTD,
-    )
-    if result.get("allowed") is False:
-        # R8#3 · 透過 X-Quota-* response headers 把細節傳給 nginx error_page
-        spent = result.get("spent_ntd", 0)
-        cap = result.get("cap_ntd", 0)
-        rid = getattr(request.state, "request_id", "")
-        return JSONResponse(
-            status_code=429,
-            content={
-                "detail": {
-                    "reason": result.get("reason", "quota exceeded"),
-                    "spent_ntd": spent,
-                    "cap_ntd": cap,
-                    "request_id": rid,
-                }
-            },
-            headers={
-                "X-Quota-Spent-Ntd": str(spent),
-                "X-Quota-Cap-Ntd": str(cap),
-                "X-Quota-Request-Id": str(rid),
-            },
-        )
-    return Response(status_code=204)
+# 技術債#2(2026-04-23)· /quota/check + /quota/preflight + /healthz 已抽 routers/system.py
+# main.py 不再直接定義 · 後段 include_router 處理(配 register_rate_limited_routes)
 
 
 
@@ -797,20 +733,14 @@ from routers import knowledge as _knowledge_router
 app.include_router(_knowledge_router.router)
 
 # ============================================================
-# Health
+# System router · 技術債#2(2026-04-23)· /quota/check + /quota/preflight + /healthz
+# preflight 需動態 register · 因 _limiter 在 main 才有
 # ============================================================
-@app.get("/healthz")
-def health():
-    from services.knowledge_extract import ocr_status
-    return {
-        "status": "ok",
-        "mongo": db.name,
-        "accounts": accounts_col.count_documents({}),
-        "projects": projects_col.count_documents({}),
-        "feedback": feedback_col.count_documents({}),
-        "knowledge_sources": knowledge_sources_col.count_documents({"enabled": True}),
-        "ocr": ocr_status(),  # Round 9 implicit · OCR tesseract 缺失曝光
-    }
+from routers import system as _system_router
+_system_router.register_rate_limited_routes(
+    _limiter.limit(os.getenv("RATE_LIMIT_QUOTA_PREFLIGHT", "60/minute"))
+)
+app.include_router(_system_router.router)
 
 
 # startup() 已 migrate 到上方 lifespan() · 此處留空避免重複註冊

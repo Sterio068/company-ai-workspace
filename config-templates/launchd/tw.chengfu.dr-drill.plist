@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  承富 AI · 技術債#12(2026-04-23)· 每月 1 號 03:00 跑 dr-drill 災難復原演練
+
+  目的:
+    驗證備份能成功還原 · 不是「有備份」就好 · 而是「能用」
+    每月跑一次 · 失敗 webhook 通知 admin
+
+  安裝:
+    cp config-templates/launchd/tw.chengfu.dr-drill.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/tw.chengfu.dr-drill.plist
+
+  驗證:
+    launchctl list | grep tw.chengfu.dr-drill
+    tail -f ~/Library/Logs/chengfu-dr-drill.log
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>tw.chengfu.dr-drill</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>export PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin &amp;&amp; cd "__REPO_ROOT__" &amp;&amp; CHENGFU_DR_DRILL_AUTO=1 ./scripts/dr-drill.sh</string>
+    </array>
+
+    <!-- 每月 1 號 03:00 跑 -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Day</key>
+        <integer>1</integer>
+        <key>Hour</key>
+        <integer>3</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/USERNAME/Library/Logs/chengfu-dr-drill.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/USERNAME/Library/Logs/chengfu-dr-drill.err.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+    <key>KeepAlive</key>
+    <false/>
+</dict>
+</plist>

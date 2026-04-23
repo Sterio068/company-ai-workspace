@@ -12,7 +12,7 @@ Projects router · v1.3 §11.1 B-10 · 從 main.py 抽出
 注意:V1.1-SPEC §C handoff endpoint 獨立於 PUT /projects/{id} · 不全量更新
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Literal
 
 from fastapi import APIRouter, HTTPException, Request
@@ -80,8 +80,8 @@ def list_projects(status: Optional[str] = None):
 def create_project(p: Project):
     from main import projects_col
     data = p.model_dump()
-    data["created_at"] = datetime.utcnow()
-    data["updated_at"] = datetime.utcnow()
+    data["created_at"] = datetime.now(timezone.utc)
+    data["updated_at"] = datetime.now(timezone.utc)
     r = projects_col.insert_one(data)
     return {"id": str(r.inserted_id)}
 
@@ -91,7 +91,7 @@ def update_project(project_id: str, p: Project):
     """R14#1 · 用 _project_oid · 補 404 · bad id 不再 500"""
     from main import projects_col
     data = p.model_dump(exclude_unset=True)  # py-review #1 · pydantic v2 一致
-    data["updated_at"] = datetime.utcnow()
+    data["updated_at"] = datetime.now(timezone.utc)
     r = projects_col.update_one({"_id": _project_oid(project_id)}, {"$set": data})
     if r.matched_count == 0:
         raise HTTPException(404, "專案不存在")
@@ -120,12 +120,12 @@ def update_handoff(project_id: str, card: HandoffCard, request: Request):
     payload = {
         **card.model_dump(),
         "updated_by": email,
-        "updated_at": datetime.utcnow(),
+        "updated_at": datetime.now(timezone.utc),
     }
     # R13#2 · _project_oid raise 400 為唯一 · update_one 失敗 → 真 500(Mongo 異常)
     r = projects_col.update_one(
         {"_id": _project_oid(project_id)},
-        {"$set": {"handoff": payload, "updated_at": datetime.utcnow()}},
+        {"$set": {"handoff": payload, "updated_at": datetime.now(timezone.utc)}},
     )
     if r.matched_count == 0:
         raise HTTPException(404, "專案不存在")

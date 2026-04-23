@@ -45,14 +45,27 @@ TAIPEI_TZ = timezone(timedelta(hours=8))
 
 
 def _to_utc(dt: datetime) -> datetime:
-    """R22#3 · 接收 datetime · 統一轉 UTC naive
-    - aware datetime → astimezone UTC + 去掉 tz info(Mongo 存 naive UTC)
-    - naive datetime → 視為台灣時間 + 換成 UTC
+    """R22#3 · 接收 datetime · 統一轉 aware UTC
+    - aware datetime → astimezone UTC
+    - naive datetime → 視為台灣時間 → 換成 UTC
+
+    技術債#1(2026-04-23)· 整個系統改用 aware UTC · 配合 datetime.now(timezone.utc)
+    Mongo / mongomock 都支援 aware datetime · 比舊 naive 更安全(防 R22 跨時區比較炸)
     """
     if dt.tzinfo is None:
         # 視為台灣時間
-        return (dt.replace(tzinfo=TAIPEI_TZ).astimezone(timezone.utc)).replace(tzinfo=None)
-    return dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return dt.replace(tzinfo=TAIPEI_TZ).astimezone(timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _ensure_aware(dt: Optional[datetime]) -> Optional[datetime]:
+    """讀 DB 出來的 naive datetime(舊資料)當 UTC · 回 aware
+    新資料寫入時就是 aware · 不需 patch · 只 patch 舊資料"""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 def _oid(post_id: str) -> ObjectId:
@@ -86,7 +99,7 @@ def create_post(p: ScheduledPost, email: str = require_user_dep()):
         raise HTTPException(400, "Instagram 需要 image_url(IG 硬規定)")
     # R22#3 · timezone normalize · 不論前端送 naive(視為 TW)或 aware · 統一轉 UTC naive
     schedule_utc = _to_utc(p.schedule_at)
-    if schedule_utc < datetime.utcnow() - timedelta(minutes=5):
+    if schedule_utc < datetime.now(timezone.utc) - timedelta(minutes=5):
         raise HTTPException(400, "schedule_at 不能在過去")
 
     doc = {
@@ -97,8 +110,8 @@ def create_post(p: ScheduledPost, email: str = require_user_dep()):
         "schedule_at": schedule_utc,
         "status": "queued",
         "attempts": 0,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     }
     r = db.scheduled_posts.insert_one(doc)
     return {"post_id": str(r.inserted_id), "status": "queued"}
@@ -150,10 +163,10 @@ def update_post(post_id: str, p: ScheduledPostPatch, email: str = require_user_d
         raise HTTPException(400, "沒有可更新欄位")
     if "schedule_at" in updates:
         schedule_utc = _to_utc(updates["schedule_at"])
-        if schedule_utc < datetime.utcnow():
+        if schedule_utc < datetime.now(timezone.utc):
             raise HTTPException(400, "schedule_at 不能在過去")
         updates["schedule_at"] = schedule_utc
-    updates["updated_at"] = datetime.utcnow()
+    updates["updated_at"] = datetime.now(timezone.utc)
 
     # CAS · 必須 status=queued + author 是 self
     r = db.scheduled_posts.update_one(
@@ -182,7 +195,7 @@ def cancel_post(post_id: str, email: str = require_user_dep()):
     # CAS · 只准 queued / failed 狀態 cancel
     r = db.scheduled_posts.update_one(
         {"_id": oid, "author": email, "status": {"$in": ["queued", "failed"]}},
-        {"$set": {"status": "cancelled", "updated_at": datetime.utcnow()}},
+        {"$set": {"status": "cancelled", "updated_at": datetime.now(timezone.utc)}},
     )
     if r.matched_count == 0:
         existing = db.scheduled_posts.find_one({"_id": oid})
@@ -222,7 +235,7 @@ def _dispatch_one(oid: ObjectId, doc: dict) -> dict:
     from main import db
 
     # R22#1 · Atomic claim · 加 publishing_until lease
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     lease_until = now + timedelta(minutes=PUBLISHING_LEASE_MINUTES)
     r = db.scheduled_posts.update_one(
         {
@@ -251,8 +264,8 @@ def _dispatch_one(oid: ObjectId, doc: dict) -> dict:
                 "status": "published",
                 "platform_post_id": result["post_id"],
                 "platform_url": result["url"],
-                "published_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow(),
+                "published_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc),
                 "last_error": None,
             },
              "$unset": {"publishing_until": ""}},  # R22#1 · 清 lease
@@ -265,7 +278,7 @@ def _dispatch_one(oid: ObjectId, doc: dict) -> dict:
         new_status = "failed" if attempts >= MAX_RETRIES else "queued"
         # Retry 間隔 · exp backoff 寫進 schedule_at
         if new_status == "queued":
-            next_try = datetime.utcnow() + timedelta(minutes=2 ** attempts)
+            next_try = datetime.now(timezone.utc) + timedelta(minutes=2 ** attempts)
         else:
             next_try = doc["schedule_at"]
         err_msg = ("PublishError: " if is_known else "Exception: ") + str(e)[:280]
@@ -276,7 +289,7 @@ def _dispatch_one(oid: ObjectId, doc: dict) -> dict:
                 "attempts": attempts,
                 "last_error": err_msg,
                 "schedule_at": next_try,
-                "updated_at": datetime.utcnow(),
+                "updated_at": datetime.now(timezone.utc),
             },
              "$unset": {"publishing_until": ""}},  # R22#1 · 清 lease
         )
@@ -289,7 +302,7 @@ def _dispatch_one(oid: ObjectId, doc: dict) -> dict:
                     "resource": str(oid),
                     "details": {"platform": doc["platform"], "error": str(e)[:300],
                                 "attempts": attempts},
-                    "created_at": datetime.utcnow(),
+                    "created_at": datetime.now(timezone.utc),
                 })
             except Exception:
                 pass
@@ -313,7 +326,7 @@ def run_queue(
         raise HTTPException(403, "internal token invalid")
 
     from main import db
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     # R22#1 · 也撈 publishing 過期的孤兒(container kill / 真 timeout)
     to_dispatch = list(db.scheduled_posts.find(
         {"$or": [

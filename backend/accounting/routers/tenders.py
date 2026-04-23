@@ -8,7 +8,7 @@ v1.2 §11.1 B-1.5 · 改用 routers/_deps.py 共用 helper
 """
 from fastapi import APIRouter, HTTPException
 from typing import Optional, Literal
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ._deps import _serialize, current_user_email_dep, require_user_dep
 
@@ -43,6 +43,6 @@ def update_tender_alert(
         raise HTTPException(403, "未識別呼叫者 · 請從 launcher 進入")
     r = db.tender_alerts.update_one(
         {"tender_key": tender_key},
-        {"$set": {"status": status, "reviewed_at": datetime.utcnow(), "reviewed_by": caller}},
+        {"$set": {"status": status, "reviewed_at": datetime.now(timezone.utc), "reviewed_by": caller}},
     )
     return {"updated": r.modified_count}

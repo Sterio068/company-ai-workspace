@@ -17,7 +17,7 @@ import re
 import logging
 import mimetypes
 import fnmatch
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Literal
 from collections import OrderedDict
 
@@ -188,7 +188,7 @@ def _invalidate_sources_cache():
     try:
         db.knowledge_meta.update_one(
             {"name": "sources_cache_version"},
-            {"$set": {"v": _uuid.uuid4().hex, "ts": datetime.utcnow()}},
+            {"$set": {"v": _uuid.uuid4().hex, "ts": datetime.now(timezone.utc)}},
             upsert=True,
         )
     except Exception as e:
@@ -303,8 +303,8 @@ def create_source(src: KnowledgeSource, admin_email: str = require_admin_dep()):
         "last_indexed_at": None,
         "last_index_stats": None,
         "created_by": admin_email,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     })
     r = knowledge_sources_col.insert_one(doc)
     sid = str(r.inserted_id)
@@ -331,7 +331,7 @@ def update_source(
     updates = {k: v for k, v in patch.model_dump(exclude_unset=True).items() if v is not None}
     if not updates:
         raise HTTPException(400, "沒有可更新欄位")
-    updates["updated_at"] = datetime.utcnow()
+    updates["updated_at"] = datetime.now(timezone.utc)
     r = knowledge_sources_col.update_one({"_id": _id}, {"$set": updates})
     if r.matched_count == 0:
         raise HTTPException(404, "資料源不存在")
@@ -376,7 +376,7 @@ def source_health(source_id: str, _admin: str = require_admin_dep()):
         "name": src.get("name"),
         "path": path,
         "enabled": src.get("enabled", True),
-        "checked_at": datetime.utcnow().isoformat(),
+        "checked_at": datetime.now(timezone.utc).isoformat(),
     }
 
     health["path_exists"] = os.path.exists(path)
@@ -441,7 +441,7 @@ def all_sources_health(_admin: str = require_admin_dep()):
         else:
             summary["other"] += 1
     return {
-        "checked_at": datetime.utcnow().isoformat(),
+        "checked_at": datetime.now(timezone.utc).isoformat(),
         "summary": summary,
         "sources": results,
     }
@@ -606,7 +606,7 @@ def knowledge_read(
             "source_id": source_id,
             "rel_path": rel_path,
             "size": size,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
         })
     except Exception as e:
         logger.error("[knowledge] audit log fail · 擋讀取(fail-closed): %s", e)

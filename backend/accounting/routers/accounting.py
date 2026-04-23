@@ -16,7 +16,7 @@ Accounting router · v1.3 §11.1 B-8 · 從 main.py 抽出(會計核心)
 - /projects/* 仍在 main.py(B 區塊 · v1.3 後續可抽 routers/projects.py)
 """
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from enum import Enum
 from typing import Optional, Literal
 
@@ -155,7 +155,7 @@ def seed_accounts():
     created = 0
     for acc in DEFAULT_ACCOUNTS:
         if not accounts_col.find_one({"code": acc["code"]}):
-            accounts_col.insert_one({**acc, "active": True, "created_at": datetime.utcnow()})
+            accounts_col.insert_one({**acc, "active": True, "created_at": datetime.now(timezone.utc)})
             created += 1
     return {"seeded": created, "total": accounts_col.count_documents({})}
 
@@ -174,7 +174,7 @@ def create_account(acc: Account):
     from main import accounts_col
     if accounts_col.find_one({"code": acc.code}):
         raise HTTPException(400, f"科目編號 {acc.code} 已存在")
-    r = accounts_col.insert_one({**acc.model_dump(), "created_at": datetime.utcnow()})
+    r = accounts_col.insert_one({**acc.model_dump(), "created_at": datetime.now(timezone.utc)})
     return {"id": str(r.inserted_id)}
 
 
@@ -188,7 +188,7 @@ def create_transaction(tx: Transaction):
         if not accounts_col.find_one({"code": code}):
             raise HTTPException(400, f"科目 {code} 不存在")
     data = tx.model_dump()
-    data["created_at"] = datetime.utcnow()
+    data["created_at"] = datetime.now(timezone.utc)
     r = transactions_col.insert_one(data)
     if tx.project_id:
         _update_project_finance(tx.project_id)
@@ -250,7 +250,7 @@ def create_invoice(inv: Invoice):
         tax = subtotal * data["tax_rate"]
         total = subtotal + tax
     data.update({"subtotal": round(subtotal, 2), "tax": round(tax, 2),
-                 "total": round(total, 2), "created_at": datetime.utcnow()})
+                 "total": round(total, 2), "created_at": datetime.now(timezone.utc)})
     r = invoices_col.insert_one(data)
     return {"id": str(r.inserted_id), "invoice_no": data["invoice_no"], "total": data["total"]}
 
@@ -291,7 +291,7 @@ def create_quote(quote: Quote):
         tax = subtotal * data["tax_rate"]
         total = subtotal + tax
     data.update({"subtotal": round(subtotal, 2), "tax": round(tax, 2),
-                 "total": round(total, 2), "created_at": datetime.utcnow()})
+                 "total": round(total, 2), "created_at": datetime.now(timezone.utc)})
     r = quotes_col.insert_one(data)
     return {"id": str(r.inserted_id), "quote_no": data["quote_no"], "total": data["total"]}
 
@@ -332,7 +332,7 @@ def _update_project_finance(project_id: str):
             "expense": round(expense, 2),
             "margin": round(margin, 2),
             "margin_rate": round(margin_rate, 2),
-            "updated_at": datetime.utcnow(),
+            "updated_at": datetime.now(timezone.utc),
         }},
         upsert=True,
     )

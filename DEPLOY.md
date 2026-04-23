@@ -179,6 +179,20 @@ cd ..
 ```
 
 ### 2.3 啟動系統
+
+> **🔒 PROD vs ⚙ DEV 模式**(R27#1 強制 prod fail-closed):
+>
+> ```bash
+> # 正式部署(預設):嚴格認證 · 不接 X-User-Email header
+> ./scripts/start.sh
+>
+> # 本機開發:ECC_ENV=development + ALLOW_LEGACY_AUTH_HEADERS=1
+> # 自動 merge docker-compose.override.yml(LibreChat port 3080 對外、debug log)
+> CHENGFU_ENV=dev ./scripts/start.sh
+> ```
+>
+> 啟動時 console 會印 `🔒 PROD 模式` 或 `⚙ DEV 模式` · 請確認後才繼續
+
 ```bash
 ./scripts/start.sh
 ```

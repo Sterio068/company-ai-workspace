@@ -4,7 +4,7 @@ services/admin_metrics.py · unit tests
 """
 import pytest
 import mongomock
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from services import admin_metrics
 
 
@@ -51,7 +51,7 @@ def test_probe_tx_schema_ok(db):
         "rawAmount": {"prompt": 100, "completion": 50},
         "model": "claude-haiku-4-5",
         "user": "user_abc",
-        "createdAt": datetime.utcnow(),
+        "createdAt": datetime.now(timezone.utc),
     })
     s = admin_metrics.probe_tx_schema(db)
     assert s["ok"] is True
@@ -64,7 +64,7 @@ def test_probe_tx_schema_missing_field(db):
         "amount": 100,  # 新 schema
         "model": "claude-haiku-4-5",
         "user": "x",
-        "createdAt": datetime.utcnow(),
+        "createdAt": datetime.now(timezone.utc),
     })
     s = admin_metrics.probe_tx_schema(db)
     assert s["ok"] is False
@@ -79,7 +79,7 @@ def test_budget_status_no_data(db):
 
 
 def test_budget_status_with_data(db):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     db.transactions.insert_one({
         "rawAmount": {"prompt": 4_000_000, "completion": 2_000_000},
         "model": "claude-sonnet-4-6",
@@ -94,7 +94,7 @@ def test_budget_status_with_data(db):
 
 def test_budget_status_over_budget(db):
     """超 100% · alert_level = over"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     # Opus: 100M × 15 + 50M × 75 = 1500 + 3750 = 5250 USD × 32.5 = NT$ 170625
     db.transactions.insert_one({
         "rawAmount": {"prompt": 100_000_000, "completion": 50_000_000},
@@ -146,7 +146,7 @@ def test_quota_check_hard_stop_over(db, users_col):
         "rawAmount": {"prompt": 100_000_000, "completion": 50_000_000},
         "model": "claude-opus-4-7",
         "user": uid,
-        "createdAt": datetime.utcnow(),
+        "createdAt": datetime.now(timezone.utc),
     })
     r = admin_metrics.quota_check(
         db, users_col, "staff@x.com",
@@ -164,7 +164,7 @@ def test_quota_check_soft_warn_over(db, users_col):
         "rawAmount": {"prompt": 100_000_000, "completion": 50_000_000},
         "model": "claude-opus-4-7",
         "user": uid,
-        "createdAt": datetime.utcnow(),
+        "createdAt": datetime.now(timezone.utc),
     })
     r = admin_metrics.quota_check(
         db, users_col, "staff@x.com",
@@ -180,7 +180,7 @@ def test_librechat_contract_includes_fingerprint(db):
         "rawAmount": {"prompt": 100, "completion": 50},
         "model": "claude-haiku-4-5",
         "user": "x",
-        "createdAt": datetime.utcnow(),
+        "createdAt": datetime.now(timezone.utc),
     })
     r = admin_metrics.librechat_contract(db)
     assert r["transactions_schema_ok"] is True

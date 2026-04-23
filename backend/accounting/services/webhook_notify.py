@@ -109,16 +109,12 @@ def send(webhook_url: str, message: str, *, timeout: int = 10) -> bool:
 
 
 def notify_user(db, email: str, message: str) -> bool:
-    """從 db.user_preferences 拿 webhook_url(舊 line_token 也兼容)"""
-    # 優先讀新欄位
+    """從 db.user_preferences 拿 webhook_url
+    技術債#4(2026-04-23)· 移除 line_token fallback · 已 cleanup-line-legacy.py 清過
+    """
     pref = db.user_preferences.find_one({"user_email": email, "key": "webhook_url"})
     if pref and pref.get("value"):
         return send(pref["value"], message)
-    # 回退舊 line_token(已停服 · 但 1.2 早期 user 可能存了)
-    legacy = db.user_preferences.find_one({"user_email": email, "key": "line_token"})
-    if legacy and legacy.get("value"):
-        logger.warning("[webhook] %s 仍用 LINE Notify token · 已停服 · 改設 webhook_url", email)
-        # 不送 LINE(會 fail)· 不浪費 timeout
     return False
 
 

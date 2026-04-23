@@ -126,7 +126,7 @@ def audit_pii(payload: PIIDetectRequest, request: Request):
                     "hit_kinds": list(set(h["kind"] for h in hits)),
                     "text_length": len(payload.text or ""),
                 },
-                "created_at": __import__("datetime").datetime.utcnow(),
+                "created_at": __import__("datetime").datetime.now(timezone.utc),
             })
         except Exception:
             pass

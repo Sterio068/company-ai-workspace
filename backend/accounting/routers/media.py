@@ -22,7 +22,7 @@ Collection · media_contacts:
 import csv
 import io
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
@@ -129,8 +129,8 @@ def create_contact(c: MediaContact, admin_email: str = require_admin_dep()):
     data["pitched_count"] = 0
     data["accepted_count"] = 0
     data["accepted_topics"] = []
-    data["created_at"] = datetime.utcnow()
-    data["updated_at"] = datetime.utcnow()
+    data["created_at"] = datetime.now(timezone.utc)
+    data["updated_at"] = datetime.now(timezone.utc)
     data["created_by"] = admin_email
     r = db.media_contacts.insert_one(data)
     return {"id": str(r.inserted_id)}
@@ -144,7 +144,7 @@ def update_contact(contact_id: str, p: MediaContactPatch, _admin: str = require_
         raise HTTPException(400, "沒有可更新欄位")
     if "email" in updates:
         updates["email"] = updates["email"].lower()
-    updates["updated_at"] = datetime.utcnow()
+    updates["updated_at"] = datetime.now(timezone.utc)
     r = db.media_contacts.update_one({"_id": _oid(contact_id)}, {"$set": updates})
     if r.matched_count == 0:
         raise HTTPException(404, "記者不存在")
@@ -157,7 +157,7 @@ def deactivate_contact(contact_id: str, _admin: str = require_admin_dep()):
     from main import db
     r = db.media_contacts.update_one(
         {"_id": _oid(contact_id)},
-        {"$set": {"is_active": False, "updated_at": datetime.utcnow()}},
+        {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc)}},
     )
     if r.matched_count == 0:
         raise HTTPException(404, "記者不存在")
@@ -181,7 +181,7 @@ def record_pitch(pitch: PitchRecord, email: str = require_user_dep()):
         "topic": pitch.topic,
         "press_release_ref": pitch.press_release_ref,
         "accepted": pitch.accepted,
-        "pitched_at": datetime.utcnow(),
+        "pitched_at": datetime.now(timezone.utc),
         "pitched_by": email,
     }
     db.media_pitch_history.insert_one(pitch_doc)
@@ -189,8 +189,8 @@ def record_pitch(pitch: PitchRecord, email: str = require_user_dep()):
     # 更新 contact 統計
     updates = {
         "$inc": {"pitched_count": 1},
-        "$set": {"last_pitched_at": datetime.utcnow(),
-                 "updated_at": datetime.utcnow()},
+        "$set": {"last_pitched_at": datetime.now(timezone.utc),
+                 "updated_at": datetime.now(timezone.utc)},
     }
     if pitch.accepted:
         updates["$inc"]["accepted_count"] = 1
@@ -234,7 +234,7 @@ def recommend_contacts(req: RecommendRequest, _admin: str = require_admin_dep())
 
     max_accepted = max((c.get("accepted_count", 0) for c in active), default=1) or 1
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     scored = []
     for c in active:
         beats = set(c.get("beats", []))
@@ -348,14 +348,14 @@ async def import_csv(
             "email": email,
             "phone": (row.get("phone") or "").strip() or None,
             "notes": (row.get("notes") or "").strip() or None,
-            "updated_at": datetime.utcnow(),
+            "updated_at": datetime.now(timezone.utc),
         }
         doc_insert = {
             "is_active": True,
             "pitched_count": 0,
             "accepted_count": 0,
             "accepted_topics": [],
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
             "created_by": admin_email,
         }
         existing = db.media_contacts.find_one({"email": email})

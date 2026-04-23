@@ -140,8 +140,8 @@ def test_run_queue_dispatches(client):
         "schedule_at": past,
         "status": "queued",
         "attempts": 0,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     })
     r = client.post("/admin/social/run-queue",
                     headers={"X-Internal-Token": "test-internal-token"})
