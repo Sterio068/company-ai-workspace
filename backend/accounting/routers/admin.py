@@ -919,4 +919,10 @@ def pdpa_delete_user(user_email: str, payload: PdpaDeleteRequest,
         "total": sum(counts.values()),
         "note": ("dry_run · 沒真刪 · 確認後 dry_run=false 重打"
                  if payload.dry_run else "已刪 · 不可恢復 · audit 已紀錄"),
+        # R30 補 · 提醒 LibreChat 對話資料是另一個 DB · 此 endpoint 不碰
+        "librechat_warning": (
+            "此操作不刪 LibreChat 對話紀錄(MongoDB librechat DB)· "
+            "如需清對話 · 走 docs/05-SECURITY.md §人員異動 流程 · "
+            "或 mongo shell:db.conversations.deleteMany({user:'<user_id>'})"
+        ),
     }
