@@ -16,6 +16,10 @@ function ensureContainer() {
   if (!container) {
     container = document.createElement("div");
     container.className = "toast-container";
+    // v1.3 P1#8 · a11y · 讀屏器會唸出 toast 內容 · error/warn 用 assertive
+    container.setAttribute("role", "status");
+    container.setAttribute("aria-live", "polite");
+    container.setAttribute("aria-atomic", "true");
     document.body.appendChild(container);
   }
   return container;
@@ -36,6 +40,8 @@ export function show(msg, type = "info", opts = {}) {
 
   const el = document.createElement("div");
   el.className = `toast ${type}`;
+  // v1.3 P1#8 · error/warn 用 assertive(立刻唸)· success/info 用 polite(等說完再唸)
+  el.setAttribute("role", type === "error" || type === "warn" ? "alert" : "status");
 
   const detailHtml = detail ? `<div class="toast-detail">${escapeHtml(detail)}</div>` : "";
   const actionHtml = action ? `<button class="toast-action">${escapeHtml(action.label)}</button>` : "";
