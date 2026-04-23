@@ -224,6 +224,14 @@ export const app = {
     });
     if (view !== "dashboard") window.location.hash = view;
     else history.pushState("", document.title, window.location.pathname);
+
+    // v1.3 batch4 · dispatch ws-changed · 給 mobile bottom nav sync active state
+    const VIEW_TO_WS = {
+      dashboard: "0", tenders: "1", projects: "2",
+      chat: "3", meeting: "4", accounting: "5",
+    };
+    const ws = VIEW_TO_WS[view] || "0";
+    document.dispatchEvent(new CustomEvent("ws-changed", { detail: { ws, view } }));
     // V1.1 §E-3 · 切到 knowledge 自動載入
     if (view === "knowledge") knowledge.loadBrowser();
     if (view === "admin") knowledge.loadAdmin();

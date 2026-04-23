@@ -1737,7 +1737,49 @@ kbd {
   }
   body.mobile-drawer-open .sidebar { transform: translateX(0); }
 
-  .main { padding-top: 64px; }
+  .main {
+    padding-top: 64px;
+    padding-bottom: 72px;  /* v1.3 batch4 · 給 bottom nav 留空 */
+  }
+}
+
+/* v1.3 batch4 P1#6 · 行動端底部 nav · 拇指可達 · 6 個工作區一鍵切 */
+.mobile-bottom-nav {
+  display: none;  /* 桌機隱 */
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 60px;
+  background: var(--bg-float, var(--bg-content));
+  backdrop-filter: var(--blur, blur(12px));
+  -webkit-backdrop-filter: var(--blur, blur(12px));
+  border-top: 1px solid var(--border);
+  z-index: 90;
+  padding-bottom: env(safe-area-inset-bottom, 0);  /* iPhone home indicator */
+}
+.mobile-bottom-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-size: 10px;
+  padding: 6px 4px;
+  transition: color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.mobile-bottom-item:active { background: var(--surface-2); }
+.mobile-bottom-item.active { color: var(--accent); }
+.mobile-bottom-icon {
+  font-size: 22px;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+.mobile-bottom-label { font-size: 10px; line-height: 1.2; }
+
+@media (max-width: 768px) {
+  .mobile-bottom-nav { display: flex; }
 }
 
 /* ============================================================ Caption */
@@ -3015,7 +3057,11 @@ button:focus-visible,
   margin-bottom: var(--s-4);
 }
 .help-secrets-noadmin p { margin-bottom: 4px; }
-.help-secrets-err { background: rgba(239, 68, 68, .08); color: #b91c1c; }
+.help-secrets-err { background: rgba(239, 68, 68, .08); color: var(--red, #b91c1c); }
+[data-theme="dark"] .help-secrets-err,
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] .help-secrets-err { color: #fca5a5; }
+}
 
 .help-secrets-summary {
   font-size: 13px;
@@ -3047,8 +3093,8 @@ button:focus-visible,
   border-radius: 4px;
   font-family: SFMono-Regular, Menlo, monospace;
 }
-.secret-ok { color: #16a34a; font-weight: 600; }
-.secret-miss { color: #dc2626; font-weight: 600; }
+.secret-ok { color: var(--green, #16a34a); font-weight: 600; }
+.secret-miss { color: var(--red, #dc2626); font-weight: 600; }
 
 .badge-required, .badge-optional {
   font-size: 10px;
@@ -3057,8 +3103,13 @@ button:focus-visible,
   margin-left: 6px;
   font-weight: 600;
 }
-.badge-required { background: #fef2f2; color: #b91c1c; }
-.badge-optional { background: var(--surface-3); color: var(--text-tertiary); }
+.badge-required { background: color-mix(in srgb, var(--red) 12%, transparent); color: var(--red); }
+.badge-optional { background: var(--surface-3, var(--bg-base)); color: var(--text-tertiary); }
+[data-theme="dark"] .badge-required,
+[data-theme="auto"] .badge-required { color: #fca5a5; }
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] .badge-required { color: #fca5a5; }
+}
 
 .btn-apply, .btn-edit {
   display: inline-block;

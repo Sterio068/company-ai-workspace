@@ -3,7 +3,7 @@
  */
 import { escapeHtml } from "./util.js";
 import { modal } from "./modal.js";
-import { toast } from "./toast.js";
+import { toast, networkError, operationError } from "./toast.js";
 import { tpl } from "./tpl.js";
 
 const BASE = "/api-accounting/crm";
@@ -43,7 +43,10 @@ export const crm = {
         count.textContent = this.leads.filter(l =>
           !["won", "lost", "closed"].includes(l.stage)).length;
       }
-    } catch { this.leads = []; }
+    } catch (e) {
+      this.leads = [];
+      networkError("讀取 CRM 商機", e, () => this.load());
+    }
   },
 
   async loadStats() {
@@ -74,6 +77,18 @@ export const crm = {
   render() {
     const root = document.getElementById("kanban-board");
     if (!root) return;
+
+    // v1.3 batch4 · 全空態 · 提示先建第一筆
+    if (this.leads.length === 0) {
+      root.innerHTML = `
+        <div class="empty-state" style="grid-column:1/-1">
+          <div class="empty-state-icon">💼</div>
+          <div class="empty-state-title">CRM Pipeline 空</div>
+          <div class="empty-state-hint">點上方「+ 新商機」開始 · 或「📢 從標案匯入」一鍵帶入「有興趣」標案</div>
+        </div>`;
+      return;
+    }
+
     // 建 column skeleton · column-level event delegation(避免每卡綁 listener)
     root.innerHTML = STAGES.map(stage => `
       <div class="kanban-col" data-stage="${stage.key}">
@@ -145,14 +160,22 @@ export const crm = {
     e.preventDefault();
     e.currentTarget.classList.remove("drag-over");
     if (!this.draggedId) return;
-    await fetch(`${BASE}/leads/${this.draggedId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stage: newStage, _by: this._currentUserEmail }),
-    });
-    toast.success(`已移到「${STAGES.find(s => s.key === newStage).label}」`);
-    this.draggedId = null;
-    await this.load();
+    try {
+      const r = await fetch(`${BASE}/leads/${this.draggedId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage: newStage, _by: this._currentUserEmail }),
+      });
+      if (!r.ok) {
+        operationError("移動商機", await r.json().catch(() => ({})));
+        return;
+      }
+      toast.success(`已移到「${STAGES.find(s => s.key === newStage).label}」`);
+      this.draggedId = null;
+      await this.load();
+    } catch (e) {
+      networkError("移動商機", e);
+    }
   },
 
   async newLead() {
@@ -162,25 +185,41 @@ export const crm = {
       { name: "budget", label: "預算(NT$)", type: "number",  placeholder: "3000000" },
     ], { title: "新商機", primary: "建立", icon: "💼" });
     if (!r) return;
-    await fetch(`${BASE}/leads`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: r.title,
-        client: r.client,
-        budget: r.budget ? parseInt(r.budget) : null,
-        stage: "lead",
-      }),
-    });
-    toast.success("新商機已加入 · 拖到對應階段");
-    await this.load();
+    try {
+      const resp = await fetch(`${BASE}/leads`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: r.title,
+          client: r.client,
+          budget: r.budget ? parseInt(r.budget) : null,
+          stage: "lead",
+        }),
+      });
+      if (!resp.ok) {
+        operationError("建立商機", await resp.json().catch(() => ({})));
+        return;
+      }
+      toast.success("新商機已加入 · 拖到對應階段");
+      await this.load();
+    } catch (e) {
+      networkError("建立商機", e);
+    }
   },
 
   async importFromTenders() {
-    const r = await fetch(`${BASE}/import-from-tenders`, { method: "POST" });
-    const d = await r.json();
-    toast.success(`已匯入 ${d.imported} 筆「有興趣」標案(共 ${d.total_interested} 筆標記)`);
-    await this.load();
+    try {
+      const r = await fetch(`${BASE}/import-from-tenders`, { method: "POST" });
+      if (!r.ok) {
+        operationError("從標案匯入", await r.json().catch(() => ({})));
+        return;
+      }
+      const d = await r.json();
+      toast.success(`已匯入 ${d.imported} 筆「有興趣」標案(共 ${d.total_interested} 筆標記)`);
+      await this.load();
+    } catch (e) {
+      networkError("從標案匯入", e);
+    }
   },
 
   openLead(leadId) {
