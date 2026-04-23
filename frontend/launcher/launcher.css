@@ -1248,6 +1248,13 @@ kbd {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+/* v1.3 batch3 · skeleton 列表 wrapper · view init 用 */
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
 
 /* ============================================================
    ? 鍵盤快捷鍵 overlay

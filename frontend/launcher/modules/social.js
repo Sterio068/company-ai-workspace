@@ -10,7 +10,7 @@
  *     - 立刻發按鈕
  */
 import { authFetch } from "./auth.js";
-import { escapeHtml, formatDate } from "./util.js";
+import { escapeHtml, formatDate, skeletonCards } from "./util.js";
 import { toast, networkError, operationError } from "./toast.js";
 import { modal } from "./modal.js";
 
@@ -35,6 +35,8 @@ export const social = {
   _filter: { platform: "", status: "" },
 
   async init() {
+    const root = document.getElementById("view-social-content");
+    if (root) root.innerHTML = `<div class="skeleton-list">${skeletonCards(3)}</div>`;
     await this.load();
     this.render();
   },
