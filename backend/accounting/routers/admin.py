@@ -552,16 +552,19 @@ def monthly_report(month: Optional[str] = None, _admin: str = require_admin_dep(
 # Settings(_USD_TO_NTD / _MONTHLY_BUDGET_NTD / etc.)仍在 main · lazy import
 # ============================================================
 @router.get("/admin/cost")
-def cost_summary(days: int = 30, _admin: str = require_admin_dep()):
-    """粗估 API cost by model"""
+def cost_summary(days: int = Query(default=30, ge=1, le=365),
+                 _admin: str = require_admin_dep()):
+    """粗估 API cost by model · R37 · 加 days 上下限防裸 int 探勘"""
     from main import db
     from services import admin_metrics
     return admin_metrics.cost_by_model(db, days)
 
 
 @router.get("/admin/adoption")
-def adoption_summary(days: int = 7, _admin: str = require_admin_dep()):
-    """Codex Round 10.5 黃 6 · 支撐 BOSS-VIEW ROI 公式的 adoption 數字"""
+def adoption_summary(days: int = Query(default=7, ge=1, le=365),
+                     _admin: str = require_admin_dep()):
+    """Codex Round 10.5 黃 6 · 支撐 BOSS-VIEW ROI 公式的 adoption 數字
+    R37 · 加 days 上下限"""
     from main import db, _users_col, projects_col, feedback_col, _USD_TO_NTD
     from services import admin_metrics
     return admin_metrics.adoption_metrics(
@@ -595,8 +598,12 @@ def budget_status(_admin: str = require_admin_dep()):
 
 
 @router.get("/admin/top-users")
-def top_users(days: int = 30, limit: int = 10, _admin: str = require_admin_dep()):
-    """Top N 用量同仁"""
+def top_users(
+    days: int = Query(default=30, ge=1, le=365),
+    limit: int = Query(default=10, ge=1, le=100),
+    _admin: str = require_admin_dep(),
+):
+    """Top N 用量同仁 · R37 · days/limit 加上下限"""
     from main import db, _users_col, _USER_SOFT_CAP_DEFAULT, _USD_TO_NTD
     from services import admin_metrics
     return admin_metrics.top_users(db, _users_col, days, limit,

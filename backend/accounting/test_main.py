@@ -1397,6 +1397,21 @@ def test_audit_log_actions_requires_admin(client):
     assert r.status_code == 403
 
 
+def test_admin_metrics_days_bounded(client):
+    """R37 · /admin/cost /adoption /top-users days 加上下限 · 防裸 int 探勘
+    days=0 / 999 應 422"""
+    for path in ["/admin/cost", "/admin/adoption", "/admin/top-users"]:
+        # days=0 應 422
+        r = client.get(f"{path}?days=0", headers=ADMIN_HEADERS)
+        assert r.status_code == 422, f"{path}?days=0 應 422 (ge=1)"
+        # days=999 應 422
+        r = client.get(f"{path}?days=999", headers=ADMIN_HEADERS)
+        assert r.status_code == 422, f"{path}?days=999 應 422 (le=365)"
+        # 正常範圍應 200
+        r = client.get(f"{path}?days=7", headers=ADMIN_HEADERS)
+        assert r.status_code == 200, f"{path}?days=7 應 200"
+
+
 def test_audit_log_default_days_window(client):
     """R36 · /admin/audit-log GET 不帶 start_date/end_date 時 · 預設 90 天窗口
     · 防 admin 透過 ?skip 探勘全 1 年 audit history"""
