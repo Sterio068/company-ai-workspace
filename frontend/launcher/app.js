@@ -275,7 +275,12 @@ export const app = {
       const r = await resp.json();
       const convos = Array.isArray(r) ? r : (r.conversations || r.data || []);
       if (convos.length === 0) {
-        container.innerHTML = '<div class="chip-empty">尚無對話 · 從工作區開始</div>';
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">💬</div>
+            <div class="empty-state-title">尚無對話</div>
+            <div class="empty-state-hint">從 5 個工作區選一個 · 或按 ⌘1-5 快速切</div>
+          </div>`;
         return;
       }
       const dotColors = ["#FF3B30", "#FF9500", "#AF52DE", "#34C759", "#007AFF"];
@@ -295,8 +300,14 @@ export const app = {
         return node;
       });
       renderList(container, nodes);
-    } catch {
-      container.innerHTML = '<div class="chip-empty">尚無對話</div>';
+    } catch (e) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">😓</div>
+          <div class="empty-state-title">無法載入對話</div>
+          <div class="empty-state-hint">${(e?.message || "網路或後端錯")}</div>
+          <button class="btn-ghost" onclick="window.app?.loadRecents?.()" style="margin-top:12px">重試</button>
+        </div>`;
     }
   },
 
@@ -424,9 +435,12 @@ export const app = {
 
     if (list.length === 0) {
       root.innerHTML = `
-        <div class="chip-empty" style="grid-column: 1 / -1">
-          ${this.projectFilter === "all" ? "還沒有專案" : "沒有符合條件的專案"} ·
-          <a href="#" class="link" data-new-project>建立新專案</a>
+        <div class="empty-state" style="grid-column: 1 / -1">
+          <div class="empty-state-icon">📁</div>
+          <div class="empty-state-title">${this.projectFilter === "all" ? "尚無專案" : "沒有符合條件的專案"}</div>
+          <div class="empty-state-hint">
+            <a href="#" class="link" data-new-project>建立新專案</a>${this.projectFilter !== "all" ? " · 或切換篩選條件" : ""}
+          </div>
         </div>`;
       root.querySelector("[data-new-project]")?.addEventListener("click", e => {
         e.preventDefault();
