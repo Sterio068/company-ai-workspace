@@ -11,7 +11,7 @@
  */
 import { authFetch } from "./auth.js";
 import { escapeHtml, formatDate } from "./util.js";
-import { toast } from "./toast.js";
+import { toast, networkError, operationError } from "./toast.js";
 import { modal } from "./modal.js";
 
 const BASE = "/api-accounting";
@@ -50,7 +50,7 @@ export const social = {
       this._posts = body.items || [];
     } catch (e) {
       this._posts = [];
-      toast.error(`社群排程讀取失敗:${String(e)}`);
+      networkError("讀取社群排程", e, () => this.init());
     }
   },
 
@@ -80,9 +80,17 @@ export const social = {
         </div>
       </div>
 
-      ${this._renderSection("⏰ 排程中", queued, true)}
-      ${this._renderSection("✅ 已發出", published, false)}
-      ${this._renderSection("❌ 失敗", failed, true)}
+      ${this._posts.length === 0 ? `
+        <div class="empty-state">
+          <div class="empty-state-icon">📣</div>
+          <div class="empty-state-title">尚無社群排程</div>
+          <div class="empty-state-hint">點「+ 新排程」發一篇 FB / IG / LinkedIn 貼文</div>
+        </div>
+      ` : `
+        ${this._renderSection("⏰ 排程中", queued, true)}
+        ${this._renderSection("✅ 已發出", published, false)}
+        ${this._renderSection("❌ 失敗", failed, true)}
+      `}
     `;
 
     this._bindEvents();
@@ -202,14 +210,14 @@ export const social = {
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        toast.error(`儲存失敗:${err.detail || resp.status}`);
+        operationError("儲存社群排程", err);
         return;
       }
       toast.success(existing ? "已更新" : "已排程");
       await this.load();
       this.render();
     } catch (e) {
-      toast.error(`網路錯:${String(e)}`);
+      networkError("儲存社群排程", e);
     }
   },
 
@@ -219,14 +227,14 @@ export const social = {
       const r = await authFetch(`${BASE}/social/posts/${id}/publish-now`, { method: "POST" });
       const body = await r.json();
       if (body.published) {
-        toast.success(`✅ 已發 · ${body.url || ""}`);
+        toast.success("發送成功", { detail: body.url || "" });
       } else {
-        toast.error(`發送失敗:${body.error || "?"}`);
+        toast.error("社群發送失敗", { detail: body.error || "未知錯誤" });
       }
       await this.load();
       this.render();
     } catch (e) {
-      toast.error(`網路錯:${String(e)}`);
+      networkError("發送社群貼文", e);
     }
   },
 
@@ -236,14 +244,14 @@ export const social = {
       const r = await authFetch(`${BASE}/social/posts/${id}`, { method: "DELETE" });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
-        toast.error(`取消失敗:${err.detail || r.status}`);
+        operationError("取消排程", err);
         return;
       }
       toast.success("已取消");
       await this.load();
       this.render();
     } catch (e) {
-      toast.error(`網路錯:${String(e)}`);
+      networkError("取消排程", e);
     }
   },
 };

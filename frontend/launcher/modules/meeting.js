@@ -11,7 +11,7 @@
  */
 import { authFetch } from "./auth.js";
 import { escapeHtml } from "./util.js";
-import { toast } from "./toast.js";
+import { toast, networkError, operationError } from "./toast.js";
 
 const BASE = "/api-accounting";
 
@@ -51,7 +51,11 @@ export const meeting = {
 
       <h3>📋 我的會議</h3>
       ${this._meetings.length === 0 ? `
-        <p class="meeting-empty">沒會議 · 點上面「上傳音檔」開始</p>
+        <div class="empty-state">
+          <div class="empty-state-icon">🎤</div>
+          <div class="empty-state-title">尚無會議紀錄</div>
+          <div class="empty-state-hint">點上方「+ 上傳音檔」開始</div>
+        </div>
       ` : `
         <div class="meeting-list">
           ${this._meetings.map(m => `
@@ -95,14 +99,14 @@ export const meeting = {
     try {
       const r = await authFetch(`${BASE}/memory/meetings/${id}`);
       if (!r.ok) {
-        toast.error("讀取失敗");
+        operationError("讀取會議", `HTTP ${r.status}`, () => this._openDetail(id));
         return;
       }
       const body = await r.json();
       this._currentId = id;
       this._showResult(body);
     } catch (e) {
-      toast.error(`網路錯:${String(e)}`);
+      networkError("讀取會議", e, () => this._openDetail(id));
     }
   },
 
@@ -152,7 +156,7 @@ export const meeting = {
         });
         if (!r.ok) {
           const err = await r.json().catch(() => ({}));
-          toast.error(`上傳失敗:${err.detail || r.status}`);
+          operationError("上傳音檔", err);
           submitBtn.disabled = false;
           cancelBtn.disabled = false;
           submitBtn.innerHTML = "開始 · Whisper + Haiku";
@@ -166,7 +170,7 @@ export const meeting = {
         // 主 view 顯示 in-progress banner
         this._showProcessingBanner(body.meeting_id);
       } catch (e) {
-        toast.error(`網路錯:${String(e)} · 請重試`);
+        networkError("上傳音檔", e);
         submitBtn.disabled = false;
         cancelBtn.disabled = false;
         submitBtn.innerHTML = "開始 · Whisper + Haiku";
@@ -216,7 +220,10 @@ export const meeting = {
       if (attempts > 60) {  // 3 分鐘
         clearInterval(this._pollTimer);
         this._hideProcessingBanner();
-        toast.error("超時 · 到「使用教學 → API Key」看 OpenAI 是否有效");
+        toast.error("處理超時(3 分鐘)", {
+          detail: "OpenAI API Key 可能無效或過期",
+          action: { label: "看設定", onClick: () => location.hash = "#help" },
+        });
         return;
       }
       try {
@@ -230,7 +237,10 @@ export const meeting = {
         } else if (body.status === "failed") {
           clearInterval(this._pollTimer);
           this._hideProcessingBanner();
-          toast.error(`處理失敗:${body.error || "未知錯"} · 看 user-guide → 故障排除`);
+          toast.error("會議處理失敗", {
+            detail: body.error || "未知錯誤",
+            action: { label: "故障排除", onClick: () => location.hash = "#help" },
+          });
         }
       } catch {}
     }, 3000);
@@ -300,14 +310,14 @@ export const meeting = {
         );
         if (!r.ok) {
           const err = await r.json().catch(() => ({}));
-          toast.error(`推失敗:${err.detail || r.status}`);
+          operationError("推到 Handoff", err);
           return;
         }
         const body = await r.json();
         toast.success(`已推 ${body.next_actions_count} 項待辦到 Handoff`);
         modal.remove();
       } catch (e) {
-        toast.error(`網路錯:${String(e)}`);
+        networkError("推到 Handoff", e);
       }
     });
   },

@@ -12,7 +12,7 @@
  */
 import { authFetch } from "./auth.js";
 import { escapeHtml } from "./util.js";
-import { toast } from "./toast.js";
+import { toast, networkError, operationError, permissionError } from "./toast.js";
 import { modal } from "./modal.js";
 
 const BASE = "/api-accounting";
@@ -40,7 +40,7 @@ export const media = {
       this._contacts = body.items || [];
     } catch (e) {
       this._contacts = [];
-      toast.error(`媒體 CRM 讀取失敗:${String(e)}`);
+      networkError("讀取媒體 CRM", e, () => this.init(this._isAdmin));
     }
   },
 
@@ -87,7 +87,13 @@ export const media = {
         </tr></thead>
         <tbody>
           ${this._contacts.length === 0 ? `
-            <tr><td colspan="6" class="media-empty">沒記者 · ${this._isAdmin ? "點「+ 新增」或「CSV 匯入」開始" : "請 Champion 建檔"}</td></tr>
+            <tr><td colspan="6" class="media-empty">
+              <div class="empty-state">
+                <div class="empty-state-icon">📰</div>
+                <div class="empty-state-title">尚無媒體記者</div>
+                <div class="empty-state-hint">${this._isAdmin ? "點「+ 新增」或「CSV 匯入」開始" : "請 Champion 建檔"}</div>
+              </div>
+            </td></tr>
           ` : this._contacts.map(c => `
             <tr>
               <td><b>${escapeHtml(c.name || "")}</b></td>
@@ -176,14 +182,14 @@ export const media = {
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        toast.error(`儲存失敗:${err.detail || resp.status}`);
+        operationError("儲存記者", err);
         return;
       }
       toast.success(existing ? "已更新" : "已新增");
       await this.load();
       this.render();
     } catch (e) {
-      toast.error(`網路錯:${String(e)}`);
+      networkError("儲存記者", e);
     }
   },
 
@@ -192,14 +198,15 @@ export const media = {
     try {
       const r = await authFetch(`${BASE}/media/contacts/${id}`, { method: "DELETE" });
       if (!r.ok) {
-        toast.error(`停用失敗:${r.status}`);
+        const err = await r.json().catch(() => ({}));
+        operationError("停用記者", err);
         return;
       }
       toast.success("已停用");
       await this.load();
       this.render();
     } catch (e) {
-      toast.error(`網路錯:${String(e)}`);
+      networkError("停用記者", e);
     }
   },
 
@@ -223,16 +230,16 @@ export const media = {
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
         if (resp.status === 403) {
-          toast.error("推薦只 admin 可用(PDPA)");
+          permissionError("記者推薦");
         } else {
-          toast.error(`推薦失敗:${err.detail || resp.status}`);
+          operationError("記者推薦", err);
         }
         return;
       }
       const body = await resp.json();
       this._showRecommendResult(body, topics);
     } catch (e) {
-      toast.error(`網路錯:${String(e)}`);
+      networkError("記者推薦", e);
     }
   },
 
@@ -247,7 +254,11 @@ export const media = {
           從 ${body.total_candidates} 位 active 記者推 · ${body.recommended} 位匹配
         </p>
         ${body.items.length === 0 ? `
-          <p>沒有匹配的記者 · 試其他 topic</p>
+          <div class="empty-state">
+            <div class="empty-state-icon">🔍</div>
+            <div class="empty-state-title">找不到匹配記者</div>
+            <div class="empty-state-hint">試試其他 topic · 例如「環保 / 政策 / AI」</div>
+          </div>
         ` : `
           <table class="media-table">
             <thead><tr><th>#</th><th>姓名</th><th>媒體</th><th>分數</th><th>理由</th></tr></thead>
@@ -309,7 +320,7 @@ export const media = {
         });
         if (!r.ok) {
           const err = await r.json().catch(() => ({}));
-          toast.error(`匯入失敗:${err.detail || r.status}`);
+          operationError("CSV 匯入", err);
           return;
         }
         const body = await r.json();
@@ -318,7 +329,7 @@ export const media = {
         await this.load();
         this.render();
       } catch (e) {
-        toast.error(`網路錯:${String(e)}`);
+        networkError("CSV 匯入", e);
       }
     });
   },

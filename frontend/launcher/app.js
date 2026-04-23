@@ -932,6 +932,10 @@ window.tenders     = tenders;
 window.workflows   = workflows;
 window.crm         = crm;
 window.Projects    = Projects;
+window.siteSurvey  = siteSurvey;
+window.meeting     = meeting;
+window.media       = media;
+window.social      = social;
 window.palette     = palette;
 
 // ============================================================
