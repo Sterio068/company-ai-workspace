@@ -936,6 +936,7 @@ window.siteSurvey  = siteSurvey;
 window.meeting     = meeting;
 window.media       = media;
 window.social      = social;
+window.knowledge   = knowledge;
 window.palette     = palette;
 
 // ============================================================
