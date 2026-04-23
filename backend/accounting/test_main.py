@@ -1810,3 +1810,146 @@ def test_oauth_token_encrypt_decrypt_roundtrip():
     enc = oauth_tokens.encrypt_token(plain)
     dec = oauth_tokens.decrypt_token(enc)
     assert dec == plain
+
+
+# ============================================================
+# v1.3 · User Management UI · admin 在前端建同仁帳號
+# ============================================================
+def test_um_get_permission_catalog(client):
+    """admin 可拿 catalog · 28 permissions + 7 presets"""
+    r = client.get("/admin/users/permission-catalog", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    body = r.json()
+    assert "catalog" in body
+    assert "presets" in body
+    # 至少 7 組 · 全部攤平至少 20 個 permission
+    assert len(body["catalog"]) >= 7
+    all_keys = [item["key"] for g in body["catalog"] for item in g["items"]]
+    assert len(all_keys) >= 20
+    # presets 包含 7 個常見頭銜
+    assert "老闆 / Champion" in body["presets"]
+    assert "會計 / 財務" in body["presets"]
+
+
+def test_um_get_permission_catalog_user_denied(client):
+    """一般 USER 不能拿 catalog"""
+    r = client.get("/admin/users/permission-catalog",
+                   headers={"X-User-Email": "alice@chengfu.local"})
+    assert r.status_code == 403
+
+
+def test_um_create_user_success(client):
+    """admin 建新同仁 · 回 user 物件 · 寫 users collection"""
+    import main as main_mod
+    r = client.post("/admin/users", headers=ADMIN_HEADERS, json={
+        "email": "newguy@chengfu.com",
+        "name": "新同仁",
+        "password": "super-secure-pwd-2026",
+        "title": "設計師",
+        "permissions": ["design.generate", "project.edit_own", "knowledge.search"],
+        "role": "USER",
+    })
+    assert r.status_code == 200
+    body = r.json()
+    assert body["email"] == "newguy@chengfu.com"
+    assert body["title"] == "設計師"
+    assert body["role"] == "USER"
+    assert len(body["permissions"]) == 3
+    # DB 真有寫入
+    doc = main_mod.db.users.find_one({"email": "newguy@chengfu.com"})
+    assert doc is not None
+    assert doc["chengfu_title"] == "設計師"
+    assert doc["chengfu_active"] is True
+    # 密碼不能明文
+    assert doc["password"] != "super-secure-pwd-2026"
+    assert doc["password"].decode("utf-8").startswith("$2")  # bcrypt
+
+
+def test_um_create_user_rejects_duplicate_email(client):
+    """建重複 email · 回 409"""
+    client.post("/admin/users", headers=ADMIN_HEADERS, json={
+        "email": "dupe@chengfu.com", "name": "A", "password": "pwd12345678",
+    })
+    r = client.post("/admin/users", headers=ADMIN_HEADERS, json={
+        "email": "dupe@chengfu.com", "name": "B", "password": "pwd12345678",
+    })
+    assert r.status_code == 409
+
+
+def test_um_create_user_rejects_invalid_permission(client):
+    """不合法 permission key · 400"""
+    r = client.post("/admin/users", headers=ADMIN_HEADERS, json={
+        "email": "invalid@chengfu.com", "name": "X", "password": "pwd12345678",
+        "permissions": ["fake.permission.key"],
+    })
+    assert r.status_code == 400
+    assert "不合法" in r.json()["detail"]
+
+
+def test_um_create_user_rejects_weak_password(client):
+    """密碼 < 8 · pydantic 422"""
+    r = client.post("/admin/users", headers=ADMIN_HEADERS, json={
+        "email": "weak@chengfu.com", "name": "X", "password": "123",
+    })
+    assert r.status_code == 422
+
+
+def test_um_list_users(client):
+    """GET /admin/users · 列全部 · 不含密碼 hash"""
+    client.post("/admin/users", headers=ADMIN_HEADERS, json={
+        "email": "list-test@chengfu.com", "name": "列表測", "password": "pwd12345678",
+        "title": "企劃",
+    })
+    r = client.get("/admin/users", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total"] >= 1
+    # 找剛建的
+    found = [u for u in body["items"] if u["email"] == "list-test@chengfu.com"]
+    assert len(found) == 1
+    assert found[0]["title"] == "企劃"
+    # 密碼絕對不在 response 裡
+    assert "password" not in found[0]
+
+
+def test_um_update_user(client):
+    """PATCH /admin/users/:email · 改 title + permissions"""
+    client.post("/admin/users", headers=ADMIN_HEADERS, json={
+        "email": "update-me@chengfu.com", "name": "測", "password": "pwd12345678",
+        "title": "實習生",
+    })
+    r = client.patch("/admin/users/update-me@chengfu.com",
+                     headers=ADMIN_HEADERS,
+                     json={"title": "資深企劃",
+                           "permissions": ["project.create", "press.draft"]})
+    assert r.status_code == 200
+    # 驗
+    r2 = client.get("/admin/users", headers=ADMIN_HEADERS)
+    user = [u for u in r2.json()["items"] if u["email"] == "update-me@chengfu.com"][0]
+    assert user["title"] == "資深企劃"
+    assert set(user["permissions"]) == {"project.create", "press.draft"}
+
+
+def test_um_deactivate_user(client):
+    """DELETE /admin/users/:email · soft deactivate · active=false"""
+    client.post("/admin/users", headers=ADMIN_HEADERS, json={
+        "email": "kill-me@chengfu.com", "name": "測", "password": "pwd12345678",
+    })
+    r = client.delete("/admin/users/kill-me@chengfu.com", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json()["active"] is False
+    # 預設 list 不回 inactive
+    r2 = client.get("/admin/users", headers=ADMIN_HEADERS)
+    emails = [u["email"] for u in r2.json()["items"]]
+    assert "kill-me@chengfu.com" not in emails
+    # 加 include_inactive=true 才看到
+    r3 = client.get("/admin/users?include_inactive=true", headers=ADMIN_HEADERS)
+    emails3 = [u["email"] for u in r3.json()["items"]]
+    assert "kill-me@chengfu.com" in emails3
+
+
+def test_um_admin_cannot_deactivate_self(client):
+    """admin 不能停用自己 · 防 lockout"""
+    r = client.delete("/admin/users/sterio068@gmail.com", headers=ADMIN_HEADERS)
+    assert r.status_code == 400
+    assert "lockout" in r.json()["detail"].lower()

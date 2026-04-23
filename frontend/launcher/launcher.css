@@ -3577,3 +3577,166 @@ button:focus-visible,
   background: color-mix(in srgb, var(--red, #FF3B30) 8%, transparent);
 }
 
+
+/* ============================================================
+   v1.3 User Management(admin UI 建同仁)
+   ============================================================ */
+.users-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.users-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+.users-stat-item {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.users-stat-item b { color: var(--text-primary); font-weight: 600; font-size: 16px; }
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.users-table th,
+.users-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.users-table th {
+  background: var(--surface-2);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.users-table tr:hover { background: var(--surface-2); }
+.users-row-inactive { opacity: 0.5; }
+.users-row-inactive td { text-decoration: line-through; }
+
+.users-title-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.users-role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.users-role-admin { background: color-mix(in srgb, var(--red) 16%, transparent); color: var(--red); }
+.users-role-user  { background: color-mix(in srgb, var(--orange) 14%, transparent); color: var(--orange); }
+
+/* User Management · modal */
+.um-section {
+  margin: 16px 0;
+  padding: 14px;
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+}
+.um-section h4 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.um-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 600px) {
+  .um-grid-2 { grid-template-columns: 1fr; }
+}
+.um-section label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.um-section input[type="text"],
+.um-section input[type="email"],
+.um-section input[type="password"],
+.um-section select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  margin-top: 4px;
+  background: var(--bg-content);
+  color: var(--text-primary);
+}
+.um-section input:disabled { opacity: 0.5; }
+
+.um-pwd-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.um-pwd-row input { flex: 1; margin-top: 0; }
+.um-pwd-row button {
+  padding: 8px 14px;
+  white-space: nowrap;
+  border-radius: var(--r-sm);
+  background: var(--surface-3, var(--bg-content));
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* 權限樹 */
+.um-perm-group {
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg-content);
+}
+.um-perm-group summary {
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  user-select: none;
+}
+.um-perm-group summary:hover { background: var(--surface-2); }
+.um-perm-items {
+  padding: 8px 12px 12px;
+  border-top: 1px solid var(--border);
+}
+.um-perm-item {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px !important;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px !important;
+  color: var(--text-primary) !important;
+}
+.um-perm-item:hover { background: var(--surface-2); }
+.um-perm-item input[type="checkbox"] { margin: 0; flex-shrink: 0; }
+.um-perm-item span { flex: 1; }
+.um-perm-item code {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  background: transparent;
+  padding: 0;
+}

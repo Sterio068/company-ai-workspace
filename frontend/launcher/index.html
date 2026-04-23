@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0F2340">
 <title>承富 AI · 首頁 v4.1</title>
-<link rel="stylesheet" href="/static/launcher.css?v=53">
+<link rel="stylesheet" href="/static/launcher.css?v=54">
 </head>
 <body>
 
@@ -158,6 +158,11 @@
           </svg>
         </span>
         <span class="sidebar-label">管理面板</span>
+      </a>
+      <a aria-label="同仁管理(⌘U)" class="sidebar-item nav-item" data-view="users" id="users-nav" style="display:none">
+        <span class="sidebar-icon">👥</span>
+        <span class="sidebar-label">同仁管理</span>
+        <kbd class="sidebar-shortcut">⌘U</kbd>
       </a>
       <a aria-label="會議速記" class="sidebar-item nav-item" data-view="meeting">
         <span class="sidebar-icon">🎤</span>
@@ -830,6 +835,15 @@
       <div id="view-site-content"><div class="chip-empty">載入中…</div></div>
     </div>
 
+    <!-- ========== VIEW: USER MANAGEMENT(admin 建同仁帳號 · v1.3)========== -->
+    <div class="view view-users" data-view="users">
+      <div class="view-header">
+        <h1>👥 同仁管理</h1>
+        <p>建 / 編輯 / 停用同仁帳號 · 自訂頭銜 + 權限勾選 · 僅 admin 可見</p>
+      </div>
+      <div id="view-users-content"><div class="chip-empty">載入中…</div></div>
+    </div>
+
   </main>
 
   <!-- ============== INSPECTOR ============== -->
@@ -1146,7 +1160,7 @@
   <span><a href="#" onclick="tour.start();return false;" class="link">看引導</a></span>
 </div>
 
-<script type="module" src="/static/app.js?v=53"></script>
-<script src="/static/onboarding.js?v=53"></script>
+<script type="module" src="/static/app.js?v=54"></script>
+<script src="/static/onboarding.js?v=54"></script>
 </body>
 </html>

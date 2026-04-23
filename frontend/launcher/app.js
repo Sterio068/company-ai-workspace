@@ -40,6 +40,7 @@ import { chat } from "./modules/chat.js";
 import { voice } from "./modules/voice.js";
 import { accounting } from "./modules/accounting.js";
 import { admin } from "./modules/admin.js";
+import { userMgmt } from "./modules/user_mgmt.js";
 import { knowledge } from "./modules/knowledge.js";
 import { design } from "./modules/design.js";
 import { help } from "./modules/help.js";
@@ -174,6 +175,9 @@ export const app = {
     if (this.user?.role === "ADMIN") {
       const nav = document.getElementById("admin-nav");
       if (nav) nav.style.display = "";
+      // v1.3 · User Management UI(admin 建同仁)
+      const usersNav = document.getElementById("users-nav");
+      if (usersNav) usersNav.style.display = "";
       document.documentElement.dataset.role = "admin";
       document.documentElement.dataset.userEmail = this.user.email || "";
     }
@@ -248,6 +252,8 @@ export const app = {
     if (view === "media") media.init(isAdmin);
     if (view === "social") social.init();
     if (view === "site") siteSurvey.init();
+    // v1.3 · User Management
+    if (view === "users" && isAdmin) userMgmt.init();
   },
 
   openCreateSource() { knowledge.openCreateModal(); },
@@ -930,6 +936,7 @@ export const app = {
       if (mod && "6789".includes(e.key) && !inEditable) { e.preventDefault(); this.openAgent("0" + e.key); return; }
       if (mod && e.key === "a" && !inEditable) { e.preventDefault(); this.showView("accounting"); accounting.load(); return; }
       if (mod && e.key === "m" && !inEditable && this.user?.role === "ADMIN") { e.preventDefault(); this.showView("admin"); admin.load(); return; }
+      if (mod && e.key === "u" && !inEditable && this.user?.role === "ADMIN") { e.preventDefault(); this.showView("users"); return; }
       if (mod && e.key === "t" && !inEditable) { e.preventDefault(); this.showView("tenders"); tenders.load(); return; }
       if (mod && e.key === "w" && !inEditable) { e.preventDefault(); this.showView("workflows"); workflows.load(); return; }
       if (mod && e.key === "i" && !inEditable) { e.preventDefault(); this.showView("crm"); crm.load(); return; }
@@ -974,6 +981,7 @@ window.meeting     = meeting;
 window.media       = media;
 window.social      = social;
 window.knowledge   = knowledge;
+window.userMgmt    = userMgmt;
 window.palette     = palette;
 
 // ============================================================

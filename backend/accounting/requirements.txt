@@ -9,6 +9,7 @@ anthropic==0.49.0          # ROADMAP §11.10 · 升級拿 Opus 4.7 1M context + 
 # Auth + rate limit + logging
 PyJWT==2.10.0
 slowapi==0.1.9
+bcrypt==4.2.1              # v1.3 User Management · 對齊 LibreChat 10-round hash
 
 # V1.1 §E-2 · 多來源知識庫抽字 + Meili
 pymupdf==1.25.5           # Audit · dep #1 · 1.24.x PDF parser memory CVE 已修
