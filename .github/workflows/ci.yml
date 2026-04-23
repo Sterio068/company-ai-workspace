@@ -21,10 +21,36 @@ jobs:
         run: |
           cd backend/accounting
           pip install -r requirements.txt
-      - name: Run pytest(Codex R5#6 · 含 tests/ 不只 test_main.py)
+      - name: Run unit tests(mongomock · 不含 integration/)
         run: |
           cd backend/accounting
-          pytest tests/ test_main.py -v --tb=short
+          pytest tests/ test_main.py -v --tb=short --ignore=tests/integration
+
+  test-integration:
+    name: 真 Mongo 整合測試(v1.3 C1)
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports: ["27017:27017"]
+        options: --health-cmd="mongosh --quiet --eval 'db.runCommand({ping:1})'" --health-interval=5s --health-timeout=3s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install deps
+        run: |
+          cd backend/accounting
+          pip install -r requirements.txt
+      - name: Run integration tests against real Mongo
+        env:
+          INTEGRATION_MONGO_URL: mongodb://localhost:27017
+        run: |
+          cd backend/accounting
+          pytest tests/integration -v --tb=short
 
   lint-agent-json:
     name: 10 Agent JSON 格式驗證

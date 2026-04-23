@@ -26,6 +26,15 @@
 - [ ] LibreChat 版本升級(見第 4 節)
 - [ ] 還原演練(見第 3.3 節)
 - [ ] 更新 macOS 安全更新
+- [ ] **真 Mongo 整合 test 跑一輪(v1.3 C1)**:
+  ```bash
+  docker run -d --rm -p 27018:27017 --name chengfu-test-mongo mongo:7.0
+  cd backend/accounting
+  INTEGRATION_MONGO_URL=mongodb://localhost:27018 \
+      pytest tests/integration -v
+  docker stop chengfu-test-mongo
+  ```
+  CI 已自動跑 · 但季度手動驗一次 · 防 Mongo 7.0 升 8.0 行為差
 
 ---
 
