@@ -592,19 +592,21 @@ def list_agent_prompts(_admin: str = require_admin_dep()):
 def update_agent_prompt(payload: AgentPromptUpdate, _admin: str = require_admin_dep()):
     """線上更新 Agent prompt(寫 override collection · 不動原 JSON)"""
     from main import db, audit_col
+    # R31 修 · email 一律 lower · PDPA exact-match 才不漏
+    editor_lc = (payload.editor or "").strip().lower()
     db.agent_overrides.update_one(
         {"agent_num": payload.agent_num},
         {"$set": {
             "new_instructions": payload.new_instructions,
             "reason": payload.reason,
-            "editor": payload.editor,
+            "editor": editor_lc,
             "created_at": datetime.now(timezone.utc),
         }},
         upsert=True,
     )
     audit_col.insert_one({
         "action": "agent_prompt_update",
-        "user": payload.editor,
+        "user": editor_lc,
         "resource": f"agent_{payload.agent_num}",
         "details": {"reason": payload.reason, "length": len(payload.new_instructions)},
         "created_at": datetime.now(timezone.utc),
@@ -836,33 +838,44 @@ def pdpa_delete_user(user_email: str, payload: PdpaDeleteRequest,
     # 自查補:audit 寫 main.audit_col(=db.audit_log)· 跟其他 admin 操作一致
     # 原本誤用 db.knowledge_audit · /admin/audit-log 看不到 PDPA 紀錄
     from main import audit_col
+    import re
+
+    # R31 修 · case-insensitive · legacy 資料可能存大小寫混合(Leaving@ChengFu.Local)
+    # 用 regex 完整匹配 + 不含 . 的 escape · 防 admin 名含特殊字元誤判
+    def ci(field_value: str):
+        """Case-insensitive 完整 match · 防 legacy mixed-case 漏"""
+        return {"$regex": f"^{re.escape(field_value)}$", "$options": "i"}
+
+    target_ci = ci(target)
 
     # 刪除類 · collection → query
     delete_targets = [
-        ("user_preferences", {"user_email": target}),
-        ("feedback", {"user_email": target}),
-        ("meetings", {"owner": target}),
-        ("site_surveys", {"owner": target}),
-        ("scheduled_posts", {"author": target}),
-        ("knowledge_audit", {"user": target}),
-        ("chengfu_quota_overrides", {"email": target}),
-        ("design_jobs", {"user": target}),       # R29 補
-        ("agent_overrides", {"user_email": target}),  # R29 補(若 admin 有為該 user 客製)
+        ("user_preferences", {"user_email": target_ci}),
+        ("feedback", {"user_email": target_ci}),
+        ("meetings", {"owner": target_ci}),
+        ("site_surveys", {"owner": target_ci}),
+        ("scheduled_posts", {"author": target_ci}),
+        ("knowledge_audit", {"user": target_ci}),
+        ("chengfu_quota_overrides", {"email": target_ci}),
+        ("design_jobs", {"user": target_ci}),       # R29 補
+        ("agent_overrides", {"user_email": target_ci}),  # R29 補(若 admin 有為該 user 客製)
     ]
 
     # 切人關聯類 · collection → (query, $set patch)
     # R30 補 · 把所有殘留 target email 的欄位全清(法規洞)
     unset_targets = [
-        ("crm_leads", {"owner": target}, {"owner": None}),
-        ("media_pitch_history", {"pitched_by": target}, {"pitched_by": None}),  # R29 補
-        ("media_contacts", {"created_by": target}, {"created_by": None}),       # R29 補
+        ("crm_leads", {"owner": target_ci}, {"owner": None}),
+        ("media_pitch_history", {"pitched_by": target_ci}, {"pitched_by": None}),  # R29 補
+        ("media_contacts", {"created_by": target_ci}, {"created_by": None}),       # R29 補
         # R30 補 · 7 個漏網欄位
-        ("knowledge_sources", {"created_by": target}, {"created_by": None}),
-        ("projects", {"owner": target}, {"owner": None}),
-        ("projects", {"handoff.updated_by": target}, {"handoff.updated_by": None}),
-        ("crm_stage_history", {"changed_by": target}, {"changed_by": None}),
-        ("agent_overrides", {"editor": target}, {"editor": None}),
-        ("system_settings", {"updated_by": target}, {"updated_by": None}),
+        ("knowledge_sources", {"created_by": target_ci}, {"created_by": None}),
+        ("projects", {"owner": target_ci}, {"owner": None}),
+        ("projects", {"handoff.updated_by": target_ci}, {"handoff.updated_by": None}),
+        ("crm_stage_history", {"changed_by": target_ci}, {"changed_by": None}),
+        ("agent_overrides", {"editor": target_ci}, {"editor": None}),
+        ("system_settings", {"updated_by": target_ci}, {"updated_by": None}),
+        # R31 補 · tender_alerts.reviewed_by(同事 review 標案 Go/No-Go 的紀錄)
+        ("tender_alerts", {"reviewed_by": target_ci}, {"reviewed_by": None}),
     ]
 
     counts = {}
@@ -886,22 +899,34 @@ def pdpa_delete_user(user_email: str, payload: PdpaDeleteRequest,
             counts[key] = r.modified_count
 
     # R30 補 · crm_leads.notes[].by 是 array element
-    # 不用 Mongo arrayFilters($[n])· mongomock 不支援 · 改 Python 端 patch
-    affected_leads = list(db.crm_leads.find({"notes.by": target}, {"_id": 1, "notes": 1}))
+    # R31 修 · 優先用 Mongo $[n] arrayFilters atomic · 防同時新增 note race
+    # mongomock 不支援 NotImplementedError 才 fallback Python
+    notes_q = {"notes.by": target_ci}
     if payload.dry_run:
-        counts["crm_leads_notes_by_unset"] = len(affected_leads)
+        counts["crm_leads_notes_by_unset"] = db.crm_leads.count_documents(notes_q)
     else:
-        modified = 0
-        for lead in affected_leads:
-            new_notes = [
-                {**n, "by": None} if n.get("by") == target else n
-                for n in (lead.get("notes") or [])
-            ]
-            db.crm_leads.update_one(
-                {"_id": lead["_id"]}, {"$set": {"notes": new_notes}}
+        try:
+            r = db.crm_leads.update_many(
+                notes_q,
+                {"$set": {"notes.$[n].by": None}},
+                array_filters=[{"n.by": target_ci}],
             )
-            modified += 1
-        counts["crm_leads_notes_by_unset"] = modified
+            counts["crm_leads_notes_by_unset"] = r.modified_count
+        except NotImplementedError:
+            # mongomock fallback · 整 notes 覆寫(test 環境用 · 沒 race)
+            affected = list(db.crm_leads.find(notes_q, {"_id": 1, "notes": 1}))
+            modified = 0
+            for lead in affected:
+                new_notes = [
+                    {**n, "by": None}
+                    if n.get("by", "").lower() == target else n
+                    for n in (lead.get("notes") or [])
+                ]
+                db.crm_leads.update_one(
+                    {"_id": lead["_id"]}, {"$set": {"notes": new_notes}}
+                )
+                modified += 1
+            counts["crm_leads_notes_by_unset"] = modified
 
     # 寫 audit · 不論 dry_run 都記
     audit_col.insert_one({

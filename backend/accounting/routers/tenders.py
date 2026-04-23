@@ -43,6 +43,8 @@ def update_tender_alert(
         raise HTTPException(403, "未識別呼叫者 · 請從 launcher 進入")
     r = db.tender_alerts.update_one(
         {"tender_key": tender_key},
-        {"$set": {"status": status, "reviewed_at": datetime.now(timezone.utc), "reviewed_by": caller}},
+        # R31 修 · email 一律 lower · PDPA exact-match 才不漏
+        {"$set": {"status": status, "reviewed_at": datetime.now(timezone.utc),
+                  "reviewed_by": caller.strip().lower() if caller else None}},
     )
     return {"updated": r.modified_count}

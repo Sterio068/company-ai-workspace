@@ -1183,6 +1183,51 @@ def test_pdpa_real_delete(client):
     assert audit is not None, "PDPA audit 必寫 main.audit_col(db.audit_log)"
 
 
+def test_pdpa_includes_tender_alerts_reviewed_by(client):
+    """R31#1 · tender_alerts.reviewed_by 漏 · 真刪後仍殘 target email"""
+    import main as main_mod
+    target = "tender-reviewer@chengfu.local"
+    main_mod.db.tender_alerts.insert_one(
+        {"tender_key": "T123", "title": "x", "status": "interested",
+         "reviewed_by": target}
+    )
+    r = client.post(
+        f"/admin/users/{target}/delete-all",
+        json={"confirm_email": target, "dry_run": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    # tender 資料留 · reviewed_by 清
+    t = main_mod.db.tender_alerts.find_one({"tender_key": "T123"})
+    assert t is not None
+    assert t["reviewed_by"] is None, "tender_alerts.reviewed_by 必清"
+
+
+def test_pdpa_case_insensitive(client):
+    """R31#3 · target email 規範化 lower · 但 legacy 資料可能存大小寫混合
+    必 case-insensitive 才不漏"""
+    import main as main_mod
+    # 故意存 mixed case · 模擬 legacy 資料
+    target = "case-test@chengfu.local"
+    main_mod.db.user_preferences.insert_one(
+        {"user_email": "Case-Test@ChengFu.Local", "key": "lang", "value": "en"}
+    )
+    main_mod.db.crm_leads.insert_one(
+        {"title": "lead-mixed", "owner": "Case-Test@ChengFu.Local", "stage": "lead"}
+    )
+    r = client.post(
+        f"/admin/users/{target}/delete-all",
+        json={"confirm_email": target, "dry_run": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    # mixed-case 必清
+    assert main_mod.db.user_preferences.count_documents(
+        {"user_email": "Case-Test@ChengFu.Local"}
+    ) == 0, "case-insensitive 必清 legacy mixed-case"
+    assert main_mod.db.crm_leads.find_one({"title": "lead-mixed"})["owner"] is None
+
+
 def test_pii_audit_writes_log(client):
     """R29 紅 · /safety/pii-audit 須真寫 audit_log
     原 __import__ datetime + bare except 吞掉 NameError · audit 從未寫"""
