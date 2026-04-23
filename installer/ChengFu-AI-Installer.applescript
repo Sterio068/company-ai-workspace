@@ -10,10 +10,14 @@
 
 on run
 	-- ============ 步驟 0 · 歡迎畫面 ============
-	set welcomeText to "歡迎使用承富 AI 系統 v1.2 安裝精靈" & return & return & ¬
+	set welcomeText to "歡迎使用承富 AI 系統 v1.3 安裝精靈" & return & return & ¬
 		"執行時間:30-45 分鐘(視網路)" & return & return & ¬
-		"v1.2 新增 4 功能:" & return & ¬
-		"  🎤 會議速記 · 🎬 媒體 CRM · 📅 社群排程 · 📸 場勘 PWA" & return & return & ¬
+		"v1.2 4 功能:" & return & ¬
+		"  🎤 會議速記 · 🎬 媒體 CRM · 📅 社群排程 · 📸 場勘 PWA" & return & ¬
+		"v1.3 強化(6 PR · 2026-04-23):" & return & ¬
+		"  📤 媒體 CRM CSV 匯出 · 🎙 場勘音檔 Whisper STT" & return & ¬
+		"  ☁ B2 異機備份 · 🔍 audit-log 過濾 · 🔐 knowledge hash" & return & ¬
+		"  🧪 真 Mongo 整合 test 套件 · 183 tests 全綠" & return & return & ¬
 		"請預先準備:" & return & ¬
 		"  • Anthropic API Key(必須 · Tier 2 預存 USD $50)" & return & ¬
 		"  • OpenAI API Key(會議速記 Whisper 用 · 必須)" & return & ¬
