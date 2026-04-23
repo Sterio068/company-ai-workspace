@@ -152,14 +152,32 @@ def reindex_source(source_id: str, knowledge_sources_col, meili_client=None) -> 
         return {"ok": False, "skipped": True, "reason": "已停用"}
 
     started = datetime.now(timezone.utc)
-    # Round 9 Q4 · 兩階段時間戳(拆 scanned 與 search_indexed)
-    # - last_scanned_at · 最近一次抽字到本地(即使 Meili 掛也前進)
-    # - last_search_indexed_at · 最近一次成功寫入 Meili(搜尋可用)
+    # 三層 fallback timestamp 設計(技術債#15 文件)
+    # ============================================================
+    # 為什麼要 3 層?分離「抽字成功」與「搜尋可用」兩件事
     #
-    # 增量 threshold 選擇:
+    # 場景:
+    # 1. Meili 健康 · 抽字成功 · 寫 Meili 成功
+    #    → last_scanned_at = X, last_search_indexed_at = X
+    #    → 下次跑 (a) 用 last_search_indexed_at(X)當 threshold · OK 增量
+    #
+    # 2. Meili 掛 · 抽字成功 · 寫 Meili 失敗
+    #    → last_scanned_at = X, last_search_indexed_at = 不變(舊值或 None)
+    #    → Meili 修好後重跑 · (a) 用 last_search 當 threshold · 自動補當期間漏的檔
+    #    → 這是核心:scanned 前進但 search 不前進 · Meili 修好後不會漏檔
+    #
+    # 3. Cron 沒配 Meili(純抽字模式 / 測試)
+    #    → 走分支 (b) · 用 last_scanned_at 避免重跑抽字(浪費 OCR 時間)
+    #
+    # 4. 舊 source(v1.0 / v1.1)只有 legacy last_indexed_at
+    #    → 走 (c) · fallback 當 scanned · v1.2 第一次跑會升級到新欄位
+    #
+    # 增量 threshold 選擇規則(下方 if/elif 對應):
     # (a) 帶 Meili → 用 last_search_indexed_at · Meili 掛過的檔會被補跑
     # (b) 不帶 Meili(cron 沒配 / test 模式) → 用 last_scanned_at 避免重跑抽字
     # (c) 舊 source(只有 last_indexed_at legacy) → 當 scanned 的 fallback
+    #
+    # ⚠ 不能簡化成單一欄位 · 否則會踩 Meili 掛時的「抽字白做」或「搜尋漏檔」
     last_scanned = src.get("last_scanned_at")
     last_search = src.get("last_search_indexed_at")
     legacy = src.get("last_indexed_at")
