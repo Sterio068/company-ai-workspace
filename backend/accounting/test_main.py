@@ -1336,7 +1336,8 @@ def test_audit_log_action_filter_multi(client):
 
 
 def test_audit_log_actions_distinct_endpoint(client):
-    """C2 · GET /admin/audit-log/actions · 列 distinct + count · sort by count desc"""
+    """C2 · GET /admin/audit-log/actions · 列 distinct + count · sort by count desc
+    R35 · 加 days/returned_count/truncated 欄位驗收"""
     import main as main_mod
     from datetime import datetime, timezone
     # seed · pop_a 5 筆 · pop_b 3 筆 · pop_c 1 筆
@@ -1362,6 +1363,32 @@ def test_audit_log_actions_distinct_endpoint(client):
     pop_a_idx = next(i for i, a in enumerate(body["actions"]) if a["action"] == "pop_a")
     pop_b_idx = next(i for i, a in enumerate(body["actions"]) if a["action"] == "pop_b")
     assert pop_a_idx < pop_b_idx, "should sort by count desc"
+    # R35 · 新欄位
+    assert body["returned_count"] == len(body["actions"])
+    assert body["limit"] == 50
+    assert body["truncated"] is False
+    assert body["days"] == 90  # default
+
+
+def test_audit_log_actions_days_param_filter(client):
+    """R35 · ?days=1 只看最近 1 天 · 老資料(91 天前)應排除"""
+    import main as main_mod
+    from datetime import datetime, timezone, timedelta
+    # 91 天前的舊資料
+    main_mod.audit_col.insert_one(
+        {"action": "old_only_action", "user": "x",
+         "created_at": datetime.now(timezone.utc) - timedelta(days=91)}
+    )
+    # 今天
+    main_mod.audit_col.insert_one(
+        {"action": "fresh_only_action", "user": "x",
+         "created_at": datetime.now(timezone.utc)}
+    )
+    r = client.get("/admin/audit-log/actions?days=1", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    actions = {a["action"] for a in r.json()["actions"]}
+    assert "fresh_only_action" in actions
+    assert "old_only_action" not in actions, "days=1 必排除 91 天前資料"
 
 
 def test_audit_log_actions_requires_admin(client):

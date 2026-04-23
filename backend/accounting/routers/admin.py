@@ -307,24 +307,39 @@ def audit_log(
 
 
 @router.get("/admin/audit-log/actions")
-def audit_log_actions(_admin: str = require_admin_dep()):
-    """C2(v1.3)· 列出所有 distinct action 值 · 給前端 dropdown 篩選用
-    回:[{action: 'pdpa_delete', count: 5}, ...]
-    sort by count desc · 最常用的在前
+def audit_log_actions(
+    days: int = Query(default=90, ge=1, le=365),
+    _admin: str = require_admin_dep(),
+):
+    """C2(v1.3)· 列出 distinct action + count · 給前端 dropdown
+    R35 修 · 預設只算最近 90 天 · 防全表 aggregate(audit_log TTL 90d 已配合)
+    回 [{action, count}, ...] · sort by count desc · 最多 50 個
+
+    Parameters
+    ----------
+    days : 1-365 · 預設 90 · 限制 aggregation 範圍
     """
     from main import audit_col
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    LIMIT = 50
     pipeline = [
+        {"$match": {"created_at": {"$gte": cutoff}}},  # R35 · 先 match 再 group
         {"$group": {"_id": "$action", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}},
-        {"$limit": 50},  # 防爆量(50 個 action 已綽綽有餘)
+        {"$limit": LIMIT + 1},  # 多取 1 偵測截斷
     ]
     rows = list(audit_col.aggregate(pipeline))
+    truncated = len(rows) > LIMIT
+    rows = rows[:LIMIT]
     return {
         "actions": [
             {"action": r["_id"] or "(unknown)", "count": r["count"]}
             for r in rows if r["_id"] is not None
         ],
-        "total_distinct": len(rows),
+        "returned_count": len(rows),  # R35 · 命名清楚 · 非「總 distinct」
+        "limit": LIMIT,
+        "truncated": truncated,
+        "days": days,
     }
 
 
