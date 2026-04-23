@@ -378,3 +378,80 @@ async def import_csv(
         "errors": errors,
         "total_rows": imported + updated + len(errors),
     }
+
+
+# ============================================================
+# B3(v1.3)· CSV Export · 給老闆 / 合作夥伴拿名單
+# ============================================================
+def _csv_safe(v) -> str:
+    """B3 · 防 CSV injection · = + - @ tab CR LF 開頭加 ' 前綴
+    詳見 OWASP CSV Injection · Excel/Numbers/Sheets 開檔會 eval 公式
+    """
+    if v is None:
+        return ""
+    s = str(v)
+    if s and s[0] in ("=", "+", "-", "@", "\t", "\r", "\n"):
+        return "'" + s
+    return s
+
+
+@router.get("/media/contacts/export.csv")
+def export_contacts_csv(
+    include_inactive: bool = False,
+    _admin: str = require_admin_dep(),
+):
+    """匯出全名單 CSV · admin only(含 email / phone PII)
+    streaming 防 1k+ 筆爆記憶體 · CSV injection 防(_csv_safe)
+
+    columns: name, outlet, beats, email, phone, accepted_count, pitched_count,
+             last_pitched_at, accepted_topics, notes, is_active, created_at
+    """
+    from main import db
+    from fastapi.responses import StreamingResponse
+
+    q = {} if include_inactive else {"is_active": {"$ne": False}}
+    cursor = db.media_contacts.find(q).sort("name", 1)
+
+    def _stream():
+        # BOM for Excel UTF-8 CSV(中文不亂碼)
+        yield "\ufeff"
+        # header
+        yield ",".join([
+            "name", "outlet", "beats", "email", "phone",
+            "accepted_count", "pitched_count", "last_pitched_at",
+            "accepted_topics", "notes", "is_active", "created_at",
+        ]) + "\r\n"
+        # rows
+        for doc in cursor:
+            beats = ";".join(doc.get("beats") or [])
+            topics = ";".join(doc.get("accepted_topics") or [])
+            last = doc.get("last_pitched_at")
+            created = doc.get("created_at")
+            row = [
+                _csv_safe(doc.get("name")),
+                _csv_safe(doc.get("outlet")),
+                _csv_safe(beats),
+                _csv_safe(doc.get("email")),
+                _csv_safe(doc.get("phone")),
+                str(doc.get("accepted_count", 0)),
+                str(doc.get("pitched_count", 0)),
+                last.isoformat() if isinstance(last, datetime) else "",
+                _csv_safe(topics),
+                _csv_safe(doc.get("notes")),
+                str(doc.get("is_active", True)),
+                created.isoformat() if isinstance(created, datetime) else "",
+            ]
+            # csv.writer 處理 quote · 不重做
+            buf = io.StringIO()
+            csv.writer(buf, quoting=csv.QUOTE_MINIMAL).writerow(row)
+            yield buf.getvalue()
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return StreamingResponse(
+        _stream(),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="chengfu-media-contacts-{today}.csv"',
+            "Cache-Control": "no-store",
+        },
+    )

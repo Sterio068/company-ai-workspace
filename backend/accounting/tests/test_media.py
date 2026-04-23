@@ -190,3 +190,70 @@ def test_deactivate_contact(client):
     doc = main.db.media_contacts.find_one({"_id": cid})
     assert doc is not None
     assert doc["is_active"] is False
+
+
+# ============================================================
+# B3(v1.3)· /media/contacts/export.csv
+# ============================================================
+def test_export_csv_admin_only(client):
+    """B3 · 匿名禁用(含 PII email/phone)"""
+    r = client.get("/media/contacts/export.csv", headers={"X-User-Email": ""})
+    assert r.status_code == 403
+
+
+def test_export_csv_basic(client):
+    """B3 · CSV 含全欄位 + UTF-8 BOM 中文不亂碼"""
+    import main
+    main.db.media_contacts.insert_one({
+        "name": "張小編", "outlet": "中央社", "email": "zhang@cna.tw",
+        "beats": ["環保", "政府"], "phone": "0912345678",
+        "is_active": True,
+    })
+    r = client.get("/media/contacts/export.csv", headers=ADMIN)
+    assert r.status_code == 200
+    assert "text/csv" in r.headers["content-type"]
+    body = r.text
+    assert body.startswith("\ufeff"), "必含 UTF-8 BOM 給 Excel"
+    assert "name,outlet,beats" in body
+    assert "張小編" in body
+    assert "中央社" in body
+    assert "環保;政府" in body  # beats 用 ; 分隔
+    assert "zhang@cna.tw" in body
+
+
+def test_export_csv_injection_defense(client):
+    """B3 · =1+1 / @evil / +cmd 開頭加 ' 前綴 · 防 Excel 公式注入"""
+    import main
+    main.db.media_contacts.insert_one({
+        "name": "=cmd|bad", "outlet": "+attack", "email": "@evil@x.com",
+        "beats": ["-formula"], "is_active": True,
+    })
+    r = client.get("/media/contacts/export.csv", headers=ADMIN)
+    body = r.text
+    # 找到那行
+    line = next(ln for ln in body.split("\r\n") if "cmd" in ln)
+    # 必有 ' prefix · csv.writer 會 quote 含逗號或引號的欄位
+    assert "'=cmd|bad" in line, "= 開頭必加 ' 前綴防注入"
+    assert "'+attack" in line
+    assert "'@evil@x.com" in line
+    assert "'-formula" in line
+
+
+def test_export_csv_excludes_inactive_by_default(client):
+    """B3 · is_active=False 軟刪預設排除 · ?include_inactive=true 才含"""
+    import main
+    main.db.media_contacts.insert_one({
+        "name": "active1", "outlet": "X", "email": "a1@x.com",
+        "is_active": True,
+    })
+    main.db.media_contacts.insert_one({
+        "name": "deleted1", "outlet": "X", "email": "d1@x.com",
+        "is_active": False,
+    })
+    r = client.get("/media/contacts/export.csv", headers=ADMIN)
+    assert "active1" in r.text
+    assert "deleted1" not in r.text
+    # include_inactive=true
+    r2 = client.get("/media/contacts/export.csv?include_inactive=true", headers=ADMIN)
+    assert "active1" in r2.text
+    assert "deleted1" in r2.text
