@@ -211,17 +211,29 @@ export const siteSurvey = {
     if (this._addressHint) fd.set("address_hint", this._addressHint);
     if (this._projectId) fd.set("project_id", this._projectId);
 
+    // UX(v1.3 P1#14)· 鎖 submit + 顯示 banner · 防 double-click
+    const submitBtn = document.getElementById("site-submit-btn");
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = "⏳ 上傳中...";
+    }
+
     try {
-      toast.info(`上傳 ${this._images.length} 張(${(this._images.reduce((s, i) => s + i.file.size, 0) / 1024 / 1024).toFixed(1)}MB)...`);
+      const totalMB = (this._images.reduce((s, i) => s + i.file.size, 0) / 1024 / 1024).toFixed(1);
+      toast.info(`上傳 ${this._images.length} 張(${totalMB}MB)...`);
       const r = await authFetch(`${BASE}/site-survey`, { method: "POST", body: fd });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
-        toast.error(`上傳失敗:${err.detail || r.status}`);
+        toast.error(`上傳失敗:${err.detail || r.status} · 看 user-guide → 故障排除`);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = "🚀 上傳 + AI 分析";
+        }
         return;
       }
       const body = await r.json();
       this._currentSurveyId = body.survey_id;
-      toast.success("AI 處理中(約 30 秒)");
+      toast.success(`AI 分析中(約 ${this._images.length * 6} 秒)`);
       // R24#6 · revoke objectURLs 釋放 memory
       this._revokeObjectUrls();
       this._images = [];
@@ -229,8 +241,47 @@ export const siteSurvey = {
       this._addressHint = "";
       this.render();
       this._startPolling();
+      this._showProcessingBanner(body.survey_id, this._images?.length || 0);
     } catch (e) {
-      toast.error(`網路錯:${String(e)}`);
+      toast.error(`網路錯:${String(e)} · 請重試`);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = "🚀 上傳 + AI 分析";
+      }
+    }
+  },
+
+  _showProcessingBanner(surveyId, imageCount) {
+    // P1#14 · main view 上方顯示 banner · 跟 meeting.js 同 pattern
+    const root = document.getElementById("view-site-content");
+    if (!root) return;
+    let banner = document.getElementById("site-processing-banner");
+    if (!banner) {
+      banner = document.createElement("div");
+      banner.id = "site-processing-banner";
+      banner.className = "banner-processing";
+      root.prepend(banner);
+    }
+    let elapsed = 0;
+    banner.innerHTML = `<div class="loading-spinner" style="width:18px; height:18px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+      <div style="flex:1">
+        <div style="font-weight:600">📸 場勘 AI 分析中(survey ${surveyId.slice(-6)})</div>
+        <div id="site-banner-timer" style="font-size:12px; color:var(--text-secondary)">已 ${elapsed}s · Claude Vision 處理 ${imageCount} 張照片中</div>
+      </div>`;
+    if (this._bannerTimer) clearInterval(this._bannerTimer);
+    this._bannerTimer = setInterval(() => {
+      elapsed += 1;
+      const t = document.getElementById("site-banner-timer");
+      if (t) t.textContent = `已 ${elapsed}s · Claude Vision 處理中`;
+    }, 1000);
+  },
+
+  _hideProcessingBanner() {
+    const banner = document.getElementById("site-processing-banner");
+    if (banner) banner.remove();
+    if (this._bannerTimer) {
+      clearInterval(this._bannerTimer);
+      this._bannerTimer = null;
     }
   },
 
@@ -241,7 +292,8 @@ export const siteSurvey = {
       attempts++;
       if (attempts > 30) {
         clearInterval(this._pollTimer);
-        toast.error("超時 · 到歷史看");
+        this._hideProcessingBanner();
+        toast.error("AI 分析超時 · 到歷史看 · 或檢查 ANTHROPIC_API_KEY");
         return;
       }
       try {
@@ -250,11 +302,13 @@ export const siteSurvey = {
         const body = await r.json();
         if (body.status === "done") {
           clearInterval(this._pollTimer);
+          this._hideProcessingBanner();
           this._showResult(body);
           this._loadHistory();
         } else if (body.status === "failed") {
           clearInterval(this._pollTimer);
-          toast.error(`處理失敗:${body.error || "?"}`);
+          this._hideProcessingBanner();
+          toast.error(`處理失敗:${body.error || "?"} · 看 user-guide`);
         }
       } catch {}
     }, 3000);

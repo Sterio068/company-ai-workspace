@@ -10,8 +10,20 @@ export async function fetchJSON(url, opts = {}) {
 }
 
 export function formatDate(d) {
+  // v1.3 P1#10 · 簡化:2026.04.23 週三
   const wk = ["日", "一", "二", "三", "四", "五", "六"];
-  return `${d.getFullYear()} 年 ${d.getMonth()+1} 月 ${d.getDate()} 日 · 週${wk[d.getDay()]}`;
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}.${m}.${day} 週${wk[d.getDay()]}`;
+}
+
+export function formatDateShort(iso) {
+  // v1.3 P1#10 · 列表 / chip 用 · 簡短「4/23 14:30」
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  } catch { return iso; }
 }
 
 export function greetingFor(hour) {
