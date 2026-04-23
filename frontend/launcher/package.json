@@ -1,0 +1,14 @@
+{
+  "name": "chengfu-launcher",
+  "version": "1.3.0",
+  "description": "承富 AI Launcher · esbuild bundle for prod (v1.3 A3)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.config.js",
+    "build:watch": "node build.config.js --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  }
+}

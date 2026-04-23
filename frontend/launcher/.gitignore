@@ -1,0 +1,4 @@
+# v1.3 A3 · esbuild build output
+dist/
+node_modules/
+*.log
