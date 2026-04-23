@@ -1296,3 +1296,154 @@ def test_healthz_remains_public(client):
     r = client.get("/healthz", headers={"X-User-Email": ""})
     assert r.status_code == 200
     assert r.json()["status"] == "ok"
+
+
+# ============================================================
+# C2(v1.3)· /admin/audit-log filter + distinct actions
+# ============================================================
+def test_audit_log_action_filter_single(client):
+    """C2 · ?action=xxx 單一 action 過濾"""
+    import main as main_mod
+    from datetime import datetime, timezone
+    # seed 不同 action 的 audit
+    for action in ["test_a", "test_a", "test_b"]:
+        main_mod.audit_col.insert_one(
+            {"action": action, "user": "x", "resource": "y",
+             "created_at": datetime.now(timezone.utc)}
+        )
+    r = client.get("/admin/audit-log?action=test_a", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    body = r.json()
+    # 全部 items 都該 test_a
+    assert all(i["action"] == "test_a" for i in body["items"])
+    assert body["total"] >= 2
+
+
+def test_audit_log_action_filter_multi(client):
+    """C2 · ?action=a,b 多 action 過濾(逗號分隔 · pdpa_delete + dryrun 一起看)"""
+    import main as main_mod
+    from datetime import datetime, timezone
+    for action in ["multi_a", "multi_b", "multi_c"]:
+        main_mod.audit_col.insert_one(
+            {"action": action, "user": "x", "resource": "y",
+             "created_at": datetime.now(timezone.utc)}
+        )
+    r = client.get("/admin/audit-log?action=multi_a,multi_b", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    actions = {i["action"] for i in r.json()["items"]}
+    assert "multi_c" not in actions  # 沒被選的不該出現
+    assert actions <= {"multi_a", "multi_b"}
+
+
+def test_audit_log_actions_distinct_endpoint(client):
+    """C2 · GET /admin/audit-log/actions · 列 distinct + count · sort by count desc
+    R35 · 加 days/returned_count/truncated 欄位驗收"""
+    import main as main_mod
+    from datetime import datetime, timezone
+    # seed · pop_a 5 筆 · pop_b 3 筆 · pop_c 1 筆
+    for _ in range(5):
+        main_mod.audit_col.insert_one(
+            {"action": "pop_a", "user": "x", "created_at": datetime.now(timezone.utc)}
+        )
+    for _ in range(3):
+        main_mod.audit_col.insert_one(
+            {"action": "pop_b", "user": "x", "created_at": datetime.now(timezone.utc)}
+        )
+    main_mod.audit_col.insert_one(
+        {"action": "pop_c", "user": "x", "created_at": datetime.now(timezone.utc)}
+    )
+    r = client.get("/admin/audit-log/actions", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    body = r.json()
+    actions_dict = {a["action"]: a["count"] for a in body["actions"]}
+    assert actions_dict["pop_a"] >= 5
+    assert actions_dict["pop_b"] >= 3
+    assert actions_dict["pop_c"] >= 1
+    # sort by count desc · pop_a 應在 pop_b 之前
+    pop_a_idx = next(i for i, a in enumerate(body["actions"]) if a["action"] == "pop_a")
+    pop_b_idx = next(i for i, a in enumerate(body["actions"]) if a["action"] == "pop_b")
+    assert pop_a_idx < pop_b_idx, "should sort by count desc"
+    # R35 · 新欄位
+    assert body["returned_count"] == len(body["actions"])
+    assert body["limit"] == 50
+    assert body["truncated"] is False
+    assert body["days"] == 90  # default
+
+
+def test_audit_log_actions_days_param_filter(client):
+    """R35 · ?days=1 只看最近 1 天 · 老資料(91 天前)應排除"""
+    import main as main_mod
+    from datetime import datetime, timezone, timedelta
+    # 91 天前的舊資料
+    main_mod.audit_col.insert_one(
+        {"action": "old_only_action", "user": "x",
+         "created_at": datetime.now(timezone.utc) - timedelta(days=91)}
+    )
+    # 今天
+    main_mod.audit_col.insert_one(
+        {"action": "fresh_only_action", "user": "x",
+         "created_at": datetime.now(timezone.utc)}
+    )
+    r = client.get("/admin/audit-log/actions?days=1", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    actions = {a["action"] for a in r.json()["actions"]}
+    assert "fresh_only_action" in actions
+    assert "old_only_action" not in actions, "days=1 必排除 91 天前資料"
+
+
+def test_audit_log_actions_requires_admin(client):
+    """C2 · /admin/audit-log/actions 必須 admin · 不能匿名打"""
+    r = client.get("/admin/audit-log/actions", headers={"X-User-Email": ""})
+    assert r.status_code == 403
+
+
+def test_admin_metrics_days_bounded(client):
+    """R37 · /admin/cost /adoption /top-users days 加上下限 · 防裸 int 探勘
+    days=0 / 999 應 422"""
+    for path in ["/admin/cost", "/admin/adoption", "/admin/top-users"]:
+        # days=0 應 422
+        r = client.get(f"{path}?days=0", headers=ADMIN_HEADERS)
+        assert r.status_code == 422, f"{path}?days=0 應 422 (ge=1)"
+        # days=999 應 422
+        r = client.get(f"{path}?days=999", headers=ADMIN_HEADERS)
+        assert r.status_code == 422, f"{path}?days=999 應 422 (le=365)"
+        # 正常範圍應 200
+        r = client.get(f"{path}?days=7", headers=ADMIN_HEADERS)
+        assert r.status_code == 200, f"{path}?days=7 應 200"
+
+
+def test_audit_log_default_days_window(client):
+    """R36 · /admin/audit-log GET 不帶 start_date/end_date 時 · 預設 90 天窗口
+    · 防 admin 透過 ?skip 探勘全 1 年 audit history"""
+    import main as main_mod
+    from datetime import datetime, timezone, timedelta
+    # seed · 一筆 91 天前 + 一筆今天
+    main_mod.audit_col.insert_one(
+        {"action": "audit_old_only", "user": "x", "resource": "y",
+         "created_at": datetime.now(timezone.utc) - timedelta(days=91)}
+    )
+    main_mod.audit_col.insert_one(
+        {"action": "audit_fresh_only", "user": "x", "resource": "y",
+         "created_at": datetime.now(timezone.utc)}
+    )
+    # 不帶 start_date/end_date · 預設 days=90 窗口
+    r = client.get(
+        "/admin/audit-log?action=audit_old_only,audit_fresh_only",
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    body = r.json()
+    actions = {i["action"] for i in body["items"]}
+    assert "audit_fresh_only" in actions
+    assert "audit_old_only" not in actions, "R36 · 預設 90 天窗口必排除 91 天前資料"
+    assert body["days_window"] == 90  # default 顯示
+
+    # 顯式帶 start_date · 應覆蓋 default
+    old_date = (datetime.now(timezone.utc) - timedelta(days=200)).strftime("%Y-%m-%d")
+    r2 = client.get(
+        f"/admin/audit-log?action=audit_old_only&start_date={old_date}",
+        headers=ADMIN_HEADERS,
+    )
+    actions2 = {i["action"] for i in r2.json()["items"]}
+    assert "audit_old_only" in actions2, "明確 start_date 應覆寫 default 窗口"
+    assert r2.json()["days_window"] is None  # 不顯示 default

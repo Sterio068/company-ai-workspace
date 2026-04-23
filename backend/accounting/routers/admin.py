@@ -271,22 +271,36 @@ def audit_log(
     skip: int = Query(default=0, ge=0),
     start_date: Optional[str] = None,  # YYYY-MM-DD
     end_date: Optional[str] = None,
+    days: int = Query(default=90, ge=1, le=365),  # R36 · 預設窗 90 天 · 防 admin 全表探勘
     _admin: str = require_admin_dep(),
 ):
     """查 audit_log · admin 維運期
     R14#5 · 加 pagination + date range filter · 防一年百萬條全撈
+    C2(v1.3)· action 支援 multi-action 過濾(用 ',' 分隔 · pdpa_delete,pdpa_delete_dryrun)
+    R36(v1.3)· days 預設 90 · 明確 start/end_date 才覆寫 default 窗口
     """
     from main import audit_col, serialize
     q = {}
-    if action: q["action"] = action
+    if action:
+        # C2 · 支援多 action(pdpa_delete,pdpa_delete_dryrun)
+        actions = [a.strip() for a in action.split(",") if a.strip()]
+        if len(actions) == 1:
+            q["action"] = actions[0]
+        elif actions:
+            q["action"] = {"$in": actions}
     if user:   q["user"] = user
-    # date range · R18 · 容忍 YYYY-MM-DD 或完整 ISO datetime
+    # R36 · date 處理優先順序:
+    #   - start_date/end_date 明確給 → 用該範圍
+    #   - 否則 → 預設 days 窗口(防全表探勘 + 大 count_documents)
     if start_date or end_date:
         q["created_at"] = {}
         if start_date:
             q["created_at"]["$gte"] = _parse_date_boundary(start_date)
         if end_date:
             q["created_at"]["$lte"] = _parse_date_boundary(end_date, end=True)
+    else:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        q["created_at"] = {"$gte": cutoff}
     cursor = audit_col.find(q).sort("created_at", -1).skip(skip).limit(limit)
     items = serialize(list(cursor))
     total = audit_col.count_documents(q)
@@ -296,6 +310,44 @@ def audit_log(
         "skip": skip,
         "limit": limit,
         "has_more": (skip + len(items)) < total,
+        "days_window": days if not (start_date or end_date) else None,  # R36 · 顯示用 default
+    }
+
+
+@router.get("/admin/audit-log/actions")
+def audit_log_actions(
+    days: int = Query(default=90, ge=1, le=365),
+    _admin: str = require_admin_dep(),
+):
+    """C2(v1.3)· 列出 distinct action + count · 給前端 dropdown
+    R35 修 · 預設只算最近 90 天 · 防全表 aggregate(audit_log TTL 90d 已配合)
+    回 [{action, count}, ...] · sort by count desc · 最多 50 個
+
+    Parameters
+    ----------
+    days : 1-365 · 預設 90 · 限制 aggregation 範圍
+    """
+    from main import audit_col
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    LIMIT = 50
+    pipeline = [
+        {"$match": {"created_at": {"$gte": cutoff}}},  # R35 · 先 match 再 group
+        {"$group": {"_id": "$action", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": LIMIT + 1},  # 多取 1 偵測截斷
+    ]
+    rows = list(audit_col.aggregate(pipeline))
+    truncated = len(rows) > LIMIT
+    rows = rows[:LIMIT]
+    return {
+        "actions": [
+            {"action": r["_id"] or "(unknown)", "count": r["count"]}
+            for r in rows if r["_id"] is not None
+        ],
+        "returned_count": len(rows),  # R35 · 命名清楚 · 非「總 distinct」
+        "limit": LIMIT,
+        "truncated": truncated,
+        "days": days,
     }
 
 
@@ -500,16 +552,19 @@ def monthly_report(month: Optional[str] = None, _admin: str = require_admin_dep(
 # Settings(_USD_TO_NTD / _MONTHLY_BUDGET_NTD / etc.)仍在 main · lazy import
 # ============================================================
 @router.get("/admin/cost")
-def cost_summary(days: int = 30, _admin: str = require_admin_dep()):
-    """粗估 API cost by model"""
+def cost_summary(days: int = Query(default=30, ge=1, le=365),
+                 _admin: str = require_admin_dep()):
+    """粗估 API cost by model · R37 · 加 days 上下限防裸 int 探勘"""
     from main import db
     from services import admin_metrics
     return admin_metrics.cost_by_model(db, days)
 
 
 @router.get("/admin/adoption")
-def adoption_summary(days: int = 7, _admin: str = require_admin_dep()):
-    """Codex Round 10.5 黃 6 · 支撐 BOSS-VIEW ROI 公式的 adoption 數字"""
+def adoption_summary(days: int = Query(default=7, ge=1, le=365),
+                     _admin: str = require_admin_dep()):
+    """Codex Round 10.5 黃 6 · 支撐 BOSS-VIEW ROI 公式的 adoption 數字
+    R37 · 加 days 上下限"""
     from main import db, _users_col, projects_col, feedback_col, _USD_TO_NTD
     from services import admin_metrics
     return admin_metrics.adoption_metrics(
@@ -543,8 +598,12 @@ def budget_status(_admin: str = require_admin_dep()):
 
 
 @router.get("/admin/top-users")
-def top_users(days: int = 30, limit: int = 10, _admin: str = require_admin_dep()):
-    """Top N 用量同仁"""
+def top_users(
+    days: int = Query(default=30, ge=1, le=365),
+    limit: int = Query(default=10, ge=1, le=100),
+    _admin: str = require_admin_dep(),
+):
+    """Top N 用量同仁 · R37 · days/limit 加上下限"""
     from main import db, _users_col, _USER_SOFT_CAP_DEFAULT, _USD_TO_NTD
     from services import admin_metrics
     return admin_metrics.top_users(db, _users_col, days, limit,
