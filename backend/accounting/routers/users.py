@@ -41,9 +41,21 @@ def get_user_prefs(user_email: str,
     db = get_db()
     _require_self_or_admin(user_email, caller)
     prefs = list(db.user_preferences.find({"user_email": user_email}))
+    # R25#1 · 敏感欄位(line_token / api_keys)只回 configured + last4 · 不回原值
+    SENSITIVE = {"line_token"}
+    out = {}
+    for p in prefs:
+        k, v = p.get("key"), p.get("value", "")
+        if k in SENSITIVE:
+            out[k] = {
+                "configured": bool(v),
+                "preview": (v[-4:] if v and len(v) > 4 else "***"),
+            }
+        else:
+            out[k] = v
     return {
         "user_email": user_email,
-        "preferences": {p["key"]: p["value"] for p in prefs},
+        "preferences": out,
         "count": len(prefs),
     }
 

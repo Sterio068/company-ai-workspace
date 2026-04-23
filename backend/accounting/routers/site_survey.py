@@ -273,47 +273,80 @@ async def create_survey(
     try:
         for img in images:
             mime = (img.content_type or "").lower()
-            content = await img.read()
-            # Day 2.3 · HEIC/HEIF 自動轉 JPEG · 不再 reject iPhone 用戶
-            if mime in ("image/heic", "image/heif") or img.filename.lower().endswith((".heic", ".heif")):
+            is_heic = (mime in ("image/heic", "image/heif")
+                       or (img.filename or "").lower().endswith((".heic", ".heif")))
+
+            # R25#2 · 先寫 tmp · raw size cap · 不全部 read 進 memory
+            # FastAPI UploadFile 內部已 spool 到 tmp file · 直接 chunked copy
+            fd_raw, raw_path = tempfile.mkstemp(
+                prefix="chengfu-survey-raw-",
+                suffix=".heic" if is_heic else f".{mime.split('/')[-1]}",
+            )
+            raw_size = 0
+            try:
+                while True:
+                    chunk = await img.read(64 * 1024)  # 64KB chunk
+                    if not chunk:
+                        break
+                    raw_size += len(chunk)
+                    if raw_size > MAX_IMAGE_BYTES * 2:  # HEIC 比 JPEG 約大 2x · 容忍
+                        os.close(fd_raw)
+                        os.remove(raw_path)
+                        _cleanup_tmp_files(tmp_paths)
+                        raise HTTPException(413, f"照片 raw > {MAX_IMAGE_BYTES * 2 // 1024 // 1024}MB · 請先 resize")
+                    os.write(fd_raw, chunk)
+            finally:
+                os.close(fd_raw)
+
+            if raw_size < 1024:
+                os.remove(raw_path)
+                _cleanup_tmp_files(tmp_paths)
+                raise HTTPException(400, "照片太小 · 可能空檔")
+
+            # 若 HEIC 則轉 JPEG · 否則直接驗 mime + size
+            if is_heic:
                 try:
                     from PIL import Image
                     import pillow_heif
                     pillow_heif.register_heif_opener()
-                    import io
-                    heif = Image.open(io.BytesIO(content))
-                    out = io.BytesIO()
-                    heif.convert("RGB").save(out, format="JPEG", quality=85)
-                    content = out.getvalue()
-                    mime = "image/jpeg"
-                    logger.info("[site-survey] HEIC → JPEG 轉檔 · %s · %d bytes", img.filename, len(content))
+                    fd_jpg, jpg_path = tempfile.mkstemp(prefix="chengfu-survey-", suffix=".jpg")
+                    os.close(fd_jpg)
+                    # 從 file path 開 · Pillow 內部 stream(不全載 memory)
+                    img_pil = Image.open(raw_path)
+                    img_pil.convert("RGB").save(jpg_path, format="JPEG", quality=85)
+                    img_pil.close()
+                    os.remove(raw_path)  # 刪 raw heic
+                    final_size = os.path.getsize(jpg_path)
+                    if final_size > MAX_IMAGE_BYTES:
+                        os.remove(jpg_path)
+                        _cleanup_tmp_files(tmp_paths)
+                        raise HTTPException(413, f"HEIC 轉 JPEG 後仍 > {MAX_IMAGE_BYTES // 1024 // 1024}MB")
+                    tmp_paths.append(jpg_path)
+                    mime_list.append("image/jpeg")
+                    total_bytes += final_size
+                    logger.info("[site-survey] HEIC → JPEG · %s · raw %d → jpg %d",
+                                img.filename, raw_size, final_size)
                 except ImportError:
+                    os.remove(raw_path)
                     _cleanup_tmp_files(tmp_paths)
-                    raise HTTPException(400,
-                        "HEIC 需 pillow-heif 套件 · 或 iPhone 設定 → 相機 → 最相容")
+                    raise HTTPException(400, "HEIC 需 pillow-heif · 或 iPhone 設定 → 相機 → 最相容")
                 except Exception as e:
+                    if os.path.exists(raw_path):
+                        os.remove(raw_path)
                     _cleanup_tmp_files(tmp_paths)
                     raise HTTPException(400, f"HEIC 轉檔失敗: {str(e)[:100]}")
-            elif mime not in ("image/jpeg", "image/png", "image/webp"):
-                _cleanup_tmp_files(tmp_paths)
-                raise HTTPException(400, f"照片格式不支援:{mime} · 請用 JPEG/PNG/WebP")
-            size = len(content)
-            if size > MAX_IMAGE_BYTES:
-                _cleanup_tmp_files(tmp_paths)
-                raise HTTPException(413, f"照片 > {MAX_IMAGE_BYTES // 1024 // 1024}MB · 請先 resize")
-            if size < 1024:
-                _cleanup_tmp_files(tmp_paths)
-                raise HTTPException(400, "照片太小 · 可能空檔")
-            total_bytes += size
-            # 寫 tmp · 清 memory
-            fd, tpath = tempfile.mkstemp(prefix="chengfu-survey-", suffix=f".{mime.split('/')[-1]}")
-            try:
-                os.write(fd, content)
-            finally:
-                os.close(fd)
-            tmp_paths.append(tpath)
-            mime_list.append(mime)
-            del content  # 釋放 memory
+            else:
+                if mime not in ("image/jpeg", "image/png", "image/webp"):
+                    os.remove(raw_path)
+                    _cleanup_tmp_files(tmp_paths)
+                    raise HTTPException(400, f"照片格式不支援:{mime} · 請用 JPEG/PNG/WebP")
+                if raw_size > MAX_IMAGE_BYTES:
+                    os.remove(raw_path)
+                    _cleanup_tmp_files(tmp_paths)
+                    raise HTTPException(413, f"照片 > {MAX_IMAGE_BYTES // 1024 // 1024}MB · 請先 resize")
+                tmp_paths.append(raw_path)
+                mime_list.append(mime)
+                total_bytes += raw_size
     except HTTPException:
         raise
     except Exception as e:
