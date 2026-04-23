@@ -1563,3 +1563,145 @@ def test_librechat_user_id_case_insensitive(client):
     assert uid is not None
     uid2 = librechat_admin.find_librechat_user_id(main_mod.db, "MIXED@CASE.COM")
     assert uid2 == uid
+
+
+# ============================================================
+# A5(v1.3)· Social OAuth infra(無真 Meta call · v1.4 補)
+# ============================================================
+USER_HEADERS = {"X-User-Email": "alice@chengfu.local"}
+
+
+def test_oauth_start_requires_app_credentials(client):
+    """A5 · 沒設 FACEBOOK_APP_ID env → 503"""
+    import os
+    # 確保沒設
+    os.environ.pop("FACEBOOK_APP_ID", None)
+    os.environ.pop("FACEBOOK_APP_SECRET", None)
+    r = client.get("/social/oauth/start?platform=facebook",
+                   headers=USER_HEADERS, follow_redirects=False)
+    assert r.status_code == 503
+    assert "FACEBOOK_APP_ID" in r.json()["detail"]
+
+
+def test_oauth_start_redirects_when_creds_present(client, monkeypatch):
+    """A5 · 有 app creds → 302 redirect to platform auth + state 寫 db"""
+    import main as main_mod
+    monkeypatch.setenv("FACEBOOK_APP_ID", "test-app-id")
+    monkeypatch.setenv("FACEBOOK_APP_SECRET", "test-app-secret")
+    r = client.get("/social/oauth/start?platform=facebook",
+                   headers=USER_HEADERS, follow_redirects=False)
+    assert r.status_code == 302
+    loc = r.headers["location"]
+    assert "facebook.com/v18.0/dialog/oauth" in loc
+    assert "client_id=test-app-id" in loc
+    assert "state=" in loc
+    # state 寫進 db
+    state_doc = main_mod.db.social_oauth_states.find_one(
+        {"user_email": "alice@chengfu.local", "platform": "facebook"}
+    )
+    assert state_doc is not None
+
+
+def test_oauth_callback_stores_token_mock(client, monkeypatch):
+    """A5 · callback 收 code + state · mock 模擬成功 store token"""
+    import main as main_mod
+    from datetime import datetime, timezone, timedelta
+    # seed state
+    main_mod.db.social_oauth_states.insert_one({
+        "state": "test-state-xyz",
+        "user_email": "alice@chengfu.local",
+        "platform": "facebook",
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=5),
+    })
+    r = client.get("/social/oauth/callback?code=test-code&state=test-state-xyz",
+                   follow_redirects=False)
+    assert r.status_code == 302
+    assert "/#social?connected=facebook" in r.headers["location"]
+    # token 寫進 db
+    token_doc = main_mod.db.social_oauth_tokens.find_one(
+        {"user_email": "alice@chengfu.local", "platform": "facebook"}
+    )
+    assert token_doc is not None
+    assert token_doc["account_id"] == "mock-facebook-account-id"
+    # state 已 cleanup
+    assert main_mod.db.social_oauth_states.count_documents({"state": "test-state-xyz"}) == 0
+
+
+def test_oauth_callback_rejects_unknown_state(client):
+    """A5 · 假 state → 400(防 CSRF)"""
+    r = client.get("/social/oauth/callback?code=x&state=fake-state-not-in-db",
+                   follow_redirects=False)
+    assert r.status_code == 400
+
+
+def test_oauth_callback_rejects_expired_state(client):
+    """A5 · state 過期(>10 min)→ 400 + cleanup"""
+    import main as main_mod
+    from datetime import datetime, timezone, timedelta
+    main_mod.db.social_oauth_states.insert_one({
+        "state": "expired-state",
+        "user_email": "alice@chengfu.local",
+        "platform": "facebook",
+        "expires_at": datetime.now(timezone.utc) - timedelta(minutes=1),
+    })
+    r = client.get("/social/oauth/callback?code=x&state=expired-state",
+                   follow_redirects=False)
+    assert r.status_code == 400
+    assert main_mod.db.social_oauth_states.count_documents({"state": "expired-state"}) == 0
+
+
+def test_oauth_disconnect(client):
+    """A5 · POST disconnect 刪 token(用 instagram 避免跟 callback test 撞)"""
+    import main as main_mod
+    main_mod.db.social_oauth_tokens.insert_one({
+        "user_email": "alice@chengfu.local",
+        "platform": "instagram",
+        "access_token_encrypted": "PLAIN:fake-ig-token",
+    })
+    r = client.post("/social/oauth/disconnect?platform=instagram", headers=USER_HEADERS)
+    assert r.status_code == 200
+    assert r.json()["deleted"] is True
+    assert main_mod.db.social_oauth_tokens.count_documents(
+        {"user_email": "alice@chengfu.local", "platform": "instagram"}
+    ) == 0
+
+
+def test_oauth_status_admin_only(client):
+    """A5 · /social/oauth/status 必 admin · 不能匿名/一般 user"""
+    r = client.get("/social/oauth/status", headers={"X-User-Email": ""})
+    assert r.status_code == 403
+
+
+def test_oauth_status_lists_connections(client):
+    """A5 · admin 看到所有同事連的 platform · 不回 token"""
+    import main as main_mod
+    from datetime import datetime, timezone
+    main_mod.db.social_oauth_tokens.insert_one({
+        "user_email": "alice@chengfu.local",
+        "platform": "facebook",
+        "access_token_encrypted": "PLAIN:secret",
+        "account_id": "fb-1",
+        "account_name": "Alice FB",
+        "expires_at": datetime.now(timezone.utc),
+        "connected_at": datetime.now(timezone.utc),
+        "last_refreshed_at": datetime.now(timezone.utc),
+        "scopes": ["pages_manage_posts"],
+    })
+    r = client.get("/social/oauth/status", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    conns = r.json()["connections"]
+    assert any(c["user_email"] == "alice@chengfu.local"
+               and c["platform"] == "facebook" for c in conns)
+    # 不該回 token 本身
+    for c in conns:
+        assert "access_token" not in c
+        assert "access_token_encrypted" not in c
+
+
+def test_oauth_token_encrypt_decrypt_roundtrip():
+    """A5 · encrypt → decrypt 來回一致 · 沒 CREDS_KEY 退化 PLAIN: 前綴"""
+    from services import oauth_tokens
+    plain = "secret-token-123"
+    enc = oauth_tokens.encrypt_token(plain)
+    dec = oauth_tokens.decrypt_token(enc)
+    assert dec == plain

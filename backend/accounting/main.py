@@ -127,6 +127,19 @@ async def lifespan(app: FastAPI):
     db.knowledge_file_hashes.create_index(
         [("source_id", 1), ("rel_path", 1)], unique=True, name="src_path_uniq"
     )
+    # A5(v1.3)· social OAuth · token + state TTL
+    try:
+        db.social_oauth_tokens.create_index(
+            [("user_email", 1), ("platform", 1)], unique=True, name="user_platform_uniq"
+        )
+        db.social_oauth_tokens.create_index([("expires_at", 1)])  # cron refresh 掃用
+        # state · expires_at TTL · 過期自動清(防 stale state 累積)
+        db.social_oauth_states.create_index([("state", 1)], unique=True)
+        db.social_oauth_states.create_index(
+            [("expires_at", 1)], expireAfterSeconds=0, name="state_ttl"
+        )
+    except Exception as e:
+        logger.warning("[index] social_oauth: %s", e)
     # Round 9 implicit · log TTL 防無限長(估 10 人 × 50 read/day × 365 ≈ 182k doc/年)
     # PDPA 留 90 天 audit 已綽綽有餘 · admin 想看歷史另存 export
     # R14#4 · 原本 try/except 靜默過 · 若 index 選項不同(TTL) 會留舊的 · TTL 沒生效 · 月 +4GB
@@ -721,6 +734,13 @@ app.include_router(_media_router.router)
 # ============================================================
 from routers import social as _social_router
 app.include_router(_social_router.router)
+
+# ============================================================
+# Social OAuth infra · v1.3 A5 · /social/oauth/{start,callback,disconnect,status}
+# B1 真接 Meta API 留 v1.4(等承富送 App)· A5 此 PR 走 mock provider
+# ============================================================
+from routers import social_oauth as _social_oauth_router
+app.include_router(_social_oauth_router.router)
 
 # ============================================================
 # Site Survey · v1.2 Feature #7 · 場勘 PWA + Claude Vision
