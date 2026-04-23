@@ -233,6 +233,35 @@ LibreChat admin panel → Users → 選使用者 → Monthly Token Limit。
 
 ---
 
+## 6.4 · Launcher esbuild bundle cutover(v1.3 A3 · v1.4 切換)
+
+v1.3 A3 加 esbuild infra · 但 nginx 預設仍 mount `/static/` → `frontend/launcher/`(原 29 個 .js)
+正式 cutover 留 v1.4 · 因為 v1.3 ship 不想破 prod deploy
+
+### 預估改善
+- launcher 進入時間 1.2s → 0.5s(慢網)
+- request 數 29 → 1 + chunks
+- 配 minify · payload 約 -40%
+
+### 怎麼 cutover(v1.4 排)
+
+```bash
+cd frontend/launcher
+npm install
+npm run build       # 產 dist/app.[hash].js + dist/manifest.json
+
+# 改 nginx · /static/ alias 改 dist/
+# 改 index.html 用 manifest 對 hash · 強制 cache 失效
+docker compose restart nginx
+
+# devtools network · LCP / FCP 量測
+```
+
+### Rollback
+nginx mount 改回原 `frontend/launcher/`(0 downtime · 既有 modules/*.js 都還在)
+
+---
+
 ## 7. 升級事故分級(H-1)
 
 | 等級 | 定義 | 反應時間 | 誰處理 |
