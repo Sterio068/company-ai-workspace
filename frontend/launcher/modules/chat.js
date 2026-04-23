@@ -164,6 +164,47 @@ export const chat = {
     const text = input.value.trim();
     if (!text) return;
 
+    // v1.2 Feature #3 · PII 偵測 · 送前掃一次身分證/電話/email/信用卡
+    try {
+      const piiR = await authFetch("/api-accounting/safety/pii-detect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (piiR.ok) {
+        const pii = await piiR.json();
+        if (pii.total > 0) {
+          const kinds = pii.hits.map(h => h.label).filter((v, i, a) => a.indexOf(v) === i);
+          const choice = await new Promise(resolve => {
+            if (confirm(
+              `⚠️ 偵測到 ${pii.total} 個 PII:${kinds.join("、")}\n\n` +
+              `按「確定」用打碼版送(推薦)\n按「取消」回去修改`
+            )) {
+              resolve("redact");
+            } else {
+              resolve("cancel");
+            }
+          });
+          if (choice === "cancel") return;
+          if (choice === "redact") {
+            // 寫 audit + 用 redacted text 送
+            try {
+              await authFetch("/api-accounting/safety/pii-audit", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text }),
+              });
+            } catch {}
+            input.value = pii.redacted;
+            // 重新讀取打碼後的 text 繼續送
+            return this.send(e);
+          }
+        }
+      }
+    } catch (e) {
+      // PII 偵測壞 · 不擋(best-effort)
+    }
+
     // v4.6 · request-time quota check(Round 6 紅線 + Codex Round 10.5 收緊)
     // 策略:
     //   · qr.ok + allowed=false → 擋(原本就有)

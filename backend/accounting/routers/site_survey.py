@@ -266,16 +266,37 @@ async def create_survey(
     _validate_gps(gps_lat, gps_lng, gps_accuracy)
 
     # R23#1 · 驗 + 落 tmp file · 不一次全塞 memory
+    # Day 2.3 · HEIC 自動轉 JPEG(用 Pillow + pillow-heif · iPhone 友好)
     tmp_paths = []
     mime_list = []
     total_bytes = 0
     try:
         for img in images:
             mime = (img.content_type or "").lower()
-            if mime not in ("image/jpeg", "image/png", "image/webp"):
+            content = await img.read()
+            # Day 2.3 · HEIC/HEIF 自動轉 JPEG · 不再 reject iPhone 用戶
+            if mime in ("image/heic", "image/heif") or img.filename.lower().endswith((".heic", ".heif")):
+                try:
+                    from PIL import Image
+                    import pillow_heif
+                    pillow_heif.register_heif_opener()
+                    import io
+                    heif = Image.open(io.BytesIO(content))
+                    out = io.BytesIO()
+                    heif.convert("RGB").save(out, format="JPEG", quality=85)
+                    content = out.getvalue()
+                    mime = "image/jpeg"
+                    logger.info("[site-survey] HEIC → JPEG 轉檔 · %s · %d bytes", img.filename, len(content))
+                except ImportError:
+                    _cleanup_tmp_files(tmp_paths)
+                    raise HTTPException(400,
+                        "HEIC 需 pillow-heif 套件 · 或 iPhone 設定 → 相機 → 最相容")
+                except Exception as e:
+                    _cleanup_tmp_files(tmp_paths)
+                    raise HTTPException(400, f"HEIC 轉檔失敗: {str(e)[:100]}")
+            elif mime not in ("image/jpeg", "image/png", "image/webp"):
                 _cleanup_tmp_files(tmp_paths)
                 raise HTTPException(400, f"照片格式不支援:{mime} · 請用 JPEG/PNG/WebP")
-            content = await img.read()
             size = len(content)
             if size > MAX_IMAGE_BYTES:
                 _cleanup_tmp_files(tmp_paths)

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  承富 AI · 社群排程 cron(Feature #5 · v1.2 · ROADMAP)
+
+  每 5 分鐘呼叫 /admin/social/run-queue
+  · 撈 schedule_at <= now 的 queued/failed · dispatch
+  · publishing 過期(lease 5min)的孤兒也撈
+
+  安裝:./scripts/install-launchd.sh
+  卸載:launchctl unload ~/Library/LaunchAgents/tw.chengfu.social-scheduler.plist
+  驗證:tail -f ~/Library/Logs/chengfu-social-scheduler.log
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>tw.chengfu.social-scheduler</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>export PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin &amp;&amp; cd "__REPO_ROOT__" &amp;&amp; bash scripts/social-scheduler-cron.sh</string>
+    </array>
+
+    <!-- 每 5 分鐘 -->
+    <key>StartInterval</key>
+    <integer>300</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/USERNAME/Library/Logs/chengfu-social-scheduler.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/USERNAME/Library/Logs/chengfu-social-scheduler.err.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+    <key>KeepAlive</key>
+    <false/>
+</dict>
+</plist>

@@ -75,3 +75,41 @@ def delete_user_pref(user_email: str, key: str,
     _require_self_or_admin(user_email, caller)
     r = db.user_preferences.delete_one({"user_email": user_email, "key": key})
     return {"deleted": r.deleted_count}
+
+
+# ============================================================
+# Feature #2 · LINE Notify token 設定 + 測試送
+# ============================================================
+class LineTokenSetup(BaseModel):
+    token: str  # LINE Notify token
+
+
+@router.post("/users/{user_email}/line-token")
+def set_line_token(user_email: str, payload: LineTokenSetup,
+                   caller: Optional[str] = current_user_email_dep()):
+    """同事自設 LINE Notify token · /users/me 也走此(email = caller)"""
+    _require_self_or_admin(user_email, caller)
+    db = get_db()
+    db.user_preferences.update_one(
+        {"user_email": user_email, "key": "line_token"},
+        {"$set": {
+            "user_email": user_email,
+            "key": "line_token",
+            "value": payload.token.strip(),
+            "updated_at": datetime.utcnow(),
+        }},
+        upsert=True,
+    )
+    # 立刻送測試訊息
+    from services.line_notify import send
+    ok = send(payload.token.strip(), "✅ 承富 AI · LINE Notify 綁定成功 · 之後重要事件會推這")
+    return {"saved": True, "test_sent": ok}
+
+
+@router.delete("/users/{user_email}/line-token")
+def delete_line_token(user_email: str,
+                      caller: Optional[str] = current_user_email_dep()):
+    _require_self_or_admin(user_email, caller)
+    db = get_db()
+    r = db.user_preferences.delete_one({"user_email": user_email, "key": "line_token"})
+    return {"deleted": r.deleted_count}
