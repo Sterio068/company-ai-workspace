@@ -1109,15 +1109,16 @@ def test_pdpa_dry_run_counts(client):
     assert body["counts"]["user_preferences"] >= 1
     assert body["counts"]["feedback"] >= 1
     assert body["counts"]["scheduled_posts"] >= 1
-    # R29 改名 crm_leads_owner_unset → crm_leads_unset(因 unset_targets pattern)
-    assert body["counts"]["crm_leads_unset"] >= 1
+    # R30 · 命名 col_unset_field 因為一個 col 可有多個欄位被清
+    assert body["counts"]["crm_leads_unset_owner"] >= 1
     # dry_run · 資料應仍在
     assert main_mod.db.user_preferences.count_documents({"user_email": target}) >= 1
 
 
 def test_pdpa_real_delete(client):
-    """admin POST dry_run=false · 真刪 + crm_leads owner unset · audit 記下
-    R29 補:含 design_jobs / media_pitch_history / agent_overrides 等 9 類"""
+    """admin POST dry_run=false · 真刪 + 多 col owner/by/created_by unset · audit 記下
+    R30 補:7 額外漏網欄位(knowledge_sources/projects/handoff/stage_history/notes[]/agent editor/system)
+    """
     import main as main_mod
     from datetime import datetime, timezone
     target = "real-delete@chengfu.local"
@@ -1130,11 +1131,24 @@ def test_pdpa_real_delete(client):
         {"user_email": target, "agent_num": "01", "prompt": "x"})
     # 切關聯類 sample
     main_mod.db.crm_leads.insert_one(
-        {"title": "real lead", "owner": target, "stage": "lead"})
+        {"title": "real lead", "owner": target, "stage": "lead",
+         "notes": [{"text": "n1", "by": target, "at": "2026-04-01"}]})
     main_mod.db.media_pitch_history.insert_one(
         {"contact_id": "x", "pitched_by": target, "topic": "y"})
     main_mod.db.media_contacts.insert_one(
         {"name": "記者 A", "outlet": "中時", "created_by": target})
+    # R30 補 · 7 漏網欄位
+    main_mod.db.knowledge_sources.insert_one(
+        {"name": "kbA", "path": "/x", "created_by": target})
+    main_mod.db.projects.insert_one(
+        {"name": "projA", "owner": target,
+         "handoff": {"goal": "g", "updated_by": target}})
+    main_mod.db.crm_stage_history.insert_one(
+        {"lead_id": "L1", "old_stage": "lead", "new_stage": "won", "changed_by": target})
+    main_mod.db.agent_overrides.insert_one(
+        {"agent_num": "01", "user_email": "other@x.com", "editor": target, "prompt": "g"})
+    main_mod.db.system_settings.insert_one(
+        {"key": "x", "value": "y", "updated_by": target})
 
     r = client.post(
         f"/admin/users/{target}/delete-all",
@@ -1152,9 +1166,19 @@ def test_pdpa_real_delete(client):
     assert main_mod.db.crm_leads.find_one({"title": "real lead"})["owner"] is None
     assert main_mod.db.media_pitch_history.find_one({"contact_id": "x"})["pitched_by"] is None
     assert main_mod.db.media_contacts.find_one({"name": "記者 A"})["created_by"] is None
+    # R30 補 · 7 漏網欄位驗收
+    assert main_mod.db.knowledge_sources.find_one({"name": "kbA"})["created_by"] is None
+    proj = main_mod.db.projects.find_one({"name": "projA"})
+    assert proj["owner"] is None
+    assert proj["handoff"]["updated_by"] is None
+    assert main_mod.db.crm_stage_history.find_one({"lead_id": "L1"})["changed_by"] is None
+    other_override = main_mod.db.agent_overrides.find_one({"user_email": "other@x.com"})
+    assert other_override["editor"] is None  # 別人的設定資料留 · editor 殘 email 清
+    assert main_mod.db.system_settings.find_one({"key": "x"})["updated_by"] is None
+    # crm_leads.notes[].by · array element
+    notes = main_mod.db.crm_leads.find_one({"title": "real lead"})["notes"]
+    assert notes[0]["by"] is None, "notes[].by 必清"
     # audit 記下
-    # 自查補:PDPA audit 寫 db.audit_log(同其他 admin 操作)· 不寫 db.knowledge_audit
-    # 否則 /admin/audit-log 看不到 PDPA 紀錄
     audit = main_mod.audit_col.find_one({"action": "pdpa_delete", "resource": target})
     assert audit is not None, "PDPA audit 必寫 main.audit_col(db.audit_log)"
 

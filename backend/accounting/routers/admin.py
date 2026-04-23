@@ -851,10 +851,18 @@ def pdpa_delete_user(user_email: str, payload: PdpaDeleteRequest,
     ]
 
     # 切人關聯類 · collection → (query, $set patch)
+    # R30 補 · 把所有殘留 target email 的欄位全清(法規洞)
     unset_targets = [
         ("crm_leads", {"owner": target}, {"owner": None}),
         ("media_pitch_history", {"pitched_by": target}, {"pitched_by": None}),  # R29 補
         ("media_contacts", {"created_by": target}, {"created_by": None}),       # R29 補
+        # R30 補 · 7 個漏網欄位
+        ("knowledge_sources", {"created_by": target}, {"created_by": None}),
+        ("projects", {"owner": target}, {"owner": None}),
+        ("projects", {"handoff.updated_by": target}, {"handoff.updated_by": None}),
+        ("crm_stage_history", {"changed_by": target}, {"changed_by": None}),
+        ("agent_overrides", {"editor": target}, {"editor": None}),
+        ("system_settings", {"updated_by": target}, {"updated_by": None}),
     ]
 
     counts = {}
@@ -868,12 +876,32 @@ def pdpa_delete_user(user_email: str, payload: PdpaDeleteRequest,
 
     for col_name, q, patch in unset_targets:
         col = db[col_name]
-        key = f"{col_name}_unset"
+        # 多筆 unset 同 collection 不同欄位 · key 用 col + 欄位
+        field = next(iter(q.keys()))
+        key = f"{col_name}_unset_{field.replace('.', '_')}"
         if payload.dry_run:
             counts[key] = col.count_documents(q)
         else:
             r = col.update_many(q, {"$set": patch})
             counts[key] = r.modified_count
+
+    # R30 補 · crm_leads.notes[].by 是 array element
+    # 不用 Mongo arrayFilters($[n])· mongomock 不支援 · 改 Python 端 patch
+    affected_leads = list(db.crm_leads.find({"notes.by": target}, {"_id": 1, "notes": 1}))
+    if payload.dry_run:
+        counts["crm_leads_notes_by_unset"] = len(affected_leads)
+    else:
+        modified = 0
+        for lead in affected_leads:
+            new_notes = [
+                {**n, "by": None} if n.get("by") == target else n
+                for n in (lead.get("notes") or [])
+            ]
+            db.crm_leads.update_one(
+                {"_id": lead["_id"]}, {"$set": {"notes": new_notes}}
+            )
+            modified += 1
+        counts["crm_leads_notes_by_unset"] = modified
 
     # 寫 audit · 不論 dry_run 都記
     audit_col.insert_one({
