@@ -14,13 +14,14 @@ on run
 		"執行時間:30-45 分鐘(視網路)" & return & return & ¬
 		"v1.2 4 功能:" & return & ¬
 		"  🎤 會議速記 · 🎬 媒體 CRM · 📅 社群排程 · 📸 場勘 PWA" & return & ¬
-		"v1.3.0 強化(19 PR · 2026-04-23):" & return & ¬
+		"v1.3.0 強化(20 PR · 2026-04-23):" & return & ¬
 		"  · 13 V1.3-PLAN(12 ship · B1 真打 Meta 延 v1.4)" & return & ¬
 		"  · 13 user-guide markdown(quickstart / mobile-ios / error-codes / training)" & return & ¬
 		"  · 5 批 UX 升級(toast 標準化 / 8 view 空狀態 / Modal a11y / 27 shortcut)" & return & ¬
-		"  · 行動端 bottom nav · L3 機敏 confirm · PII friendly · WCAG focus-visible" & return & ¬
-		"  · prefers-reduced-motion · skeleton 載入 · PWA 6 個 long-press shortcut" & return & ¬
-		"  201 tests + 10 integration · 12/13 ship · B1 真 Meta 留 v1.4" & return & return & ¬
+		"  · 行動端 bottom nav · WCAG 2.2 (skip-link / focus-visible / reduced-motion)" & return & ¬
+		"  · 30+ hardening fixes(來自 5 agent deep audit)" & return & ¬
+		"  · L3 server-side wall + OAuth URL encode + cookie verified audit" & return & ¬
+		"  203 tests pass · 12/13 ship · B1 真 Meta + sync→async pymongo 留 v1.4" & return & return & ¬
 		"請預先準備:" & return & ¬
 		"  • Anthropic API Key(必須 · Tier 2 預存 USD $50)" & return & ¬
 		"  • OpenAI API Key(會議速記 Whisper 用 · 必須)" & return & ¬
