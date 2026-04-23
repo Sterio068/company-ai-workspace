@@ -1296,3 +1296,75 @@ def test_healthz_remains_public(client):
     r = client.get("/healthz", headers={"X-User-Email": ""})
     assert r.status_code == 200
     assert r.json()["status"] == "ok"
+
+
+# ============================================================
+# C2(v1.3)· /admin/audit-log filter + distinct actions
+# ============================================================
+def test_audit_log_action_filter_single(client):
+    """C2 · ?action=xxx 單一 action 過濾"""
+    import main as main_mod
+    from datetime import datetime, timezone
+    # seed 不同 action 的 audit
+    for action in ["test_a", "test_a", "test_b"]:
+        main_mod.audit_col.insert_one(
+            {"action": action, "user": "x", "resource": "y",
+             "created_at": datetime.now(timezone.utc)}
+        )
+    r = client.get("/admin/audit-log?action=test_a", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    body = r.json()
+    # 全部 items 都該 test_a
+    assert all(i["action"] == "test_a" for i in body["items"])
+    assert body["total"] >= 2
+
+
+def test_audit_log_action_filter_multi(client):
+    """C2 · ?action=a,b 多 action 過濾(逗號分隔 · pdpa_delete + dryrun 一起看)"""
+    import main as main_mod
+    from datetime import datetime, timezone
+    for action in ["multi_a", "multi_b", "multi_c"]:
+        main_mod.audit_col.insert_one(
+            {"action": action, "user": "x", "resource": "y",
+             "created_at": datetime.now(timezone.utc)}
+        )
+    r = client.get("/admin/audit-log?action=multi_a,multi_b", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    actions = {i["action"] for i in r.json()["items"]}
+    assert "multi_c" not in actions  # 沒被選的不該出現
+    assert actions <= {"multi_a", "multi_b"}
+
+
+def test_audit_log_actions_distinct_endpoint(client):
+    """C2 · GET /admin/audit-log/actions · 列 distinct + count · sort by count desc"""
+    import main as main_mod
+    from datetime import datetime, timezone
+    # seed · pop_a 5 筆 · pop_b 3 筆 · pop_c 1 筆
+    for _ in range(5):
+        main_mod.audit_col.insert_one(
+            {"action": "pop_a", "user": "x", "created_at": datetime.now(timezone.utc)}
+        )
+    for _ in range(3):
+        main_mod.audit_col.insert_one(
+            {"action": "pop_b", "user": "x", "created_at": datetime.now(timezone.utc)}
+        )
+    main_mod.audit_col.insert_one(
+        {"action": "pop_c", "user": "x", "created_at": datetime.now(timezone.utc)}
+    )
+    r = client.get("/admin/audit-log/actions", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    body = r.json()
+    actions_dict = {a["action"]: a["count"] for a in body["actions"]}
+    assert actions_dict["pop_a"] >= 5
+    assert actions_dict["pop_b"] >= 3
+    assert actions_dict["pop_c"] >= 1
+    # sort by count desc · pop_a 應在 pop_b 之前
+    pop_a_idx = next(i for i, a in enumerate(body["actions"]) if a["action"] == "pop_a")
+    pop_b_idx = next(i for i, a in enumerate(body["actions"]) if a["action"] == "pop_b")
+    assert pop_a_idx < pop_b_idx, "should sort by count desc"
+
+
+def test_audit_log_actions_requires_admin(client):
+    """C2 · /admin/audit-log/actions 必須 admin · 不能匿名打"""
+    r = client.get("/admin/audit-log/actions", headers={"X-User-Email": ""})
+    assert r.status_code == 403

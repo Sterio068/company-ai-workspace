@@ -275,10 +275,17 @@ def audit_log(
 ):
     """查 audit_log · admin 維運期
     R14#5 · 加 pagination + date range filter · 防一年百萬條全撈
+    C2(v1.3)· action 支援 multi-action 過濾(用 ',' 分隔 · pdpa_delete,pdpa_delete_dryrun)
     """
     from main import audit_col, serialize
     q = {}
-    if action: q["action"] = action
+    if action:
+        # C2 · 支援多 action(pdpa_delete,pdpa_delete_dryrun)
+        actions = [a.strip() for a in action.split(",") if a.strip()]
+        if len(actions) == 1:
+            q["action"] = actions[0]
+        elif actions:
+            q["action"] = {"$in": actions}
     if user:   q["user"] = user
     # date range · R18 · 容忍 YYYY-MM-DD 或完整 ISO datetime
     if start_date or end_date:
@@ -296,6 +303,28 @@ def audit_log(
         "skip": skip,
         "limit": limit,
         "has_more": (skip + len(items)) < total,
+    }
+
+
+@router.get("/admin/audit-log/actions")
+def audit_log_actions(_admin: str = require_admin_dep()):
+    """C2(v1.3)· 列出所有 distinct action 值 · 給前端 dropdown 篩選用
+    回:[{action: 'pdpa_delete', count: 5}, ...]
+    sort by count desc · 最常用的在前
+    """
+    from main import audit_col
+    pipeline = [
+        {"$group": {"_id": "$action", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 50},  # 防爆量(50 個 action 已綽綽有餘)
+    ]
+    rows = list(audit_col.aggregate(pipeline))
+    return {
+        "actions": [
+            {"action": r["_id"] or "(unknown)", "count": r["count"]}
+            for r in rows if r["_id"] is not None
+        ],
+        "total_distinct": len(rows),
     }
 
 
