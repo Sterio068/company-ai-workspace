@@ -16,14 +16,23 @@ function ensureRoot() {
 
 function show({ title, body, icon, buttons, autofocus }) {
   const root = ensureRoot();
+  // v1.3 batch3 · 記住觸發 modal 的元素 · 關閉時 focus restore
+  const previouslyFocused = document.activeElement;
+
   const backdrop = document.createElement("div");
   backdrop.className = "modal2-backdrop";
   const box = document.createElement("div");
   box.className = "modal2-box";
+  // v1.3 batch3 · WCAG 2.1 dialog role + aria-modal + labelled by title
+  const titleId = "modal2-title-" + Math.random().toString(36).slice(2, 8);
+  box.setAttribute("role", "dialog");
+  box.setAttribute("aria-modal", "true");
+  box.setAttribute("aria-labelledby", titleId);
+  box.tabIndex = -1;
   box.innerHTML = `
     <div class="modal2-head">
-      <span class="modal2-icon">${icon || ""}</span>
-      <h3 class="modal2-title">${escapeHtml(title)}</h3>
+      <span class="modal2-icon" aria-hidden="true">${icon || ""}</span>
+      <h3 class="modal2-title" id="${titleId}">${escapeHtml(title)}</h3>
     </div>
     <div class="modal2-body">${body}</div>
     <div class="modal2-actions"></div>
@@ -46,16 +55,39 @@ function show({ title, body, icon, buttons, autofocus }) {
     backdrop.classList.add("open");
     box.classList.add("open");
     if (autofocus) document.getElementById(autofocus)?.focus();
+    else box.focus();  // 預設 focus modal 本身 · 讓 Tab 從這裡開始
   });
 
   const close = () => {
     backdrop.classList.remove("open");
     box.classList.remove("open");
     setTimeout(() => { backdrop.remove(); box.remove(); }, 200);
-    document.removeEventListener("keydown", onEsc);
+    document.removeEventListener("keydown", onKey);
+    // v1.3 batch3 · 還原 focus · 鍵盤使用者體驗
+    if (previouslyFocused && typeof previouslyFocused.focus === "function") {
+      try { previouslyFocused.focus(); } catch {}
+    }
   };
-  const onEsc = (e) => { if (e.key === "Escape") close(); };
-  document.addEventListener("keydown", onEsc);
+
+  // v1.3 batch3 · ESC 關 + Tab focus trap
+  const onKey = (e) => {
+    if (e.key === "Escape") { close(); return; }
+    if (e.key !== "Tab") return;
+    const focusables = box.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+  document.addEventListener("keydown", onKey);
   backdrop.onclick = close;
 }
 
@@ -112,30 +144,55 @@ export const modal = {
   prompt(fields, { title = "輸入", primary = "確定", cancel = "取消", icon = "✏️" } = {}) {
     return new Promise(resolve => {
       const fid = "f_" + Math.random().toString(36).slice(2);
-      const html = fields.map((f, i) => `
-        <label style="display:block;margin-bottom:12px">
-          <span style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px">
-            ${escapeHtml(f.label)}${f.required ? ' <em style="color:var(--red)">*</em>' : ""}
-          </span>
-          ${f.type === "textarea"
-            ? `<textarea id="${fid}_${i}" rows="${f.rows || 3}" placeholder="${escapeHtml(f.placeholder || "")}" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:14px">${escapeHtml(f.default || "")}</textarea>`
-            : `<input id="${fid}_${i}" type="${f.type || "text"}" placeholder="${escapeHtml(f.placeholder || "")}" value="${escapeHtml(f.default || "")}" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:14px">`}
-        </label>
-      `).join("");
+      // v1.3 batch3 · aria-required + label for + 驗證錯誤訊息(不只紅框)
+      const html = fields.map((f, i) => {
+        const inputId = `${fid}_${i}`;
+        const errId = `${inputId}_err`;
+        const labelText = `${escapeHtml(f.label)}${f.required ? ' <em style="color:var(--red)" aria-hidden="true">*</em>' : ""}`;
+        const ariaReq = f.required ? "aria-required=\"true\"" : "";
+        const ariaErr = `aria-describedby="${errId}"`;
+        const inputCommon = `id="${inputId}" placeholder="${escapeHtml(f.placeholder || "")}" ${ariaReq} ${ariaErr}`;
+        const inputEl = f.type === "textarea"
+          ? `<textarea ${inputCommon} rows="${f.rows || 3}" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:14px">${escapeHtml(f.default || "")}</textarea>`
+          : `<input ${inputCommon} type="${f.type || "text"}" value="${escapeHtml(f.default || "")}" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:14px">`;
+        return `
+          <div style="margin-bottom:12px">
+            <label for="${inputId}" style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px">
+              ${labelText}
+            </label>
+            ${inputEl}
+            <div id="${errId}" class="modal2-field-error" role="alert" style="display:none;font-size:12px;color:var(--red);margin-top:4px"></div>
+          </div>`;
+      }).join("");
 
       show({
         title, icon, body: html, autofocus: `${fid}_0`,
         buttons: [
           { text: cancel,  variant: "ghost",   handler: () => resolve(null) },
           { text: primary, variant: "primary", handler: () => {
-            const result = {}; let valid = true;
+            const result = {}; let valid = true; let firstErr = null;
             fields.forEach((f, i) => {
               const el = document.getElementById(`${fid}_${i}`);
+              const errEl = document.getElementById(`${fid}_${i}_err`);
               const val = el.value.trim();
-              if (f.required && !val) { valid = false; el.style.borderColor = "var(--red)"; }
+              if (f.required && !val) {
+                valid = false;
+                el.style.borderColor = "var(--red)";
+                el.setAttribute("aria-invalid", "true");
+                if (errEl) {
+                  errEl.textContent = `「${f.label}」必填`;
+                  errEl.style.display = "block";
+                }
+                if (!firstErr) firstErr = el;
+              } else {
+                el.style.borderColor = "";
+                el.removeAttribute("aria-invalid");
+                if (errEl) errEl.style.display = "none";
+              }
               result[f.name] = val;
             });
             if (valid) resolve(result);
+            else if (firstErr) firstErr.focus();
             return valid;
           }},
         ],

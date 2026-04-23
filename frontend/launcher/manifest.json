@@ -32,6 +32,19 @@
       "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
+      "name": "場勘 PWA",
+      "short_name": "場勘",
+      "description": "iPhone 拍照 + GPS + 語音 · v1.3 新",
+      "url": "/#site",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "會議速記",
+      "short_name": "會議",
+      "description": "上傳音檔 · Whisper STT · v1.3 新",
+      "url": "/#meeting"
+    },
+    {
       "name": "專案",
       "short_name": "專案",
       "description": "管理承富專案",

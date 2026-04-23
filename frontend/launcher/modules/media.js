@@ -11,7 +11,7 @@
  *     - 推薦 modal(輸入 topic · 顯示 top 10)
  */
 import { authFetch } from "./auth.js";
-import { escapeHtml } from "./util.js";
+import { escapeHtml, skeletonCards } from "./util.js";
 import { toast, networkError, operationError, permissionError } from "./toast.js";
 import { modal } from "./modal.js";
 
@@ -24,6 +24,8 @@ export const media = {
 
   async init(isAdmin) {
     this._isAdmin = isAdmin;
+    const root = document.getElementById("view-media-content");
+    if (root) root.innerHTML = `<div class="skeleton-list">${skeletonCards(3)}</div>`;
     await this.load();
     this.render();
   },

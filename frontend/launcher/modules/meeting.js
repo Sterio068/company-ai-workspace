@@ -10,7 +10,7 @@
  *   6. 一鍵「推到 Handoff」
  */
 import { authFetch } from "./auth.js";
-import { escapeHtml } from "./util.js";
+import { escapeHtml, skeletonCards } from "./util.js";
 import { toast, networkError, operationError } from "./toast.js";
 
 const BASE = "/api-accounting";
@@ -21,6 +21,9 @@ export const meeting = {
   _meetings: [],
 
   async init() {
+    // v1.3 batch3 · 載入前顯 skeleton · 不讓 view 短暫空白
+    const root = document.getElementById("view-meeting-content");
+    if (root) root.innerHTML = `<div class="skeleton-list">${skeletonCards(3)}</div>`;
     await this.loadList();
     this.renderView();
   },
