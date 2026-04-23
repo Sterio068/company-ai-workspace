@@ -301,6 +301,27 @@ export const siteSurvey = {
           `).join("")}
         </details>
 
+        <details style="margin-top:16px" open>
+          <summary>🎙 audio note(${(body.audio_notes || []).length})</summary>
+          <div id="site-audio-list">
+            ${(body.audio_notes || []).map((a, i) => `
+              <div style="margin-top:8px; padding:8px; background:var(--surface-2); border-radius:6px">
+                <b>${i + 1}.</b>
+                ${a.status === "done"
+                  ? `<span>${escapeHtml(a.transcript || "")}</span>`
+                  : a.status === "failed"
+                  ? `<span style="color:#ef4444">失敗 · ${escapeHtml(a.error || "")}</span>`
+                  : `<span style="color:var(--text-secondary)">⏳ 處理中…</span>`}
+                ${a.duration_sec ? `<small style="color:var(--text-secondary)"> · ${a.duration_sec.toFixed?.(1) || a.duration_sec}s</small>` : ""}
+              </div>
+            `).join("")}
+          </div>
+          <div style="margin-top:12px">
+            <button type="button" id="site-audio-rec" class="btn-secondary">🎙 錄 30 秒</button>
+            <span id="site-audio-status" style="margin-left:12px; color:var(--text-secondary); font-size:13px"></span>
+          </div>
+        </details>
+
         <div class="modal2-actions">
           <button type="button" data-close>關閉</button>
           ${body.project_id ? `<button type="button" class="primary" data-push>推到 Handoff</button>` : ""}
@@ -309,6 +330,10 @@ export const siteSurvey = {
     `;
     root.appendChild(m);
     m.querySelector("[data-close]").addEventListener("click", () => m.remove());
+    // B4 · 錄音按鈕
+    m.querySelector("#site-audio-rec")?.addEventListener("click", async () => {
+      await this._recordAudio(m);
+    });
     m.querySelector("[data-push]")?.addEventListener("click", async () => {
       try {
         const r = await authFetch(`${BASE}/site-survey/${this._currentSurveyId}/push-to-handoff`, { method: "POST" });
@@ -355,5 +380,92 @@ export const siteSurvey = {
     try {
       return new Date(iso).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
     } catch { return iso; }
+  },
+
+  // B4(v1.3)· 30 秒錄音 + 上傳 + Whisper STT
+  async _recordAudio(modal) {
+    const status = modal.querySelector("#site-audio-status");
+    const btn = modal.querySelector("#site-audio-rec");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      status.textContent = "❌ 瀏覽器不支援錄音(iOS Safari 16+ / Chrome / Firefox)";
+      return;
+    }
+    if (!window.MediaRecorder) {
+      status.textContent = "❌ MediaRecorder API 不支援";
+      return;
+    }
+    btn.disabled = true;
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+      status.textContent = `❌ 麥克風權限被拒:${e.message}`;
+      btn.disabled = false;
+      return;
+    }
+    // iPhone Safari 16+ 支援 audio/mp4 · 其他預設 audio/webm
+    const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ? "audio/webm;codecs=opus"
+      : MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : "";
+    const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : {});
+    const chunks = [];
+    rec.ondataavailable = (ev) => { if (ev.data?.size) chunks.push(ev.data); };
+
+    const startTime = Date.now();
+    rec.start();
+    btn.textContent = "⏹ 停 (錄 30s)";
+    btn.disabled = false;
+
+    let countdown = 30;
+    status.textContent = `🎙 錄音中… ${countdown}s`;
+    const tick = setInterval(() => {
+      countdown -= 1;
+      status.textContent = `🎙 錄音中… ${countdown}s`;
+      if (countdown <= 0) {
+        rec.state === "recording" && rec.stop();
+      }
+    }, 1000);
+
+    const stopAndUpload = () => new Promise((resolve) => {
+      rec.onstop = async () => {
+        clearInterval(tick);
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
+        const durationSec = (Date.now() - startTime) / 1000;
+        status.textContent = "📤 上傳 · STT 中…";
+        try {
+          const fd = new FormData();
+          // .webm / .mp4 副檔名以便 Whisper 識別
+          const ext = (rec.mimeType || "audio/webm").includes("mp4") ? "mp4" : "webm";
+          fd.append("audio", blob, `audio.${ext}`);
+          fd.append("duration_sec", String(durationSec));
+          const r = await authFetch(
+            `${BASE}/site-survey/${this._currentSurveyId}/audio`,
+            { method: "POST", body: fd },
+          );
+          if (!r.ok) {
+            const err = await r.json().catch(() => ({}));
+            status.textContent = `❌ 上傳失敗:${err.detail || r.status}`;
+            resolve(false);
+            return;
+          }
+          status.textContent = "✅ 上傳成功 · STT 背景跑 · 重 open 看結果";
+          resolve(true);
+        } catch (e) {
+          status.textContent = `❌ 網路錯:${String(e)}`;
+          resolve(false);
+        }
+      };
+    });
+
+    btn.onclick = () => {
+      if (rec.state === "recording") {
+        rec.stop();
+      }
+    };
+    await stopAndUpload();
+    btn.textContent = "🎙 錄下一段";
+    btn.disabled = false;
+    btn.onclick = () => this._recordAudio(modal);  // restore handler
   },
 };
