@@ -267,41 +267,79 @@ echo OK
 	-- 寫可執行 .command 檔 · Terminal 雙擊會跑
 	-- v1.3.0 · 自動建 LibreChat admin(用戶剛設的 email + 密碼)
 	-- 用 LibreChat 內建 npm run create-user CLI
+	-- v1.3.0+ · 加完整 log + timeout · 避免 silent fail 後用戶看不出原因
 	set cmdContent to "#!/bin/bash
 export PATH=/opt/homebrew/bin:/usr/local/bin:/Applications/Docker.app/Contents/Resources/bin:$PATH
+# v1.3.0+ · 所有輸出同步寫 log · 事後可診斷
+LOG_FILE=/tmp/chengfu-install.log
+: > \"$LOG_FILE\"
+exec > >(tee -a \"$LOG_FILE\") 2>&1
+echo \"=== 承富 AI 安裝 · $(date) ===\"
 cd " & quoted form of repoPath & "
-echo '═══ 承富 AI 安裝 · 抓 image + 啟動容器 ═══'
-cd config-templates && docker compose pull
+echo '═══ [1/6] 抓 image + 啟動容器 ═══'
+cd config-templates && docker compose pull || { echo '❌ docker pull 失敗'; exit 1; }
 cd ..
-bash scripts/start.sh
+bash scripts/start.sh || { echo '❌ start.sh 失敗'; exit 1; }
 echo ''
-echo '═══ 等 LibreChat ready ═══'
-until curl -sf http://localhost/chat/api/config > /dev/null 2>&1; do sleep 2; done
-echo '✓ LibreChat ready'
-echo ''
-echo '═══ 建 admin 帳號(' " & quoted form of adminEmail & " ')═══'
-# LibreChat npm run create-user 會問 confirm · echo y 自動過
-docker exec chengfu-librechat sh -c 'echo y | npm run create-user -- " & quoted form of adminEmail & " " & quoted form of adminName & " " & quoted form of adminEmail & " " & quoted form of adminPassword & " ' || echo '⚠ admin 建立失敗 · 可手動註冊 http://localhost/chat(第一個註冊者自動為 ADMIN)'
-echo ''
-echo '═══ 等 admin 寫入 MongoDB(避 race condition)═══'
-until docker exec chengfu-mongo mongosh chengfu --quiet --eval 'db.users.countDocuments({email:\"" & adminEmail & "\"})' 2>/dev/null | grep -q '^1$'; do
-  echo '  等 admin 寫入...'
+echo '═══ [2/6] 等 LibreChat ready (max 120s) ═══'
+TIMEOUT=60
+while [ $TIMEOUT -gt 0 ]; do
+  if curl -sf http://localhost/chat/api/config > /dev/null 2>&1; then
+    echo '✓ LibreChat ready'
+    break
+  fi
   sleep 2
+  TIMEOUT=$((TIMEOUT - 1))
 done
-echo '✓ admin 已 ready'
+if [ $TIMEOUT -eq 0 ]; then
+  echo '❌ LibreChat 超時 · 看 docker compose logs librechat'
+  exit 1
+fi
 echo ''
-echo '═══ 建 10 個 core Agent(✨ 主管家 · 🎯 投標 · 🎪 活動 · 🎨 設計 · 📣 公關 · 🎙 會議 · 📚 知識 · 💰 財務 · ⚖️ 法務 · 📊 營運)═══'
-# LIBRECHAT_URL 必走 http://localhost(走 nginx)· 不能直連 3080 因 docker 網路只內部
-LIBRECHAT_URL=http://localhost \
-LIBRECHAT_ADMIN_EMAIL=" & quoted form of adminEmail & " \
-LIBRECHAT_ADMIN_PASSWORD=" & quoted form of adminPassword & " \
-python3 scripts/create-agents.py --tier core || {
-  echo '⚠ Agent 建立失敗 · 裝完進 launcher 再手動跑:'
-  echo '   LIBRECHAT_URL=http://localhost \\\\'
-  echo '   LIBRECHAT_ADMIN_EMAIL=" & adminEmail & " \\\\'
-  echo '   LIBRECHAT_ADMIN_PASSWORD=<密碼> \\\\'
-  echo '   python3 scripts/create-agents.py --tier core'
-}
+echo '═══ [3/6] 建 admin 帳號(' " & quoted form of adminEmail & " ')═══'
+# LibreChat npm run create-user 會問 confirm · echo y 自動過
+# user 已存在會報錯但不致命 · continue 下一步(v1.3.0 fix)
+docker exec chengfu-librechat sh -c 'echo y | npm run create-user -- " & quoted form of adminEmail & " " & quoted form of adminName & " " & quoted form of adminEmail & " " & quoted form of adminPassword & " ' 2>&1 | tail -10
+echo ''
+echo '═══ [4/6] 等 admin 寫入 MongoDB (max 30s) ═══'
+TIMEOUT=15
+while [ $TIMEOUT -gt 0 ]; do
+  COUNT=$(docker exec chengfu-mongo mongosh chengfu --quiet --eval 'db.users.countDocuments({email:\"" & adminEmail & "\"})' 2>/dev/null | tr -d '[:space:]')
+  if [ \"$COUNT\" = '1' ]; then
+    echo '✓ admin 已 ready'
+    break
+  fi
+  echo \"  等 admin 寫入... (COUNT=$COUNT)\"
+  sleep 2
+  TIMEOUT=$((TIMEOUT - 1))
+done
+if [ $TIMEOUT -eq 0 ]; then
+  echo '⚠ admin 沒寫進 MongoDB · 跳過 Agent 建立 · 手動處理:'
+  echo '   1. 訪問 http://localhost/chat 手動註冊'
+  echo '   2. 跑 scripts/create-agents.py'
+  echo '   log 在 /tmp/chengfu-install.log'
+fi
+echo ''
+echo '═══ [5/6] 建 10 個 core Agent ═══'
+echo '(✨ 主管家 · 🎯 投標 · 🎪 活動 · 🎨 設計 · 📣 公關 · 🎙 會議 · 📚 知識 · 💰 財務 · ⚖️ 法務 · 📊 營運)'
+if [ $TIMEOUT -gt 0 ]; then
+  # admin 真的 ready 才跑
+  # LIBRECHAT_URL=http://localhost(走 nginx · 不直連 3080 因 docker 網路只內部)
+  LIBRECHAT_URL=http://localhost \\
+  LIBRECHAT_ADMIN_EMAIL=" & quoted form of adminEmail & " \\
+  LIBRECHAT_ADMIN_PASSWORD=" & quoted form of adminPassword & " \\
+  python3 scripts/create-agents.py --tier core 2>&1 | tee -a \"$LOG_FILE\"
+  AGENT_RC=${PIPESTATUS[0]}
+  if [ $AGENT_RC -ne 0 ]; then
+    echo '⚠ Agent 建立失敗 (rc=' $AGENT_RC ') · 手動跑:'
+    echo '   LIBRECHAT_URL=http://localhost \\\\'
+    echo '   LIBRECHAT_ADMIN_EMAIL=" & adminEmail & " \\\\'
+    echo '   LIBRECHAT_ADMIN_PASSWORD=<密碼> \\\\'
+    echo '   python3 scripts/create-agents.py --tier core'
+  fi
+fi
+echo ''
+echo '═══ [6/6] smoke test ═══'
 echo ''
 bash scripts/smoke-test.sh
 echo ''

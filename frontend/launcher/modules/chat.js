@@ -1,6 +1,6 @@
 /**
  * Chat Pane · Launcher 內建對話介面(路線 A · 不跳 LibreChat 頁)
- * 呼叫 /api/ask/agents · SSE 串流
+ * 呼叫 /api/agents/chat · SSE 串流
  */
 import { escapeHtml } from "./util.js";
 import { modal } from "./modal.js";
@@ -262,7 +262,7 @@ export const chat = {
     //   · qr.ok + allowed=true → 放行 · 顯示 warning
     //   · qr.ok=false(HTTP 非 2xx) → 按 hard_stop 預期 fail-closed · 擋
     //   · 網路錯 / quota service 完全掛 → hard_stop 擋 · soft_warn 放(後端決定)
-    // 注意:真正的 quota enforcement 應在後端 /api/ask/agents gateway · 這裡只是第一道
+    // 注意:真正的 quota enforcement 應在後端 /api/agents/chat gateway · 這裡只是第一道
     try {
       const qr = await authFetch("/api-accounting/quota/check");
       if (qr.ok) {
@@ -324,7 +324,7 @@ export const chat = {
       isTemporary: false,
       messageId: crypto.randomUUID?.() || String(Date.now()),
     };
-    const resp = await authFetch("/api/ask/agents", {
+    const resp = await authFetch("/api/agents/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
