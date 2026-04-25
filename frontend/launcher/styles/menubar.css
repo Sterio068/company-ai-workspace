@@ -1,0 +1,50 @@
+/* ============================================================
+   menubar.css · v1.4 · macOS Sequoia menu bar 殼
+   ============================================================
+   Sprint A · 只佈線(看不見的容器 + PWA 切換可見)· 內容 Sprint B
+   PWA mode: <html data-pwa="1"> · CSS var --menubar-h: 24px
+
+   layered z-index: --z-menubar(600 · 比 dock 500 高)
+   ============================================================ */
+
+.macos-menubar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--menubar-h, 0);
+  z-index: var(--z-menubar, 600);
+  background: var(--vibrancy-light);
+  backdrop-filter: var(--blur-vibrancy);
+  -webkit-backdrop-filter: var(--blur-vibrancy);
+  border-bottom: 0.5px solid var(--separator);
+  display: none;  /* default 隱藏 · PWA 才秀 */
+  align-items: center;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--label-primary);
+  user-select: none;
+  pointer-events: auto;
+}
+
+/* PWA mode 才 display */
+[data-pwa="1"] .macos-menubar {
+  display: flex;
+}
+
+/* fallback · backdrop-filter 不支援(Firefox 老版)→ 半透明 fallback */
+@supports not (backdrop-filter: blur(20px)) {
+  .macos-menubar {
+    background: rgba(246, 246, 246, 0.95);
+  }
+}
+
+[data-theme="dark"] .macos-menubar {
+  background: var(--vibrancy-dark);
+}
+@supports not (backdrop-filter: blur(20px)) {
+  [data-theme="dark"] .macos-menubar {
+    background: rgba(30, 30, 30, 0.95);
+  }
+}

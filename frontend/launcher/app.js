@@ -46,6 +46,8 @@ import { toast } from "./modules/toast.js";
 import { palette } from "./modules/palette.js";
 import { theme } from "./modules/theme.js";  // v1.3 A2 · 從 app.js 抽出
 import { activateLauncherView, isRoutableView, routeFromHash } from "./modules/router.js";
+// v1.4 macOS · PWA detection(自動 init · 套 [data-pwa] · menubar 才出)
+import "./modules/macos/pwa-detect.js";
 import { shortcuts } from "./modules/shortcuts.js";
 import { health } from "./modules/health.js";
 import { mobile } from "./modules/mobile.js";
