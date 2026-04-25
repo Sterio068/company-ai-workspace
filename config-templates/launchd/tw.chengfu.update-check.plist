@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  承富智慧助理 · 每日 03:00 檢查 GitHub 是否有新版(vNext C · auto-update)
+
+  跑 scripts/check-update.sh · 寫 reports/update-status.json
+  Admin 進入 launcher · update-notifier.js GET /admin/update/status 看到通知
+
+  安裝:./scripts/install-launchd.sh
+  卸載:launchctl unload ~/Library/LaunchAgents/tw.chengfu.update-check.plist
+  驗證:tail -f ~/Library/Logs/chengfu-update-check.log
+        cat reports/update-status.json
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>tw.chengfu.update-check</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>export PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin &amp;&amp; cd "__REPO_ROOT__" &amp;&amp; bash scripts/check-update.sh --quiet</string>
+    </array>
+
+    <!-- 每日 03:00 跑(此時間段 Mac mini 通常閒置 · 不擾使用) -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>3</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/USERNAME/Library/Logs/chengfu-update-check.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/USERNAME/Library/Logs/chengfu-update-check.err.log</string>
+
+    <!-- RunAtLoad=true · 安裝完馬上跑一次 · 第一次 admin 登入就能看到 status -->
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <false/>
+</dict>
+</plist>
