@@ -1,0 +1,290 @@
+/* ============================================================
+   dock.css · v1.4 · macOS Sequoia Dock
+   ============================================================
+   Phase 2.1 · 結構 + 視覺
+   Phase 2.2 · magnification(JS 寫 --scale · CSS 套 transform)
+
+   座標:
+     position: fixed · bottom: var(--dock-margin) · left: 50% · translate(-50%)
+
+   z-index: var(--z-dock) = 500 · 比 sidebar 高 · 比 menubar(600)低
+   ============================================================ */
+
+.dock-shell {
+  position: fixed;
+  bottom: var(--dock-margin, 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-dock, 500);
+  pointer-events: none;
+}
+
+.dock {
+  display: flex;
+  align-items: flex-end;  /* icon 從 bottom 對齊 · 放大時往上長 */
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--vibrancy-light);
+  backdrop-filter: var(--blur-vibrancy);
+  -webkit-backdrop-filter: var(--blur-vibrancy);
+  border-radius: var(--r-xl);
+  border: 0.5px solid var(--border);
+  box-shadow: var(--shadow-dock);
+  pointer-events: auto;  /* 內部 button 可點 */
+  user-select: none;
+}
+
+/* Backdrop-filter fallback */
+@supports not (backdrop-filter: blur(20px)) {
+  .dock {
+    background: rgba(246, 246, 246, 0.95);
+  }
+}
+
+[data-theme="dark"] .dock {
+  background: var(--vibrancy-dark);
+}
+@supports not (backdrop-filter: blur(20px)) {
+  [data-theme="dark"] .dock {
+    background: rgba(30, 30, 30, 0.95);
+  }
+}
+
+/* ============================================================
+   Dock Icon
+   ============================================================ */
+.dock-icon {
+  --scale: 1;
+  --icon-color: var(--accent);
+
+  position: relative;
+  width: var(--dock-icon, 56px);
+  height: var(--dock-icon, 56px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: var(--r-xl);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transform: scale(var(--scale));
+  transform-origin: bottom center;
+  transition: transform var(--dur-fast) var(--ease-spring);
+  will-change: transform;
+}
+
+/* 進場時 will-change 開 · 離開回收(防 RAM 占用) */
+.dock:not(:hover) .dock-icon {
+  will-change: auto;
+  transition: transform var(--dur-normal) var(--ease-spring);
+}
+
+/* Icon glyph · macOS 風 SVG(squircle + 多層 gradient · 直接 inline) */
+.dock-icon-glyph {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  /* drop shadow · macOS dock 圖示獨立陰影 · 不在 button 上 */
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.18));
+}
+
+.dock-icon-glyph svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Emoji fallback · workspace / view 用(暫代 · v1.5 全換 SVG) */
+.dock-icon-glyph.emoji-fallback {
+  font-size: 32px;
+  line-height: 1;
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--icon-color) 20%, white) 0%,
+    color-mix(in oklab, var(--icon-color) 80%, white) 100%
+  );
+  border-radius: var(--r-xl);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+@supports not (background: color-mix(in oklab, red, blue)) {
+  .dock-icon-glyph.emoji-fallback {
+    background: var(--icon-color);
+  }
+}
+
+/* Active indicator dot */
+.dock-icon-indicator {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%) scale(0);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--label-primary);
+  opacity: 0.75;
+  transition: transform var(--dur-fast) var(--ease-spring);
+}
+
+.dock-icon.active .dock-icon-indicator {
+  transform: translateX(-50%) scale(1);
+}
+
+/* Tooltip · hover 上方浮現 */
+.dock-icon-tooltip {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  padding: 4px 10px;
+  background: var(--bg-elevated);
+  color: var(--label-primary);
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-popover);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-fast), transform var(--dur-fast) var(--ease-spring);
+}
+
+.dock-icon:hover .dock-icon-tooltip,
+.dock-icon:focus-visible .dock-icon-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Focus ring · 鍵盤導航 */
+.dock-icon:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Drag · 被拖的 icon 半透明 */
+.dock-icon.dragging {
+  opacity: 0.4;
+  transform: scale(1.05);
+}
+
+/* Drop target · drop 位置高亮 */
+.dock-icon.drop-target::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 2px dashed var(--accent);
+  border-radius: var(--r-xl);
+  pointer-events: none;
+  animation: dock-drop-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes dock-drop-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Separator(三組之間用 · 目前只一組 · Sprint B 加 active chats 才用) */
+.dock-separator {
+  width: 2px;
+  height: 36px;
+  background: var(--separator);
+  margin: 0 var(--space-1);
+  align-self: center;
+  border-radius: 1px;
+}
+
+/* ============================================================
+   Context Menu(right-click)· macOS NSMenu 風
+   ============================================================ */
+.dock-context-menu {
+  position: fixed;
+  z-index: var(--z-overlay, 700);
+  min-width: 200px;
+  padding: 4px;
+  background: var(--bg-elevated);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-popover);
+  font-size: 13px;
+  color: var(--label-primary);
+  user-select: none;
+}
+
+[data-theme="dark"] .dock-context-menu {
+  background: rgba(50, 50, 50, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.dock-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  background: transparent;
+  border-radius: var(--r-xs);
+  color: inherit;
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast);
+}
+
+.dock-context-menu-item:hover,
+.dock-context-menu-item:focus-visible {
+  background: var(--accent);
+  color: white;
+  outline: none;
+}
+
+.dock-context-menu-item.danger:hover,
+.dock-context-menu-item.danger:focus-visible {
+  background: var(--color-danger);
+}
+
+.cm-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.cm-label {
+  flex: 1;
+}
+
+.dock-context-menu-sep {
+  height: 1px;
+  background: var(--separator);
+  margin: 4px 6px;
+}
+
+/* ============================================================
+   隱藏條件
+   ============================================================ */
+
+/* mobile · 隱藏 dock(已有 mobile bottom nav) */
+@media (max-width: 768px) {
+  .dock-shell {
+    display: none;
+  }
+}
+
+/* chat view · 隱藏 dock(LibreChat 自己有 sidebar · 不重複)
+   Issue 6 修 · USER 視角
+   實作:body.in-chat-view .dock-shell { display: none; }
+   待 app.js showView 時加/移 body class · 暫用 :has 預埋(支援 Safari 15.4+) */
+body:has(.view[data-view="chat"].active) .dock-shell {
+  display: none;
+}
+
+/* 仍提供 fallback class · app.js 之後加 body[data-active-view] */
+body[data-active-view="chat"] .dock-shell {
+  display: none;
+}

@@ -46,6 +46,10 @@ import { toast } from "./modules/toast.js";
 import { palette } from "./modules/palette.js";
 import { theme } from "./modules/theme.js";  // v1.3 A2 · 從 app.js 抽出
 import { activateLauncherView, isRoutableView, routeFromHash } from "./modules/router.js";
+// v1.4 macOS · PWA detection(自動 init · 套 [data-pwa] · menubar 才出)
+import "./modules/macos/pwa-detect.js";
+// v1.4 macOS · Dock(底部 · vibrancy · hover magnification · default seed 7 agents)
+import { dock as macosDock } from "./modules/macos/dock.js";
 import { shortcuts } from "./modules/shortcuts.js";
 import { health } from "./modules/health.js";
 import { mobile } from "./modules/mobile.js";
@@ -176,6 +180,12 @@ export const app = {
 
     health.start();
     mobile.init();
+    // v1.4 macOS · Dock 啟動 · default seed 7 個 agent
+    try {
+      macosDock.init();
+    } catch (e) {
+      console.warn("[macos] dock init failed", e);
+    }
 
     // 首次訪問 onboarding
     if (!localStorage.getItem("chengfu-tour-done") && window.tour) {
@@ -453,6 +463,8 @@ export const app = {
   showView(view) {
     this.currentView = view;
     activateLauncherView(view);
+    // v1.4 macOS · body[data-active-view] · 給 dock CSS 在 chat view 隱藏(Issue 6)
+    document.body.dataset.activeView = view;
     if (view !== "workspace") {
       document.querySelectorAll(".sidebar-item.ws-nav").forEach(el => el.classList.remove("active"));
     }
