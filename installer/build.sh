@@ -70,9 +70,9 @@ PLIST="${APP}/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleName 承富 AI 安裝精靈" "$PLIST" 2>/dev/null || true
 /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName 承富 AI 安裝精靈" "$PLIST" 2>/dev/null || \
     /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string '承富 AI 安裝精靈'" "$PLIST"
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.3.0" "$PLIST" 2>/dev/null || \
-    /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string '1.3.0'" "$PLIST"
-echo -e "  ${GREEN}✓${NC} 中文名 + 版本 1.3.0"
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.4.0" "$PLIST" 2>/dev/null || \
+    /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string '1.4.0'" "$PLIST"
+echo -e "  ${GREEN}✓${NC} 中文名 + 版本 1.4.0"
 
 # ---------- Step 3 · 包成 .dmg ----------
 echo -e "${BLUE}[3/3]${NC} 包成 .dmg(可 mail / USB 給 IT)"
