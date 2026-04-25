@@ -1,0 +1,32 @@
+{
+  "stamp": "20260424152414",
+  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260424152414-console-retarget",
+  "totals": {
+    "pass": 4,
+    "fail": 0
+  },
+  "results": [
+    {
+      "name": "API 登入建立 session",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "前端版本確認",
+      "status": "PASS",
+      "detail": "/static/app.js?v=72"
+    },
+    {
+      "name": "OpenAI 實際回覆 + 對話回填",
+      "status": "PASS",
+      "detail": "POSTPATCH_QA_OK"
+    },
+    {
+      "name": "Console / 404 回歸",
+      "status": "PASS",
+      "detail": "無 404 / 無未預期 console error"
+    }
+  ],
+  "badResponses": [],
+  "consoleErrors": []
+}

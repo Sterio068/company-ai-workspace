@@ -1,0 +1,9 @@
+## DMG verify
+DMG_VERIFY=PASS
+4ae1b68793bb412d5d1704874ec081ad79c492c691ce0fd0b8c275118e50771d  installer/dist/ChengFu-AI-Installer.dmg
+DMG_FORBIDDEN=PASS
+<link rel="stylesheet" href="/static/launcher.css?v=63">
+<script type="module" src="/static/app.js?v=72"></script>
+
+## Mongo backup stream
+MONGO_DUMP_STREAM=PASS bytes=55704

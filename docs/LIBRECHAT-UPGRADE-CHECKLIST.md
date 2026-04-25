@@ -39,7 +39,7 @@ AGENT_ID=$(curl -s http://localhost/api/agents \
   | python3 -c 'import sys,json;d=json.load(sys.stdin);print((d if isinstance(d,list) else d["data"])[0]["id"])')
 
 # 錄 SSE 訊息 (5 秒取樣)
-timeout 5 curl -N -X POST http://localhost/api/ask/agents \
+timeout 5 curl -N -X POST http://localhost/api/agents/chat \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -H 'User-Agent: Mozilla/5.0 Chrome/131' \
@@ -215,7 +215,7 @@ python3 scripts/create-agents.py --dry-run --tier core
 ```bash
 # 錄新版 SSE 與舊版比對
 TOKEN=...  # 同上
-timeout 5 curl -N -X POST http://localhost/api/ask/agents \
+timeout 5 curl -N -X POST http://localhost/api/agents/chat \
   -H "Authorization: Bearer $TOKEN" \
   ...(同上)... > /tmp/sse-after.jsonl
 

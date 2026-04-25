@@ -22,9 +22,10 @@
 - [ ] 網路線 × 1(CAT6+)
 
 ### 0.2 API 與帳號
-- [ ] Anthropic API Key:到 https://console.anthropic.com 註冊,**預存 USD $50 升到 Tier 2**(D-002)
-  - 驗收方式:console 顯示 Tier 2,或 `curl` 看 `anthropic-ratelimit-requests-limit: 1000+`
-- [ ] OpenAI API Key(選配,用於 STT 語音轉文字):https://platform.openai.com
+- [ ] OpenAI API Key(主力 AI 引擎):https://platform.openai.com/api-keys
+  - 驗收方式:Launcher 預設 OpenAI 可正常串流回覆
+- [ ] Anthropic API Key(選配備援):https://console.anthropic.com
+  - 驗收方式:前端切換 Claude 後可正常建立新對話
 - [ ] 域名:承富擁有的一級網域,計畫用 `ai.<公司網域>.com`
 - [ ] Cloudflare 帳號:https://dash.cloudflare.com(免費即可)
 - [ ] (選配)Resend 帳號:https://resend.com 用於密碼重設寄信
@@ -159,12 +160,12 @@ cd ~/ChengFu
 ./scripts/setup-keychain.sh
 ```
 腳本會互動式詢問:
-- Anthropic API Key(貼入 `sk-ant-...`)
-- OpenAI API Key(選配)
+- OpenAI API Key(貼入 `sk-...`)
+- Anthropic API Key(選配備援)
 - JWT/CREDS/MEILI 金鑰(按 Enter 自動產生)
 - Email 密碼(選配)
 
-- [ ] 驗證:`security find-generic-password -s 'chengfu-ai-anthropic-key' -w` 能印出 key
+- [ ] 驗證:`security find-generic-password -s 'chengfu-ai-openai-key' -w` 能印出 key
 
 ### 2.2 非機密設定
 ```bash

@@ -1,0 +1,648 @@
+{
+  "stamp": "20260424155008",
+  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260424155008-hardening-10tabs-v73",
+  "totals": {
+    "pass": 0,
+    "fail": 1
+  },
+  "avgMs": 9070,
+  "maxMs": 24400,
+  "concurrent": [
+    {
+      "idx": 1,
+      "ok": false,
+      "ms": 22298,
+      "error": "page.waitForSelector: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#app') to be visible\u001b[22m\n",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "badResponses": [
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/silence.mp3",
+          "error": "net::ERR_BLOCKED_BY_RESPONSE"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        }
+      ]
+    },
+    {
+      "idx": 2,
+      "ok": true,
+      "ms": 2339
+    },
+    {
+      "idx": 3,
+      "ok": true,
+      "ms": 2828
+    },
+    {
+      "idx": 4,
+      "ok": false,
+      "ms": 4078,
+      "error": "{\"filteredBad\":[{\"status\":\"failed\",\"url\":\"http://localhost/api/auth/refresh\",\"error\":\"net::ERR_ABORTED\"},{\"status\":\"failed\",\"url\":\"http://localhost/\",\"error\":\"net::ERR_ABORTED\"},{\"status\":\"failed\",\"url\":\"http://localhost/api/models\",\"error\":\"net::ERR_ABORTED\"},{\"status\":\"failed\",\"url\":\"http://localhost/api/agents/chat/active\",\"error\":\"net::ERR_ABORTED\"},{\"status\":\"failed\",\"url\":\"http://localhost/api/user/settings/favorites\",\"error\":\"net::ERR_ABORTED\"},{\"status\":\"failed\",\"url\":\"http://localhost/api/roles/admin\",\"error\":\"net::ERR_ABORTED\"},{\"status\":\"failed\",\"url\":\"http://localhost/api/files/speech/config/get\",\"error\":\"net::ERR_ABORTED\"},{\"status\":\"failed\",\"url\":\"http://localhost/api/search/enable\",\"error\":\"net::ERR_ABORTED\"},{\"status\":\"failed\",\"url\":\"http://localhost/api/banner\",\"error\":\"net::ERR_ABORTED\"},{\"status\":\"failed\",\"url\":\"http://localhost/api/roles/user\",\"error\":\"net::ERR_ABORTED\"},{\"status\":\"failed\",\"url\":\"http://localhost/assets/AccountSettings.6R1m80UO.js\",\"error\":\"net::ERR_ABORTED\"},{\"status\":\"failed\",\"url\":\"http://localhost/api/user\",\"error\":\"net::ERR_ABORTED\"},{\"status\":\"failed\",\"url\":\"http://localhost/api/config\",\"error\":\"net::ERR_ABORTED\"},{\"status\":\"failed\",\"url\":",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+      ],
+      "badResponses": [
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/silence.mp3",
+          "error": "net::ERR_BLOCKED_BY_RESPONSE"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/models",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/agents/chat/active",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/user/settings/favorites",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/roles/admin",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/files/speech/config/get",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/search/enable",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/banner",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/roles/user",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/AccountSettings.6R1m80UO.js",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/user",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/config",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/config",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/endpoints",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/files",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/convos",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/healthz"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/reports/pnl?date_from=2026-04-01&date_to=2026-04-24"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/orchestrator/workflow/presets"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/reports/aging"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/memory/meetings?limit=30"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/media/contacts?limit=200"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/social/posts?limit=100"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/memory/meetings?limit=30"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/site-survey?limit=10"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/media/contacts?limit=200"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/social/posts?limit=100"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/site-survey?limit=10"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/admin/secrets/status"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/admin/secrets/status"
+        }
+      ]
+    },
+    {
+      "idx": 5,
+      "ok": true,
+      "ms": 3002
+    },
+    {
+      "idx": 6,
+      "ok": true,
+      "ms": 3266
+    },
+    {
+      "idx": 7,
+      "ok": true,
+      "ms": 2596
+    },
+    {
+      "idx": 8,
+      "ok": false,
+      "ms": 24400,
+      "error": "page.waitForSelector: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#app') to be visible\u001b[22m\n",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "badResponses": [
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/silence.mp3",
+          "error": "net::ERR_BLOCKED_BY_RESPONSE"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/config",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/roles/user",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/banner",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/search/enable",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/user/settings/favorites",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/endpoints",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/convos",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/agents/chat/active",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/files",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/AccountSettings.6R1m80UO.js",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/files/speech/config/get",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/config",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/user",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/models",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/roles/admin",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/silence.mp3",
+          "error": "net::ERR_BLOCKED_BY_RESPONSE"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/files",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/roles/admin",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/roles/user",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/search/enable",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/user",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/models",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/endpoints",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/banner",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/config",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/convos",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/user/settings/favorites",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/agents/chat/active",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/files/speech/config/get",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/AccountSettings.6R1m80UO.js",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/silence.mp3",
+          "error": "net::ERR_BLOCKED_BY_RESPONSE"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        }
+      ]
+    },
+    {
+      "idx": 9,
+      "ok": false,
+      "ms": 22366,
+      "error": "page.waitForSelector: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#app') to be visible\u001b[22m\n",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "badResponses": [
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/silence.mp3",
+          "error": "net::ERR_BLOCKED_BY_RESPONSE"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        }
+      ]
+    },
+    {
+      "idx": 10,
+      "ok": false,
+      "ms": 3530,
+      "error": "{\"filteredBad\":[{\"status\":429,\"url\":\"http://localhost/api-accounting/transactions?limit=10\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/orchestrator/workflow/presets\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/crm/stats\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/crm/leads?limit=500\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/invoices\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/tender-alerts\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/reports/pnl?date_from=2026-04-01&date_to=2026-04-24\"}],\"consoleErrors\":[\"Failed to load resource: the server responded with a status of 429 (Too Many Requests)\",\"Failed to load resource: the server responded with a status of 429 (Too Many Requests)\",\"Failed to load resource: the server responded with a status of 429 (Too Many Requests)\",\"Failed to load resource: the server responded with a status of 429 (Too Many Requests)\",\"Failed to load resource: the server responded with a status of 429 (Too Many Requests)\",\"Failed to load resource: the server responded with a status of 429 (Too Many Requests)\",\"Failed to load resource: the server responded with a status of 429 (Too Many Requests)\"]}",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+      ],
+      "badResponses": [
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/transactions?limit=10"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/orchestrator/workflow/presets"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/crm/stats"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/crm/leads?limit=500"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/invoices"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/tender-alerts"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/reports/pnl?date_from=2026-04-01&date_to=2026-04-24"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/site-survey?limit=10"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/site-survey?limit=10"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/media/contacts?limit=200"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/media/contacts?limit=200"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/memory/meetings?limit=30"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/memory/meetings?limit=30"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/admin/secrets/status"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/social/posts?limit=100"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/social/posts?limit=100"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/admin/secrets/status"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        }
+      ]
+    }
+  ]
+}

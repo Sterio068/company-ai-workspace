@@ -2,7 +2,7 @@
 
 > 給接手開發的 AI 看的單一入口。
 > 讀完這份 + `docs/DECISIONS.md` 即可開始改 code。
-> 最後更新 · 2026-04-24 · v1.3.0 ship
+> 最後更新 · 2026-04-25 · Phase 1 現場驗收包完成 · pre-pilot 自檢 8/8 通過 · release gate 13/13 通過
 
 ---
 
@@ -10,7 +10,9 @@
 
 **這是什麼**:給台灣公關行銷公司「承富」(10 人)用的 AI 協作平台 · 本地部署在他們辦公室的 Mac mini · LibreChat + 自製 launcher + FastAPI 會計後端組合 · 不上雲。
 
-**現在狀態**:v1.3.0 正式 release · 已交付 IT · 22 個 PR ship · 203 tests pass · 含 30+ hardening fixes(來自 5 agent deep audit)。
+**現在狀態**:v1.3.0 正式 release 候選版 · 外部 AI 審計後已補強 UI/UX 高槓桿項目。2026-04-25 最新證據:`./scripts/release-verify.sh http://localhost` 13 passed / 0 failed,backend `246 passed / 13 skipped`,Playwright desktop+mobile `35 passed / 3 skipped`,smoke `15 passed / 0 failed`,LibreChat route smoke `13 pass / 0 fail`,最新 DMG SHA-256 `d85f5194b104d9f2ca4872c391350a762d8dc6bdf30f8efd1bf4a51056135ffa`。`./scripts/pre-pilot-verify.sh` 已跑過 8 passed / 0 failed,manifest 在 `reports/pre-pilot/pre-pilot-readiness-2026-04-25-150444.md`。外部審計原判定為 `770/1000 · 可帶條件交付`,目前已把可在開發機完成的項目補到位;乾淨 Mac/VM 安裝驗收、LibreChat 原生 RAG/file_search 引用實測、4 人 Phase 1 pilot 仍是現場 Gate,不要在開發機上偽裝完成。
+
+**下一步一句話**:照 `docs/PHASE1-PILOT-VALIDATION-PACK-2026-04-25.md` 執行 Gate 1-4:乾淨 Mac/VM 安裝 → LibreChat RAG/file_search → 老闆 + Champion + 2 PM pilot → Day +1 Go/No-Go。
 
 **核心使用者**:
 - 老闆 1 人(ADMIN · 看儀表板 / 管帳號 / 改 agent prompt)
@@ -18,10 +20,16 @@
 
 **核心功能**:
 - 5 工作區(投標 · 活動 · 設計 · 公關 · 營運)各對應 1-N agent
+- 10 核心 Agent 是 production 使用者入口；legacy 29 Agent 保留作為 prompt/能力拆解參考
 - 4 個 v1.2 功能(會議速記 · 媒體 CRM · 社群排程 · 場勘 PWA)
 - 內建會計模組(台灣統編發票 · 月報 · 預算)
 - 標案 cron(每日抓政府電子採購網)
 - v1.3 同仁管理 UI(admin 在前端建帳號 + 7 preset 頭銜 + 28 權限勾選)
+- vNext Round 2 已讓 accounting / social / site survey 等高風險入口開始吃 `chengfu_permissions`;停用帳號會被全域擋下。
+- Project / handoff / workflow draft / meeting push / site survey push 已有 owner/admin 邊界,避免知道 project_id 就能跨專案寫入。
+- 半自動 workflow 仍預設 draft-first,但可把主管家草稿寫入 project handoff 的 `workflow_draft` 並留下 audit log。
+- Chat 回答已可一鍵存回 project handoff 或列成下一步;從工作包「AI 判斷」建議卡開出的對話會自動帶回寫上下文,回覆完成後可直接回寫該工作包。Project 支援 `collaborators` / `next_owner`,協作者可接手 handoff,但刪除仍限 owner/admin。
+- Workflow 採用 / 拒絕會寫入 `workflow_adoptions`,後續可接老闆月報、採用率與 Level 4 Learning。
 
 ---
 
@@ -32,7 +40,7 @@
 | 硬體 | Mac mini M4 (24GB/512GB) | 老闆要本地部署 |
 | 容器化 | Docker Desktop for Mac | LibreChat 官方推薦 |
 | AI 對話框架 | **LibreChat v0.8.4** | 開源 + 多 provider + 原生 Agent · pin v0.8.4 |
-| 主力模型 | Claude Sonnet 4.6 / Haiku 4.5 / Opus 4.7 | 老闆指定 Anthropic |
+| 主力模型 | OpenAI GPT-5.4 / GPT-5.4-mini / GPT-5.4-nano | 預設主力 · 前端可切換 Claude 備援 |
 | 後端 | FastAPI + Python 3.12 | 會計 + 標案 + 業務邏輯 |
 | DB | MongoDB 7 | LibreChat 用 + 我們的 collections 共享 |
 | 全文索引 | Meilisearch v1.12 | 知識庫 + 對話歷史 |
@@ -62,6 +70,8 @@ ChengFu/
 │   ├── 04-OPERATIONS.md         ← Day-2 維運(備份 / RTO / 升級)
 │   ├── 05-SECURITY.md           ← Keychain / PDPA / 人員異動
 │   ├── 06-TROUBLESHOOTING.md    ← 常見問題集
+│   ├── EXTERNAL-AUDIT-2026-04-25.md  ← 外部 AI 審計存檔(770/1000 · 可帶條件交付)
+│   ├── PHASE1-PILOT-VALIDATION-PACK-2026-04-25.md  ← ⭐ 交付前現場 Gate 0-4 驗收包
 │   └── ... (37 份 · 大多是歷史決策 + spec)
 │
 ├── backend/accounting/          ← FastAPI 後端
@@ -85,7 +95,7 @@ ChengFu/
 │   │   ├── librechat_admin.py   ← LibreChat 跨 collection PDPA delete
 │   │   ├── oauth_tokens.py      ← AES-GCM token 加密(v1.3 A5)
 │   │   └── ...
-│   ├── test_main.py             ← pytest 主測試(96 unit · mongomock)
+│   ├── test_main.py             ← pytest 主測試(124 unit · mongomock)
 │   └── tests/                   ← 子測試集
 │       ├── conftest.py
 │       ├── integration/         ← 真 Mongo 整合測試(v1.3 C1)
@@ -138,17 +148,20 @@ ChengFu/
 │   ├── upload-knowledge-base.py ← 知識庫上傳
 │   ├── seed-demo-data.py        ← demo 資料
 │   ├── smoke-test.sh            ← 部署後驗收
+│   ├── smoke-librechat.sh       ← LibreChat route / config 驗收
+│   ├── release-verify.sh        ← ⭐ 正式交付版總驗收(13 gate)
+│   ├── pre-pilot-verify.sh      ← ⭐ Phase 1 pilot 前交付包自檢(不讀取 secrets)
 │   └── tender-monitor.py        ← cron · 每日抓政府標案
 │
 ├── installer/                   ← Mac 原生安裝精靈(.app + .dmg)
 │   ├── ChengFu-AI-Installer.applescript  ← ⭐ 7 步精靈邏輯
 │   ├── build.sh                 ← osacompile + hdiutil 包 DMG
-│   └── dist/                    ← 產物(840K DMG)
+│   └── dist/                    ← 產物(約 11M DMG · 內含 source 快照)
 │
 ├── knowledge-base/              ← RAG 來源
 │   ├── company/                 ← 品牌 / 禁用詞 / 稱謂
 │   ├── skills/                  ← 12 個自製 skills
-│   ├── claude-skills/           ← Anthropic 官方 17 skills
+│   ├── claude-skills/           ← Anthropic 官方 17 skills(Claude 備援 / 技能參考)
 │   ├── openclaw-reference/      ← 參考用
 │   └── SKILL-AGENT-MATRIX.md    ← skill ↔ agent 路由表
 │
@@ -157,6 +170,14 @@ ChengFu/
 └── tests/                       ← 跨層級的 E2E + integration
     └── e2e/                     ← Playwright(CI 跑 sandbox)
 ```
+
+### 最新交付報告位置
+
+| 報告 | 狀態 |
+|---|---|
+| `reports/final-delivery-audit-2026-04-25.md` | 正式交付版本機 release gate 通過,列出現場剩餘 Gate |
+| `reports/release/release-manifest-2026-04-25-143407.md` | `release-verify.sh` 13 passed / 0 failed |
+| `reports/pre-pilot/pre-pilot-readiness-2026-04-25-150444.md` | `pre-pilot-verify.sh` 8 passed / 0 failed |
 
 ---
 
@@ -240,6 +261,29 @@ def bar(_admin: str = require_admin_dep()):    # 必須 admin
 ```
 
 admin 認定:`ADMIN_EMAILS` env 白名單 OR LibreChat `users.role=ADMIN`(OR 關係)。
+停用帳號(`chengfu_active=false`)即使仍在 `ADMIN_EMAILS` 或有 `chengfu_permissions`,也會被 `require_user_dep()` / admin guard 擋下。
+
+### A2 · 細部權限 enforcement
+
+`chengfu_permissions` 已不只是 UI 設定。高風險 endpoint 要用:
+
+```python
+from routers._deps import require_permission_dep
+
+@router.post("/transactions")
+def create_tx(..., _user: str = require_permission_dep("accounting.edit")):
+    ...
+```
+
+目前已接上 enforcement 的權限族群:
+- `accounting.view` / `accounting.edit`
+- `social.post_own`
+- `site.survey`
+- `knowledge.manage`
+- `media_crm.edit` / `media_crm.export`
+- admin-only 類(`admin.dashboard`, `admin.audit`, `admin.pdpa`)
+
+注意:`social.post_all` 還是 advisory,尚未做跨作者發文權限拆分。
 
 ### B · MongoDB collections 共用
 
@@ -310,11 +354,29 @@ curl 直打 `/api/agents/chat` 會繞過 1+2 但 3 留 audit。
 
 ---
 
-## 現在狀態 · v1.3.0 ship 後
+## 現在狀態 · v1.3.0 release candidate + Phase 1 現場 Gate
 
 ### ✅ 全綠 · 可日用
 
-12/13 V1.3-PLAN feature(B1 真打 Meta API 等審核中)、203 tests pass、20 PR merged、安裝精靈 7 步全自動建 admin + 10 Agent。
+12/13 V1.3-PLAN feature(B1 真打 Meta API 等審核中)、246 backend tests pass、launcher build pass、安裝精靈 7 步全自動建 admin + 10 Agent。vNext 已補上 Workspace 今日工作台、workflow draft-first UI、專案交棒卡 workflow draft、細部權限第一批 enforcement。本輪再補 Chat → Project handoff、工作包 AI 建議 → Chat → 直接回寫、project collaborator / next_owner、workflow adoption tracking、UI/UX 外部審計必修前端項目,並完成正式交付版本機 release gate。
+
+### ✅ 本輪驗證
+
+- `./scripts/release-verify.sh http://localhost`:13 passed / 0 failed。
+- `./scripts/pre-pilot-verify.sh`:8 passed / 0 failed。
+- Backend pytest:`246 passed,13 skipped,1 warning`。
+- E2E:`35 passed,3 skipped`。
+- Main smoke:`15 passed,0 failed`。
+- LibreChat smoke:`13 passed,0 failed`。
+- DMG SHA-256:`d85f5194b104d9f2ca4872c391350a762d8dc6bdf30f8efd1bf4a51056135ffa`。
+
+### ⏭️ 接手後第一優先順序
+
+1. 先跑 `./scripts/pre-pilot-verify.sh`,確認本地交付包仍是 8/8。
+2. 在乾淨 Mac/VM 或承富 Mac mini 用 DMG 跑完整安裝,照 `docs/PHASE1-PILOT-VALIDATION-PACK-2026-04-25.md` Gate 1 留錄影/截圖/smoke log。
+3. 用 3-5 份去識別化樣本跑 LibreChat 原生 RAG/file_search,確認正向查詢可引用資料、負向查詢不編造。
+4. 開 4 人 Phase 1 pilot:老闆/Admin + Champion + 2 PM,至少 3/4 完成 first-win 才擴到 8 人。
+5. Gate 1-4 任一 fail 時,不要全員上線;回到對應 Gate 修正。
 
 ### ⏸️ 留 v1.4
 
@@ -325,14 +387,15 @@ curl 直打 `/api/agents/chat` 會繞過 1+2 但 3 留 audit。
 - PDPA replica set transaction
 - CRM lead detail 專屬 view 深化
 - mobile-first 大改寫
+- `social.post_all` 真正拆成「可管理全公司社群貼文」
 - 30+ MEDIUM polish(來自 5 agent audit)
 
 詳見 `docs/DECISIONS.md` 待決議區。
 
 ### 🐛 已知 bug · 不擋
 
-- chrome-extension 還沒寫(只 scaffold)· v1.4 補
-- workflows view 是 placeholder(v2.0 才做)
+- chrome-extension 已修 manifest 可安裝,仍需真機打包 / 安裝教學驗收
+- workflows view 已從 placeholder 升級為 draft-first 入口,但尚未開全自動 execution
 - 登入 LibreChat 後 session 失效會跳奇怪 redirect · 重 login 解(發現再修)
 
 ---
@@ -345,6 +408,10 @@ curl 直打 `/api/agents/chat` 會繞過 1+2 但 3 留 audit。
 | 怎麼部署 | `DEPLOY.md` Phase 1-6 |
 | UX 設計原則 | `SYSTEM-DESIGN.md` |
 | 最新 architecture | `ARCHITECTURE.md` |
+| 交付前最後 Gate | `docs/PHASE1-PILOT-VALIDATION-PACK-2026-04-25.md` |
+| 本機交付包自檢 | `scripts/pre-pilot-verify.sh` + `reports/pre-pilot/pre-pilot-readiness-2026-04-25-150444.md` |
+| 正式交付版驗收 | `reports/final-delivery-audit-2026-04-25.md` |
+| 外部 AI 審計 | `docs/EXTERNAL-AUDIT-2026-04-25.md` |
 | 一個 endpoint 在哪 | `frontend/launcher/user-guide/frontend-endpoints.md`(模組 ↔ API 對照) |
 | 27 個鍵盤捷徑 | `frontend/launcher/user-guide/slash-commands.md` |
 | 3 層權限矩陣 | `frontend/launcher/user-guide/admin-permissions.md` |

@@ -60,19 +60,26 @@ docker restart chengfu-librechat
 **解法**:正常現象,一次性;使用者重新登入即可。
 
 ### 2.2 Agent 回應很慢(> 30 秒才開始)
-**原因 A**:Anthropic API 那端慢。
-**驗證**:`curl` 直接打 Anthropic API 試 latency。
+**原因 A**:OpenAI 或 Anthropic API 那端慢。
+**驗證**:`curl` 直接打目前選用的 provider 試 latency。OpenAI 範例:
+```bash
+time curl https://api.openai.com/v1/responses \
+    -H "Authorization: Bearer $(security find-generic-password -s 'chengfu-ai-openai-key' -w)" \
+    -H "Content-Type: application/json" \
+    -d '{"model":"gpt-5.4-nano","input":"hi"}'
+```
+Claude 備援範例:
 ```bash
 time curl https://api.anthropic.com/v1/messages \
     -H "x-api-key: $(security find-generic-password -s 'chengfu-ai-anthropic-key' -w)" \
     -H "anthropic-version: 2023-06-01" \
     -d '{"model":"claude-haiku-4-5","max_tokens":50,"messages":[{"role":"user","content":"hi"}]}'
 ```
-若 > 5 秒 → Anthropic 那端有問題,查 https://status.anthropic.com。
+若 > 5 秒 → 查 provider status page,或在 Launcher 先切另一個 AI 引擎。
 
 **原因 B**:Rate limit(Tier 1 / 尖峰)。
 **驗證**:`docker compose logs librechat | grep -i "rate.limit"`
-**解法**:升 Tier 2(見 D-002);若已 Tier 2 仍爆 → 評估 Tier 3。
+**解法**:調整 OpenAI / Claude 額度與預算上限(見 D-002-v2);必要時先切另一個 AI 引擎。
 
 **原因 C**:Mac mini 網路慢。
 **驗證**:`speedtest-cli`。
@@ -176,7 +183,7 @@ find ~/chengfu-backups/daily -type f -mtime +14 -delete
 ## 5. Agent 品質類
 
 ### 5.1 Agent 回應格式跑掉(應該是表格但變條列)
-**原因**:Claude 偶發不守 instructions。
+**原因**:模型偶發不守 instructions。
 **解法**:
 - 使用者在對話中加「請用 markdown 表格輸出」
 - 長期:改該 Agent 的 instructions,加明確格式範例(few-shot)
@@ -202,7 +209,7 @@ find ~/chengfu-backups/daily -type f -mtime +14 -delete
 **解法**:訓練時強化「具體 prompt」技巧(見 `docs/03-TRAINING.md`)。
 
 **原因(次常見)**:該 Agent 的 instructions 與承富實際需求不夠貼合。
-**解法**:收集 5-10 個案例,改 instructions;加 few-shot;若仍不行就改 Sonnet → Opus。
+**解法**:收集 5-10 個案例,改 instructions;加 few-shot;若仍不行就切換更高階模型版本。
 
 ---
 
@@ -212,14 +219,14 @@ find ~/chengfu-backups/daily -type f -mtime +14 -delete
 **原因 A**:某同仁過度使用(知識庫查詢無限 loop)。
 **解法**:admin panel 看 top 3 用量使用者,private chat 確認用途。
 
-**原因 B**:Agent 默認 Opus/Sonnet 而非 Haiku。
-**解法**:改 Agent model 欄位為 Haiku(成本 1/10)。
+**原因 B**:Agent 默認高階模型而非 mini/nano 或 Haiku。
+**解法**:改 Agent model 欄位為成本較低的快速模型。
 
-### 6.2 Anthropic console 顯示「超過預算上限」
+### 6.2 OpenAI / Anthropic console 顯示「超過預算上限」
 **解法**:
 1. 升 `MONTHLY_BUDGET_USD`(.env)
 2. 或降使用者 token 上限
-3. 或月底前暫時切 Haiku
+3. 或月底前暫時切快速模型 / 另一個 AI 引擎
 
 ---
 

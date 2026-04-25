@@ -54,7 +54,8 @@
 │   └──────────────────────────────────────────────────┘    │
 │                                                            │
 │   macOS Keychain(機密儲存 · 見 docs/05-SECURITY.md)        │
-│     ├─ chengfu-ai-anthropic-key                            │
+│     ├─ chengfu-ai-openai-key                               │
+│     ├─ chengfu-ai-anthropic-key(選配備援)                  │
 │     ├─ chengfu-ai-jwt-secret                               │
 │     ├─ chengfu-ai-creds-key / creds-iv                     │
 │     └─ chengfu-ai-meili-master-key                         │
@@ -64,10 +65,15 @@
 ┌───────────────────────────────────────────────────────────┐
 │              AI 模 型 層                                    │
 │                                                            │
-│   主力:Anthropic Claude API(Tier 2,雲端)                  │
+│   主力:OpenAI API(前端預設,雲端)                           │
+│   ├─ gpt-5.4             (重大決策、極複雜任務)             │
+│   ├─ gpt-5.4-mini        (推薦中度、長文件與日常產出)        │
+│   └─ gpt-5.4-nano        (快速任務、會議摘要、短回覆)        │
+│                                                            │
+│   備援:Anthropic Claude API(前端可切換)                    │
 │   ├─ claude-opus-4-7      (重大決策、極複雜任務)            │
-│   ├─ claude-sonnet-4-6    (推薦中度、長文件分析)             │
-│   └─ claude-haiku-4-5     (日常對話、大量文字,預設)         │
+│   ├─ claude-sonnet-4-6    (長文件分析)                      │
+│   └─ claude-haiku-4-5     (快速備援)                        │
 │                                                            │
 │   圖像生成:Claude 內建 vision + 外部工具(如 DALL-E 為選配)   │
 │                                                            │
@@ -88,7 +94,7 @@
     ↓
 LibreChat(Mac mini · HTTPS)
     ↓
-Anthropic Claude API(Tier 2,跨國傳輸,TLS)
+OpenAI API(預設)或 Anthropic Claude API(前端切換,TLS)
     ↓ 回應
 LibreChat(紀錄於本地 MongoDB)
     ↓
@@ -204,8 +210,8 @@ LibreChat 原生 Speech-to-Text
 ### macOS Keychain(S-1 · 機密儲存)
 - 不是容器,是 macOS 原生服務
 - 儲存以下項目(見 `scripts/setup-keychain.sh`):
-  - `chengfu-ai-anthropic-key`(ANTHROPIC_API_KEY)
-  - `chengfu-ai-openai-key`(OPENAI_API_KEY,供 STT / embedding)
+  - `chengfu-ai-openai-key`(OPENAI_API_KEY,主力 AI / STT / embedding)
+  - `chengfu-ai-anthropic-key`(ANTHROPIC_API_KEY,Claude 備援)
   - `chengfu-ai-jwt-secret` / `chengfu-ai-jwt-refresh-secret`
   - `chengfu-ai-creds-key` / `chengfu-ai-creds-iv`
   - `chengfu-ai-meili-master-key`
@@ -241,16 +247,16 @@ LibreChat 原生 Speech-to-Text
 | 指標 | 預估值 |
 |---|---|
 | 同時併發使用者 | 10(24GB 充裕) |
-| 對話回應延遲(Haiku) | < 2 秒 |
-| 對話回應延遲(Sonnet) | 3-6 秒 |
-| 60 頁 PDF 解析(Sonnet) | 10-15 分鐘 |
+| 對話回應延遲(GPT-5.4 nano / Haiku) | < 2 秒 |
+| 對話回應延遲(GPT-5.4 mini / Sonnet) | 3-6 秒 |
+| 60 頁 PDF 解析(GPT-5.4 mini / Sonnet) | 10-15 分鐘 |
 | 會議 60 分鐘錄音轉稿(OpenAI Whisper API) | 3-5 分鐘 |
 | 知識庫查詢(原生 file_search) | < 3 秒 |
 | Mac mini CPU 平均佔用 | 5-15% |
 | Mac mini RAM 平均佔用 | 10-14 GB(含 macOS + Docker + 容器) |
 | Mac mini RAM 尖峰佔用 | 18-20 GB(24GB 有 4-6GB 緩衝) |
-| Anthropic API RPM 需求 | 尖峰 200-300(Tier 2 的 1000 RPM 綽綽有餘) |
-| 每日平均 Claude API token 用量 | ~50 萬 token(10 人中度使用) |
+| OpenAI / Claude API RPM 需求 | 尖峰 200-300(需依實測調整額度與 rate limit) |
+| 每日平均 API token 用量 | ~50 萬 token(10 人中度使用) |
 
 ---
 
@@ -259,10 +265,10 @@ LibreChat 原生 Speech-to-Text
 ### 增加使用者(例:10 人 → 20 人)
 - RAM 24GB 仍可支撐,但建議監控
 - LibreChat 後台新增帳號即可
-- Claude API 費用隨用量線性增加
+- OpenAI / Claude API 費用隨用量線性增加
 - 超過 15 人需評估升 Mac Studio
 
-### 增加模型(例:加入 Gemini 或 GPT-4)
+### 增加模型(例:加入 Gemini 或新 OpenAI / Claude 模型)
 - 修改 `librechat.yaml` 新增 endpoints(或在 .env 加對應 API key)
 - 在各 Agent 指定使用模型
 
@@ -284,8 +290,8 @@ LibreChat 原生 Speech-to-Text
 
 ## 技術債與已知限制
 
-1. **依賴 Anthropic 雲端 API**:若 Anthropic 服務中斷,中樞功能不可用。
-   → 緩解:階段二加入本地 Ollama 做 fallback
+1. **依賴雲端 AI API**:若 OpenAI 或 Anthropic 服務中斷,對應引擎不可用。
+   → 緩解:前端可切換另一家 provider；階段二加入本地 Ollama 做 fallback
 2. **單點部署**:無負載均衡、無熱備援。10 人規模不需要,20+ 人才考慮叢集。
 3. **中文 embedding 表現**:LibreChat 原生 file_search 對繁中支援足夠,但若承富大量用行業術語(如特定政府專案代碼),Week 3 需抽樣驗證檢索準度。
 4. **繁中文語音辨識**:OpenAI Whisper API 對繁中辨識率約 92-95%,含口語專有名詞(人名、機關簡稱)時需人工校正。

@@ -22,7 +22,7 @@
       └──────────────┬───────────┘
                      │ TLS
                      ▼
-         Anthropic API(US · Level 01/02 才能送)
+         OpenAI / Anthropic API(Level 01/02 才能送)
 ```
 
 **原則**:
@@ -42,8 +42,8 @@
 ### 2.2 Keychain 項目清單
 | key | 用途 | 必要性 |
 |---|---|---|
-| `chengfu-ai-anthropic-key` | Claude API 主力 | **必要** |
-| `chengfu-ai-openai-key` | STT + embedding(選配) | 選配 |
+| `chengfu-ai-openai-key` | OpenAI 主力 AI 引擎 | **必要** |
+| `chengfu-ai-anthropic-key` | Claude 備援 / 長文件工作流 | 選配 |
 | `chengfu-ai-jwt-secret` | LibreChat Session JWT | **必要** |
 | `chengfu-ai-jwt-refresh-secret` | JWT refresh | **必要** |
 | `chengfu-ai-creds-key` | LibreChat 內部加密 | **必要** |
@@ -71,7 +71,7 @@ security add-generic-password -s 'chengfu-ai-anthropic-key' -a "$USER" -w '<新 
 - **手動匯出**:鑰匙圈存取.app → 匯出為 `.keychain-db`(加密),放保險箱隨身碟
 
 ### 2.5 金鑰輪替(每年)
-Anthropic key 與 JWT secret 建議**每年**重產一次:
+OpenAI / Anthropic key 與 JWT secret 建議**每年**重產一次:
 ```bash
 ./scripts/setup-keychain.sh   # 覆寫選項選 y
 ./scripts/stop.sh && ./scripts/start.sh
@@ -107,14 +107,14 @@ Anthropic key 與 JWT secret 建議**每年**重產一次:
 ### 4.1 分級定義(與 CLAUDE.md 同步)
 | Level | 例子 | 處理路徑 |
 |---|---|---|
-| **01 · 公開** | 行銷文案、通案研究、已公告政府資訊 | → Claude API(雲端) |
-| **02 · 一般** | 招標須知、建議書、預算分析(去識別化後) | → Claude API(雲端) |
+| **01 · 公開** | 行銷文案、通案研究、已公告政府資訊 | → OpenAI / Claude API(雲端) |
+| **02 · 一般** | 招標須知、建議書、預算分析(去識別化後) | → OpenAI / Claude API(雲端) |
 | **03 · 機敏** | 選情、未公告標案、客戶機敏、個資 | → 階段一人工;階段二本地 Ollama |
 
 ### 4.2 PDPA 告知書(必要)
 所有同仁須簽署「AI 工具使用告知書」,載明:
-- 使用 AI 處理 Level 01/02 資料會送 Anthropic US 伺服器
-- Anthropic 商業條款:不用 API 資料訓練模型
+- 使用 AI 處理 Level 01/02 資料會送 OpenAI 或 Anthropic API 伺服器
+- OpenAI / Anthropic 商業 API 條款需由管理員定期確認,不得用一般消費者帳號替代
 - 不得將 Level 03 送 AI
 - 不得將客戶個資、身份證、電話等 PII 明文送 AI(必須先遮蔽)
 
@@ -122,7 +122,7 @@ Anthropic key 與 JWT secret 建議**每年**重產一次:
 
 ### 4.3 客戶端告知(政府標案類)
 承富處理政府標案時,**若標書含「處理資料不得跨境」條款**:
-- 不可把該客戶資料送 Claude API
+- 不可把該客戶資料送任何雲端 AI API
 - 改用階段二本地 Ollama,或完全人工處理
 - 建議:與承富老闆 & 法務制定「客戶告知 vs 不告知」決策樹(docs/CLIENT-AI-NOTICE.md,待補)
 

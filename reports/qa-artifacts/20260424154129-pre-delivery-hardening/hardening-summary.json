@@ -1,0 +1,682 @@
+{
+  "stamp": "20260424154129",
+  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260424154129-pre-delivery-hardening",
+  "totals": {
+    "pass": 21,
+    "fail": 2
+  },
+  "results": [
+    {
+      "area": "未登入保護",
+      "name": "GET /api-accounting/admin/users",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "未登入保護",
+      "name": "GET /api-accounting/admin/dashboard",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "未登入保護",
+      "name": "GET /api-accounting/projects",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "未登入保護",
+      "name": "GET /api-accounting/crm/leads?limit=1",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "未登入保護",
+      "name": "GET /api-accounting/media/contacts?limit=1",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "未登入保護",
+      "name": "GET /api-accounting/social/posts?limit=1",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "未登入保護",
+      "name": "GET /api-accounting/knowledge/list?conversation_id=hardening-noauth",
+      "status": "FAIL",
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "未登入保護",
+      "name": "POST /api-accounting/projects",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "偽造 header 防護",
+      "name": "GET /api-accounting/admin/users",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "偽造 header 防護",
+      "name": "GET /api-accounting/admin/dashboard",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "偽造 header 防護",
+      "name": "GET /api-accounting/projects",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "偽造 header 防護",
+      "name": "GET /api-accounting/crm/leads?limit=1",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "公開端點",
+      "name": "GET /api-accounting/healthz",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "公開端點",
+      "name": "POST /api-accounting/safety/classify",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "公開端點",
+      "name": "GET /api/config",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "安全標頭",
+      "name": "/",
+      "status": "PASS",
+      "detail": "core headers present"
+    },
+    {
+      "area": "安全標頭",
+      "name": "/ CSP",
+      "status": "PASS",
+      "detail": "CSP present"
+    },
+    {
+      "area": "安全標頭",
+      "name": "/login",
+      "status": "PASS",
+      "detail": "core headers present"
+    },
+    {
+      "area": "安全標頭",
+      "name": "/api-accounting/healthz",
+      "status": "PASS",
+      "detail": "core headers present"
+    },
+    {
+      "area": "登入後 API",
+      "name": "admin login",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "登入後 API",
+      "name": "admin/users 可讀",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "登入後 API",
+      "name": "admin/dashboard 可讀",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "10 併發巡檢",
+      "name": "10 sessions load + 13 views",
+      "status": "FAIL",
+      "detail": "avg=1497ms max=2445ms fail=10"
+    }
+  ],
+  "concurrent": [
+    {
+      "idx": 1,
+      "ok": false,
+      "ms": 2378,
+      "error": "{\"filteredBad\":[{\"status\":429,\"url\":\"http://localhost/api-accounting/orchestrator/workflow/presets\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/memory/meetings?limit=30\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/knowledge/list\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/memory/meetings?limit=30\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/media/contacts?limit=200\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/knowledge/list\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/social/posts?limit=100\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/media/contacts?limit=200\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/knowledge/list\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/social/posts?limit=100\"},{\"status\":429",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+      ],
+      "badResponses": [
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/orchestrator/workflow/presets"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/memory/meetings?limit=30"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/memory/meetings?limit=30"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/media/contacts?limit=200"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/social/posts?limit=100"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/media/contacts?limit=200"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/social/posts?limit=100"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/site-survey?limit=10"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/site-survey?limit=10"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/reports/aging"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/admin/secrets/status"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/admin/secrets/status"
+        }
+      ]
+    },
+    {
+      "idx": 2,
+      "ok": false,
+      "ms": 2407,
+      "error": "{\"filteredBad\":[{\"status\":429,\"url\":\"http://localhost/api-accounting/knowledge/list\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/memory/meetings?limit=30\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/media/contacts?limit=200\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/knowledge/list\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/memory/meetings?limit=30\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/media/contacts?limit=200\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/social/posts?limit=100\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/knowledge/list\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/social/posts?limit=100\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/reports/aging\"},{\"status\":429,\"url\":\"http://l",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+      ],
+      "badResponses": [
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/memory/meetings?limit=30"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/media/contacts?limit=200"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/memory/meetings?limit=30"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/media/contacts?limit=200"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/social/posts?limit=100"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/social/posts?limit=100"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/reports/aging"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/site-survey?limit=10"
+        }
+      ]
+    },
+    {
+      "idx": 3,
+      "ok": false,
+      "ms": 2335,
+      "error": "{\"filteredBad\":[{\"status\":429,\"url\":\"http://localhost/api-accounting/orchestrator/workflow/presets\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/knowledge/list\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/memory/meetings?limit=30\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/knowledge/list\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/memory/meetings?limit=30\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/social/posts?limit=100\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/knowledge/list\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/social/posts?limit=100\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/reports/aging\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/site-survey?limit=10\"},{\"status\":429,\"url\":\"http://",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+      ],
+      "badResponses": [
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/orchestrator/workflow/presets"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/memory/meetings?limit=30"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/memory/meetings?limit=30"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/social/posts?limit=100"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/social/posts?limit=100"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/reports/aging"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/site-survey?limit=10"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/site-survey?limit=10"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/media/contacts?limit=200"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/admin/secrets/status"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/admin/secrets/status"
+        }
+      ]
+    },
+    {
+      "idx": 4,
+      "ok": false,
+      "ms": 2445,
+      "error": "{\"filteredBad\":[{\"status\":429,\"url\":\"http://localhost/api-accounting/reports/pnl?date_from=2026-04-01&date_to=2026-04-24\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/reports/aging\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/orchestrator/workflow/presets\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/knowledge/list\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/knowledge/list\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/knowledge/list\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/memory/meetings?limit=30\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/memory/meetings?limit=30\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/media/contacts?limit=200\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/media/contacts?limit",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+      ],
+      "badResponses": [
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/reports/pnl?date_from=2026-04-01&date_to=2026-04-24"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/reports/aging"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/orchestrator/workflow/presets"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/memory/meetings?limit=30"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/memory/meetings?limit=30"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/media/contacts?limit=200"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/media/contacts?limit=200"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/social/posts?limit=100"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/social/posts?limit=100"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/site-survey?limit=10"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/site-survey?limit=10"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/admin/secrets/status"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/admin/secrets/status"
+        }
+      ]
+    },
+    {
+      "idx": 5,
+      "ok": false,
+      "ms": 195,
+      "error": "login HTTP 429",
+      "consoleErrors": [],
+      "badResponses": []
+    },
+    {
+      "idx": 6,
+      "ok": false,
+      "ms": 2249,
+      "error": "{\"filteredBad\":[{\"status\":429,\"url\":\"http://localhost/api-accounting/invoices\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/transactions?limit=10\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/reports/pnl?date_from=2026-04-01&date_to=2026-04-24\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/reports/aging\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/orchestrator/workflow/presets\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/memory/meetings?limit=30\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/memory/meetings?limit=30\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/media/contacts?limit=200\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/media/contacts?limit=200\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/social/po",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+      ],
+      "badResponses": [
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/invoices"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/transactions?limit=10"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/reports/pnl?date_from=2026-04-01&date_to=2026-04-24"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/reports/aging"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/orchestrator/workflow/presets"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/memory/meetings?limit=30"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/memory/meetings?limit=30"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/media/contacts?limit=200"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/media/contacts?limit=200"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/social/posts?limit=100"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/social/posts?limit=100"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/site-survey?limit=10"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/site-survey?limit=10"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/admin/secrets/status"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/admin/secrets/status"
+        }
+      ]
+    },
+    {
+      "idx": 7,
+      "ok": false,
+      "ms": 156,
+      "error": "login HTTP 429",
+      "consoleErrors": [],
+      "badResponses": []
+    },
+    {
+      "idx": 8,
+      "ok": false,
+      "ms": 2412,
+      "error": "{\"filteredBad\":[{\"status\":429,\"url\":\"http://localhost/api-accounting/orchestrator/workflow/presets\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/knowledge/list\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/memory/meetings?limit=30\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/knowledge/list\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/media/contacts?limit=200\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/memory/meetings?limit=30\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/knowledge/list\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/media/contacts?limit=200\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/social/posts?limit=100\"},{\"status\":429,\"url\":\"http://localhost/api-accounting/social/posts?limit=100\"},{\"status\":429",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+        "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+      ],
+      "badResponses": [
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/orchestrator/workflow/presets"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/memory/meetings?limit=30"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/media/contacts?limit=200"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/memory/meetings?limit=30"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/knowledge/list"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/media/contacts?limit=200"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/social/posts?limit=100"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/social/posts?limit=100"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/site-survey?limit=10"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/site-survey?limit=10"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/reports/aging"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/admin/secrets/status"
+        },
+        {
+          "status": 429,
+          "url": "http://localhost/api-accounting/admin/secrets/status"
+        }
+      ]
+    },
+    {
+      "idx": 9,
+      "ok": false,
+      "ms": 197,
+      "error": "login HTTP 429",
+      "consoleErrors": [],
+      "badResponses": []
+    },
+    {
+      "idx": 10,
+      "ok": false,
+      "ms": 200,
+      "error": "login HTTP 429",
+      "consoleErrors": [],
+      "badResponses": []
+    }
+  ]
+}

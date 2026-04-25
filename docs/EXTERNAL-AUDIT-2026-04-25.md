@@ -57,6 +57,19 @@
 
 以下 6 項是交付前必修,不是 nice-to-have。
 
+### 3.0 2026-04-25 補強執行狀態
+
+| 必修 / Finding | 狀態 | 證據 | 備註 |
+|---|---|---|---|
+| F-01 Sidebar 過載 | 已完成第一輪 | 側欄收斂為主區、5 流程模板、更多、AI 模型折疊;移除重複工作包/知識庫/快速工具入口 | 仍可在 v1.3.1 繼續把更多功能搬進 command palette |
+| F-02 Workspace prompt-launcher 化 | 已完成第一輪 | Workspace 首屏改為「接續最近工作包 / 建立工作包 / 開新草稿」,工作包列表升為主欄 | 深度 workflow execution 留 vNext |
+| F-03 Today composer 附件 | 已完成 | 首頁 composer 支援選檔、拖放、file ribbon,送出後附件自動帶入 chat 待送出清單 | 已由 PM happy-path E2E 覆蓋 |
+| F-05 工作包被埋 | 已完成第一輪 | 首頁保留工作包主入口與最近工作包,Workspace 以工作包為第一操作 | 後續可做「工作包首頁」A/B |
+| F-10/F-11 文案 | 已完成 | 首頁 H2 改成直白任務語言,sidecar 改為操作步驟,移除內部設計註解式文案 | 仍需真實新人試用驗證 |
+| §7.3 PM happy-path E2E | 已完成 | `tests/e2e/critical-journeys.spec.ts` 覆蓋 composer → 首頁附檔 → chat payload → handoff → 複製 | chromium subset 已通過 |
+| F-08 乾淨 Mac/VM 安裝驗收 | 待現場執行 | 本文件 §6 已提供 checklist;DMG 讀我已補 Gatekeeper 右鍵開啟說明 | 不能在開發機上偽裝完成 |
+| F-24 LibreChat 原生 RAG 引用實測 | 待部署環境專項驗收 | Launcher 附件與自製知識庫 API 已驗;LibreChat 原生 file_search 仍需現場資料與 Agent projectIds 驗證 | 不阻擋內部分發,阻擋「知識庫賣點」正式宣稱 |
+
 ### 必修 1:乾淨 Mac/VM 端到端部署驗收
 
 目的:證明部署文件與腳本能在非開發機環境成功重建系統。
@@ -362,7 +375,7 @@
 
 | 項目 | Owner | 狀態 | 備註 |
 |---|---|---|---|
-| 6 必修項完成 | Sterio / release worker | 待確認 | 交付前必須全過 |
+| 6 必修項完成 | Sterio / release worker | 部分完成 | F-01/F-02/F-03/F-05/F-10/F-11/PM E2E 已補;F-08/F-24 待現場或專項驗收 |
 | 乾淨 Mac/VM 驗收 | Sterio / Champion | 待執行 | 不記錄 secret |
 | Champion Pilot | Champion | 待排程 | 至少 3 個案例 |
 | 小組 Pilot | Sterio / Champion | 待排程 | 3-5 人 |

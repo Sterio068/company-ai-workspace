@@ -1,0 +1,47 @@
+{
+  "stamp": "20260424150931",
+  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260424150931-targeted",
+  "sourcePath": "/tmp/chengfu-test-sources/qa-20260424150931",
+  "totals": {
+    "pass": 5,
+    "fail": 2
+  },
+  "results": [
+    {
+      "name": "登入與載入最新版資源",
+      "status": "PASS",
+      "detail": "v63/v70"
+    },
+    {
+      "name": "CRM scoped 建立與詳情 modal",
+      "status": "PASS",
+      "detail": "QA-勿刪-商機-target-20260424150931"
+    },
+    {
+      "name": "知識庫資料源建立",
+      "status": "PASS",
+      "detail": "/tmp/chengfu-test-sources/qa-20260424150931"
+    },
+    {
+      "name": "知識庫瀏覽新增資料源",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Error: strict mode violation: getByText('qa-knowledge-note.txt') resolved to 2 elements:\n    1) <span>/Users/sterio/工作區/ChengFu/tmp/qa-knowledge-202604…</span> aka getByText('/Users/sterio/工作區/ChengFu/tmp')\n    2) <span>qa-knowledge-note.txt</span> aka getByText('qa-knowledge-note.txt', { exact: true })\n\nCall log:\n\u001b[2m  - waiting for getByText('qa-knowledge-note.txt') to be visible\u001b[22m\n\u001b[2m    2 × locator resolved to hidden <span>/Users/sterio/工作區/ChengFu/tmp/qa-knowledge-202604…</span>\u001b[22m\n"
+    },
+    {
+      "name": "同仁管理 modal 可見並可建立 QA 帳號",
+      "status": "FAIL",
+      "detail": "locator.fill: Error: strict mode violation: locator('.modal2-overlay .modal2-box').filter({ has: locator('#um-email') }).last().locator('#um-title') resolved to 2 elements:\n    1) <div id=\"um-title\" class=\"modal2-header\">➕ 建新同仁</div> aka getByText('➕ 建新同仁')\n    2) <input value=\"\" type=\"text\" id=\"um-title\" list=\"um-title-suggest\" placeholder=\"例:會計 / 企劃 / 設計\"/> aka getByRole('combobox', { name: '頭銜(自訂 · 可留空)' })\n\nCall log:\n\u001b[2m  - waiting for locator('.modal2-overlay .modal2-box').filter({ has: locator('#um-email') }).last().locator('#um-title')\u001b[22m\n"
+    },
+    {
+      "name": "會議上傳 modal 持續可見",
+      "status": "PASS",
+      "detail": "visible after animation"
+    },
+    {
+      "name": "Console 錯誤檢查(targeted)",
+      "status": "PASS",
+      "detail": "0 warning/error captured"
+    }
+  ],
+  "consoleErrors": []
+}

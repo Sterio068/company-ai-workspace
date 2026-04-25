@@ -1,0 +1,86 @@
+{
+  "stamp": "20260424150258",
+  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260424150258",
+  "totals": {
+    "pass": 4,
+    "fail": 11
+  },
+  "results": [
+    {
+      "name": "登入 Launcher",
+      "status": "PASS",
+      "detail": "http://localhost/"
+    },
+    {
+      "name": "AI 引擎切換保持狀態",
+      "status": "PASS",
+      "detail": "主力/備援切換 OK"
+    },
+    {
+      "name": "工作包建立 + 列表呈現",
+      "status": "PASS",
+      "detail": "69eb8626053c59555c3b5a57"
+    },
+    {
+      "name": "工作包交棒卡保存",
+      "status": "FAIL",
+      "detail": "locator.fill: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#dr-goal')\u001b[22m\n\u001b[2m    - locator resolved to <textarea rows=\"2\" id=\"dr-goal\" placeholder=\"例:中秋節社群活動主視覺\"></textarea>\u001b[22m\n\u001b[2m    - fill(\"QA 交棒目標 20260424150258: 確認交棒卡可保存與讀回。\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and editable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying fill action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and editable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying fill action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    20 × waiting for element to be visible, enabled and editable\u001b[22m\n\u001b[2m       - element is not visible\u001b[22m\n\u001b[2m     - retrying fill action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+    },
+    {
+      "name": "CRM 新商機 + 卡片開啟",
+      "status": "FAIL",
+      "detail": "locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.view-crm.active').getByRole('button', { name: '+ 新商機' })\u001b[22m\n\u001b[2m    - locator resolved to <button class=\"btn-primary\" onclick=\"crm.newLead()\">+ 新商機</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not stable\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not stable\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    19 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <header class=\"drawer-head\">…</header> from <aside id=\"project-drawer\" aria-hidden=\"false\" data-mode=\"project\" class=\"project-drawer open\">…</aside> subtree intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+    },
+    {
+      "name": "流程草稿產生 + 人工確認取消",
+      "status": "FAIL",
+      "detail": "locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-workflow-id=\"tender-full\"]')\u001b[22m\n\u001b[2m    - locator resolved to <article class=\"workspace-card\" data-workflow-id=\"tender-full\">…</article>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not stable\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not stable\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    19 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div class=\"drawer-backdrop open\" id=\"project-drawer-backdrop\" onclick=\"app.closeProjectDrawer()\"></div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+    },
+    {
+      "name": "管理面板新增知識庫資料源 + 重索引",
+      "status": "FAIL",
+      "detail": "locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.view-admin.active').getByRole('button', { name: '+ 新增資料源' })\u001b[22m\n\u001b[2m    - locator resolved to <button class=\"btn-primary btn-sm\" onclick=\"app.openCreateSource()\">+ 新增資料源</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not stable\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is not stable\u001b[22m\n\u001b[2m  2 × retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"drawer-backdrop open\" id=\"project-drawer-backdrop\" onclick=\"app.closeProjectDrawer()\"></div> intercepts pointer events\u001b[22m\n\u001b[2m  18 × retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\u001b[2m       - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div class=\"drawer-backdrop open\" id=\"project-drawer-backdrop\" onclick=\"app.closeProjectDrawer()\"></div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n"
+    },
+    {
+      "name": "知識庫瀏覽與搜尋 QA 資料",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for getByText('QA-勿刪-知識源-20260424150258') to be visible\u001b[22m\n"
+    },
+    {
+      "name": "媒體名單新增 + 推薦入口",
+      "status": "FAIL",
+      "detail": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "name": "社群排程建立但不立即發送",
+      "status": "FAIL",
+      "detail": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "name": "同仁管理新建 QA 帳號",
+      "status": "FAIL",
+      "detail": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "name": "會計頁 + 新交易提示",
+      "status": "FAIL",
+      "detail": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "name": "會議速記 / 場勘 / Help 頁入口可用",
+      "status": "FAIL",
+      "detail": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "name": "前端常見英文殘留掃描",
+      "status": "FAIL",
+      "detail": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "name": "Console 錯誤檢查",
+      "status": "PASS",
+      "detail": "0 warning/error captured，無阻斷錯誤"
+    }
+  ],
+  "consoleErrors": []
+}

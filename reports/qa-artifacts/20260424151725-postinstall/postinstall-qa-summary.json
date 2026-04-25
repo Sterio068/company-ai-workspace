@@ -1,0 +1,87 @@
+{
+  "stamp": "20260424151725",
+  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260424151725-postinstall",
+  "sourcePath": "/tmp/chengfu-test-sources/postinstall-20260424151725",
+  "totals": {
+    "pass": 13,
+    "fail": 1
+  },
+  "results": [
+    {
+      "name": "登入與資源版本確認",
+      "status": "PASS",
+      "detail": "launcher.css?v=63 / app.js?v=71"
+    },
+    {
+      "name": "系統資料保留檢查",
+      "status": "PASS",
+      "detail": "{\"users\":2,\"agents\":20,\"projects\":5,\"crm\":3,\"sources\":3}"
+    },
+    {
+      "name": "13 個主功能 view 可切換",
+      "status": "PASS",
+      "detail": "13/13"
+    },
+    {
+      "name": "AI 主力/備援切換",
+      "status": "PASS",
+      "detail": "OpenAI 主力 active"
+    },
+    {
+      "name": "工作包建立 + 交棒卡保存",
+      "status": "PASS",
+      "detail": "QA-勿刪-安裝後工作包-20260424151725"
+    },
+    {
+      "name": "CRM 新商機 + 詳情 modal",
+      "status": "PASS",
+      "detail": "QA-勿刪-安裝後商機-20260424151725"
+    },
+    {
+      "name": "知識庫資料源建立 + 瀏覽",
+      "status": "PASS",
+      "detail": "/tmp/chengfu-test-sources/postinstall-20260424151725"
+    },
+    {
+      "name": "流程草稿可產生但不送出",
+      "status": "PASS",
+      "detail": "draft ok"
+    },
+    {
+      "name": "媒體名單新增 + 推薦",
+      "status": "PASS",
+      "detail": "QA 安裝後記者 20260424151725"
+    },
+    {
+      "name": "社群排程建立但不立即發",
+      "status": "PASS",
+      "detail": "queued only"
+    },
+    {
+      "name": "同仁管理 modal + 建立 QA 帳號",
+      "status": "PASS",
+      "detail": "qa-user-postinstall-20260424151725@chengfu.local"
+    },
+    {
+      "name": "會計/會議/場勘/Help 入口",
+      "status": "PASS",
+      "detail": "all visible"
+    },
+    {
+      "name": "OpenAI 主力模型實際回覆",
+      "status": "PASS",
+      "detail": "model replied"
+    },
+    {
+      "name": "前端中文化與 console 檢查",
+      "status": "FAIL",
+      "detail": "error: Failed to load resource: the server responded with a status of 404 (Not Found)"
+    }
+  ],
+  "consoleErrors": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    }
+  ]
+}

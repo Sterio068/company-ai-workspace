@@ -1,0 +1,144 @@
+{
+  "stamp": "20260424152141",
+  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260424152141-console-retarget",
+  "totals": {
+    "pass": 0,
+    "fail": 1
+  },
+  "results": [
+    {
+      "name": "聚焦回歸",
+      "status": "FAIL",
+      "detail": "page.waitForFunction: Timeout 20000ms exceeded."
+    }
+  ],
+  "badResponses": [
+    {
+      "status": "failed",
+      "url": "http://localhost/assets/silence.mp3",
+      "error": "net::ERR_BLOCKED_BY_RESPONSE"
+    },
+    {
+      "status": 401,
+      "url": "http://localhost/api/user"
+    },
+    {
+      "status": "failed",
+      "url": "http://localhost/api/convos",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "status": "failed",
+      "url": "http://localhost/assets/AccountSettings.6R1m80UO.js",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "status": "failed",
+      "url": "http://localhost/api/files",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "status": "failed",
+      "url": "http://localhost/api/banner",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "status": "failed",
+      "url": "http://localhost/api/files/speech/config/get",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "status": "failed",
+      "url": "http://localhost/api/search/enable",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "status": "failed",
+      "url": "http://localhost/api/user",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "status": "failed",
+      "url": "http://localhost/api/endpoints",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "status": "failed",
+      "url": "http://localhost/api/agents/chat/active",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "status": "failed",
+      "url": "http://localhost/api/roles/admin",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "status": "failed",
+      "url": "http://localhost/api/roles/user",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "status": "failed",
+      "url": "http://localhost/api/user/settings/favorites",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "status": "failed",
+      "url": "http://localhost/api/models",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "status": "failed",
+      "url": "http://localhost/api/auth/refresh",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "status": 401,
+      "url": "http://localhost/api/auth/refresh"
+    },
+    {
+      "status": "failed",
+      "url": "http://localhost/api/auth/refresh",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "status": "failed",
+      "url": "http://localhost/assets/silence.mp3",
+      "error": "net::ERR_BLOCKED_BY_RESPONSE"
+    },
+    {
+      "status": 401,
+      "url": "http://localhost/api/user"
+    },
+    {
+      "status": 401,
+      "url": "http://localhost/api/auth/refresh"
+    }
+  ],
+  "consoleErrors": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "text": "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "text": "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    }
+  ]
+}

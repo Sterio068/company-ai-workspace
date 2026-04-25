@@ -1,0 +1,491 @@
+{
+  "stamp": "20260424154701",
+  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260424154701-pre-delivery-hardening-final",
+  "totals": {
+    "pass": 24,
+    "fail": 1
+  },
+  "results": [
+    {
+      "area": "未登入保護",
+      "name": "GET /api-accounting/admin/users",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "未登入保護",
+      "name": "GET /api-accounting/admin/dashboard",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "未登入保護",
+      "name": "GET /api-accounting/projects",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "未登入保護",
+      "name": "GET /api-accounting/crm/leads?limit=1",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "未登入保護",
+      "name": "GET /api-accounting/media/contacts?limit=1",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "未登入保護",
+      "name": "GET /api-accounting/social/posts?limit=1",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "未登入保護",
+      "name": "GET /api-accounting/knowledge/list?conversation_id=hardening-noauth",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "未登入保護",
+      "name": "GET /api-accounting/knowledge/search?q=建議書",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "未登入保護",
+      "name": "POST /api-accounting/projects",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "偽造 header 防護",
+      "name": "GET /api-accounting/admin/users",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "偽造 header 防護",
+      "name": "GET /api-accounting/admin/dashboard",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "偽造 header 防護",
+      "name": "GET /api-accounting/projects",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "偽造 header 防護",
+      "name": "GET /api-accounting/crm/leads?limit=1",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "偽造 header 防護",
+      "name": "GET /api-accounting/media/contacts?limit=1",
+      "status": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "area": "公開端點",
+      "name": "GET /api-accounting/healthz",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "公開端點",
+      "name": "POST /api-accounting/safety/classify",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "公開端點",
+      "name": "GET /api/config",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "安全標頭",
+      "name": "/",
+      "status": "PASS",
+      "detail": "core headers present"
+    },
+    {
+      "area": "安全標頭",
+      "name": "/ CSP",
+      "status": "PASS",
+      "detail": "CSP present"
+    },
+    {
+      "area": "安全標頭",
+      "name": "/login",
+      "status": "PASS",
+      "detail": "core headers present"
+    },
+    {
+      "area": "安全標頭",
+      "name": "/api-accounting/healthz",
+      "status": "PASS",
+      "detail": "core headers present"
+    },
+    {
+      "area": "登入後 API",
+      "name": "admin login",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "登入後 API",
+      "name": "admin/users 可讀",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "登入後 API",
+      "name": "admin/dashboard 可讀",
+      "status": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "area": "10 併發巡檢",
+      "name": "10 sessions load + 13 views",
+      "status": "FAIL",
+      "detail": "avg=21097ms max=23337ms fail=9"
+    }
+  ],
+  "concurrent": [
+    {
+      "idx": 1,
+      "ok": false,
+      "ms": 23187,
+      "error": "page.waitForSelector: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#app') to be visible\u001b[22m\n",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "badResponses": [
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/silence.mp3",
+          "error": "net::ERR_BLOCKED_BY_RESPONSE"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        }
+      ]
+    },
+    {
+      "idx": 2,
+      "ok": false,
+      "ms": 23254,
+      "error": "page.waitForSelector: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#app') to be visible\u001b[22m\n",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "badResponses": [
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/silence.mp3",
+          "error": "net::ERR_BLOCKED_BY_RESPONSE"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        }
+      ]
+    },
+    {
+      "idx": 3,
+      "ok": false,
+      "ms": 23220,
+      "error": "page.waitForSelector: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#app') to be visible\u001b[22m\n",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "badResponses": [
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/silence.mp3",
+          "error": "net::ERR_BLOCKED_BY_RESPONSE"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        }
+      ]
+    },
+    {
+      "idx": 4,
+      "ok": false,
+      "ms": 23337,
+      "error": "page.waitForSelector: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#app') to be visible\u001b[22m\n",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "badResponses": [
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/silence.mp3",
+          "error": "net::ERR_BLOCKED_BY_RESPONSE"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        }
+      ]
+    },
+    {
+      "idx": 5,
+      "ok": false,
+      "ms": 23296,
+      "error": "page.waitForSelector: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#app') to be visible\u001b[22m\n",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "badResponses": [
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/silence.mp3",
+          "error": "net::ERR_BLOCKED_BY_RESPONSE"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        }
+      ]
+    },
+    {
+      "idx": 6,
+      "ok": false,
+      "ms": 23169,
+      "error": "page.waitForSelector: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#app') to be visible\u001b[22m\n",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "badResponses": [
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/silence.mp3",
+          "error": "net::ERR_BLOCKED_BY_RESPONSE"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        }
+      ]
+    },
+    {
+      "idx": 7,
+      "ok": false,
+      "ms": 23293,
+      "error": "page.waitForSelector: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#app') to be visible\u001b[22m\n",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "badResponses": [
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/silence.mp3",
+          "error": "net::ERR_BLOCKED_BY_RESPONSE"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        }
+      ]
+    },
+    {
+      "idx": 8,
+      "ok": false,
+      "ms": 23311,
+      "error": "page.waitForSelector: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#app') to be visible\u001b[22m\n",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "badResponses": [
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/silence.mp3",
+          "error": "net::ERR_BLOCKED_BY_RESPONSE"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        }
+      ]
+    },
+    {
+      "idx": 9,
+      "ok": true,
+      "ms": 1579
+    },
+    {
+      "idx": 10,
+      "ok": false,
+      "ms": 23322,
+      "error": "page.waitForSelector: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#app') to be visible\u001b[22m\n",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "badResponses": [
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/silence.mp3",
+          "error": "net::ERR_BLOCKED_BY_RESPONSE"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        }
+      ]
+    }
+  ]
+}

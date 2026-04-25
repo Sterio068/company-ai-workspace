@@ -255,12 +255,12 @@ Week 11+ · v2.0(長遠)
 
 > **這 3 項不是 Day 0 擋路項 · 但 v1.2 前必修** · 寫進合約驗收項
 
-### 10.1 LibreChat /api/ask/agents 真 quota gate
-- **問題:** 目前 quota 只在 launcher 前端 chat.js 檢查 · curl 可直打 `/api/ask/agents` 繞過
+### 10.1 LibreChat /api/agents/chat 真 quota gate
+- **問題:** 目前 quota 只在 launcher 前端 chat.js 檢查 · curl 可直打 `/api/agents/chat` 繞過
 - **影響:** 同仁知道後可無限消耗預算 · 月底爆 NT$ 12,000
 - **修法:**
   - (a) nginx `auth_request` 指向 accounting `/quota/preflight` · 擋在代理層
-  - (b) 或寫 LibreChat plugin · 在 `/api/ask/agents` 入口先打 accounting
+  - (b) 或寫 LibreChat plugin · 在 `/api/agents/chat` 入口先打 accounting
 - **工時:** 1-2 天
 - **緩解:** 短期靠 Cloudflare Access 擋外部 + 內網信任 + 每週 `/admin/cost` 監控
 
@@ -376,4 +376,3 @@ Week 11+ · v2.0(長遠)
 - /knowledge/* 與 reports 改 async + to_thread
 - workers 設 2(M4 24GB 夠)
 - 高並發場景必修
-

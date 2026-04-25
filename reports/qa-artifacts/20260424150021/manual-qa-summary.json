@@ -1,0 +1,91 @@
+{
+  "stamp": "20260424150021",
+  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260424150021",
+  "totals": {
+    "pass": 2,
+    "fail": 13
+  },
+  "results": [
+    {
+      "name": "登入 Launcher",
+      "status": "PASS",
+      "detail": "http://localhost/"
+    },
+    {
+      "name": "AI 引擎切換保持狀態",
+      "status": "FAIL",
+      "detail": "locator.getAttribute: Error: strict mode violation: locator('[data-ai-provider=\"openai\"]') resolved to 2 elements:\n    1) <html lang=\"zh-Hant\" class=\"active\" data-theme=\"auto\" data-role=\"admin\" title=\"目前使用 主力引擎\" aria-pressed=\"true\" data-ai-provider=\"openai\" data-user-email=\"sterio068@gmail.com\">…</html> aka locator('html')\n    2) <button type=\"button\" class=\"active\" title=\"目前使用 主力引擎\" aria-pressed=\"true\" data-ai-provider=\"openai\" onclick=\"app.setAIProvider('openai')\">主力</button> aka getByRole('button', { name: '主力' })\n\nCall log:\n\u001b[2m  - waiting for locator('[data-ai-provider=\"openai\"]')\u001b[22m\n"
+    },
+    {
+      "name": "工作包建立 + 列表呈現",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Error: strict mode violation: locator('[data-project-id]').filter({ hasText: 'QA-勿刪-手測工作包-20260424150021' }) resolved to 2 elements:\n    1) <article class=\"project-card\" data-project-id=\"69eb85880e4c02fab69deae2\">…</article> aka getByText('QA-勿刪-手測工作包-20260424150021 QA 測試客戶 QA 手動測試建立的工作包，用於確認專案列表、交棒卡與資料持久化。 📅 2026-05')\n    2) <article tabindex=\"0\" role=\"button\" data-project-id=\"69eb85880e4c02fab69deae2\" aria-label=\"選取工作包:QA-勿刪-手測工作包-20260424150021\" class=\"project-card status-active work-list-card active\">…</article> aka getByRole('button', { name: '選取工作包:QA-勿刪-手測工作包-' })\n\nCall log:\n\u001b[2m  - waiting for locator('[data-project-id]').filter({ hasText: 'QA-勿刪-手測工作包-20260424150021' }) to be visible\u001b[22m\n"
+    },
+    {
+      "name": "工作包交棒卡保存",
+      "status": "FAIL",
+      "detail": "locator.click: Error: strict mode violation: locator('[data-project-id]').filter({ hasText: 'QA-勿刪-手測工作包-20260424150021' }) resolved to 2 elements:\n    1) <article class=\"project-card\" data-project-id=\"69eb85880e4c02fab69deae2\">…</article> aka getByText('QA-勿刪-手測工作包-20260424150021 QA 測試客戶 QA 手動測試建立的工作包，用於確認專案列表、交棒卡與資料持久化。 📅 2026-05')\n    2) <article tabindex=\"0\" role=\"button\" data-project-id=\"69eb85880e4c02fab69deae2\" aria-label=\"選取工作包:QA-勿刪-手測工作包-20260424150021\" class=\"project-card status-active work-list-card active\">…</article> aka getByRole('button', { name: '選取工作包:QA-勿刪-手測工作包-' })\n\nCall log:\n\u001b[2m  - waiting for locator('[data-project-id]').filter({ hasText: 'QA-勿刪-手測工作包-20260424150021' })\u001b[22m\n"
+    },
+    {
+      "name": "CRM 新商機 + 卡片開啟",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('商機漏斗').first() to be visible\u001b[22m\n\u001b[2m    25 × locator resolved to hidden <span class=\"sidebar-label\">商機漏斗</span>\u001b[22m\n"
+    },
+    {
+      "name": "流程草稿產生 + 人工確認取消",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('自動化流程').first() to be visible\u001b[22m\n\u001b[2m    25 × locator resolved to hidden <span class=\"sidebar-label\">自動化流程</span>\u001b[22m\n"
+    },
+    {
+      "name": "管理面板新增知識庫資料源 + 重索引",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('營運中控').first() to be visible\u001b[22m\n"
+    },
+    {
+      "name": "知識庫瀏覽與搜尋 QA 資料",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('知識庫').first() to be visible\u001b[22m\n\u001b[2m    25 × locator resolved to hidden <span class=\"sidebar-label\">知識庫</span>\u001b[22m\n"
+    },
+    {
+      "name": "媒體名單新增 + 推薦入口",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for getByText('媒體名單').first() to be visible\u001b[22m\n\u001b[2m    15 × locator resolved to hidden <span class=\"sidebar-label\">媒體名單</span>\u001b[22m\n"
+    },
+    {
+      "name": "社群排程建立但不立即發送",
+      "status": "FAIL",
+      "detail": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "name": "同仁管理新建 QA 帳號",
+      "status": "FAIL",
+      "detail": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "name": "會計頁 + 新交易提示",
+      "status": "FAIL",
+      "detail": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "name": "會議速記 / 場勘 / Help 頁入口可用",
+      "status": "FAIL",
+      "detail": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "name": "前端常見英文殘留掃描",
+      "status": "FAIL",
+      "detail": "page.evaluate: Target page, context or browser has been closed"
+    },
+    {
+      "name": "Console 錯誤檢查",
+      "status": "PASS",
+      "detail": "1 warning/error captured，無阻斷錯誤"
+    }
+  ],
+  "consoleErrors": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    }
+  ]
+}

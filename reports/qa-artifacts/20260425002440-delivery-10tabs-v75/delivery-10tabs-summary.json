@@ -1,0 +1,111 @@
+{
+  "stamp": "20260425002440",
+  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260425002440-delivery-10tabs-v75",
+  "totals": {
+    "pass": 10,
+    "fail": 0
+  },
+  "durationMs": 1289,
+  "results": [
+    {
+      "idx": 1,
+      "hash": "#dashboard",
+      "ok": true,
+      "ms": 993,
+      "url": "http://localhost/",
+      "activeView": "dashboard",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 2,
+      "hash": "#projects",
+      "ok": true,
+      "ms": 899,
+      "url": "http://localhost/#projects",
+      "activeView": "dashboard",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 3,
+      "hash": "#crm",
+      "ok": true,
+      "ms": 913,
+      "url": "http://localhost/#crm",
+      "activeView": "dashboard",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 4,
+      "hash": "#accounting",
+      "ok": true,
+      "ms": 984,
+      "url": "http://localhost/#accounting",
+      "activeView": "dashboard",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 5,
+      "hash": "#workflows",
+      "ok": true,
+      "ms": 1071,
+      "url": "http://localhost/#workflows",
+      "activeView": "dashboard",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 6,
+      "hash": "#knowledge",
+      "ok": true,
+      "ms": 1057,
+      "url": "http://localhost/#knowledge",
+      "activeView": "dashboard",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 7,
+      "hash": "#meeting",
+      "ok": true,
+      "ms": 997,
+      "url": "http://localhost/#meeting",
+      "activeView": "dashboard",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 8,
+      "hash": "#media",
+      "ok": true,
+      "ms": 993,
+      "url": "http://localhost/#media",
+      "activeView": "dashboard",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 9,
+      "hash": "#social",
+      "ok": true,
+      "ms": 960,
+      "url": "http://localhost/#social",
+      "activeView": "dashboard",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 10,
+      "hash": "#site",
+      "ok": true,
+      "ms": 830,
+      "url": "http://localhost/#site",
+      "activeView": "dashboard",
+      "badResponses": [],
+      "consoleErrors": []
+    }
+  ]
+}

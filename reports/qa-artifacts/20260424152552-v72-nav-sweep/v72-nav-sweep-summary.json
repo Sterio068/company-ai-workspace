@@ -1,0 +1,97 @@
+{
+  "stamp": "20260424152552",
+  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260424152552-v72-nav-sweep",
+  "totals": {
+    "pass": 17,
+    "fail": 0
+  },
+  "results": [
+    {
+      "name": "v72 載入確認",
+      "status": "PASS",
+      "detail": "/static/app.js?v=72"
+    },
+    {
+      "name": "View 可切換: dashboard",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "View 可切換: projects",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "View 可切換: crm",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "View 可切換: tenders",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "View 可切換: accounting",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "View 可切換: skills",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "View 可切換: workflows",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "View 可切換: knowledge",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "View 可切換: admin",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "View 可切換: users",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "View 可切換: meeting",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "View 可切換: media",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "View 可切換: social",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "View 可切換: site",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "View 可切換: help",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "主要頁面 console/network",
+      "status": "PASS",
+      "detail": "無未預期錯誤"
+    }
+  ],
+  "badResponses": [],
+  "consoleErrors": []
+}

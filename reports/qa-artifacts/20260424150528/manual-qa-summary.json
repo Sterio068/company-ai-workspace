@@ -1,0 +1,91 @@
+{
+  "stamp": "20260424150528",
+  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260424150528",
+  "totals": {
+    "pass": 10,
+    "fail": 5
+  },
+  "results": [
+    {
+      "name": "登入 Launcher",
+      "status": "PASS",
+      "detail": "http://localhost/"
+    },
+    {
+      "name": "AI 引擎切換保持狀態",
+      "status": "PASS",
+      "detail": "主力/備援切換 OK"
+    },
+    {
+      "name": "工作包建立 + 列表呈現",
+      "status": "PASS",
+      "detail": "69eb86bb0e4c02fab69deae3"
+    },
+    {
+      "name": "工作包交棒卡保存",
+      "status": "PASS",
+      "detail": "保存成功"
+    },
+    {
+      "name": "CRM 新商機 + 卡片開啟",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Error: strict mode violation: getByText('QA 測試客戶') resolved to 10 elements:\n    1) <div data-slot=\"client\" class=\"project-card-client\">QA 測試客戶</div> aka getByText('QA 測試客戶').first()\n    2) <div data-slot=\"client\" class=\"project-card-client\">QA 測試客戶</div> aka getByText('QA 測試客戶').nth(1)\n    3) <div data-slot=\"client\" class=\"project-card-client\">QA 測試客戶</div> aka getByText('QA 測試客戶').nth(2)\n    4) <div data-slot=\"client\" class=\"project-card-client\">🏢 QA 測試客戶</div> aka getByLabel('選取工作包:QA-勿刪-手測工作包-20260424150528').getByText('🏢 QA 測試客戶')\n    5) <div data-slot=\"client\" class=\"project-card-client\">🏢 QA 測試客戶</div> aka getByLabel('選取工作包:QA-勿刪-手測工作包-20260424150258').getByText('🏢 QA 測試客戶')\n    6) <div data-slot=\"client\" class=\"project-card-client\">🏢 QA 測試客戶</div> aka getByLabel('選取工作包:QA-勿刪-手測工作包-20260424150021').getByText('🏢 QA 測試客戶')\n    7) <p>QA 測試客戶 · 進行中 · 更新 8 時前</p> aka getByText('QA 測試客戶 · 進行中 · 更新 8 時前')\n    8) <div data-slot=\"client\" class=\"lead-card-client\">QA 測試客戶</div> aka locator('#kanban-board').getByText('QA 測試客戶', { exact: true })\n    9) <dd id=\"dr-client\">QA 測試客戶</dd> aka locator('#dr-client')\n    10) <strong>QA 測試客戶</strong> aka getByLabel('QA-勿刪-商機-').getByText('QA 測試客戶', { exact: true })\n\nCall log:\n\u001b[2m  - waiting for getByText('QA 測試客戶') to be visible\u001b[22m\n"
+    },
+    {
+      "name": "流程草稿產生 + 人工確認取消",
+      "status": "PASS",
+      "detail": "草稿可產生，未送出主管家"
+    },
+    {
+      "name": "管理面板新增知識庫資料源 + 重索引",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('QA-勿刪-知識源-20260424150528') to be visible\u001b[22m\n"
+    },
+    {
+      "name": "知識庫瀏覽與搜尋 QA 資料",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('QA-勿刪-知識源-20260424150528') to be visible\u001b[22m\n"
+    },
+    {
+      "name": "媒體名單新增 + 推薦入口",
+      "status": "PASS",
+      "detail": "QA 記者 20260424150528"
+    },
+    {
+      "name": "社群排程建立但不立即發送",
+      "status": "PASS",
+      "detail": "queued，未點立即發"
+    },
+    {
+      "name": "同仁管理新建 QA 帳號",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.modal2-overlay').last() to be visible\u001b[22m\n\u001b[2m    25 × locator resolved to hidden <div role=\"dialog\" aria-modal=\"true\" class=\"modal2-overlay\" aria-labelledby=\"um-title\">…</div>\u001b[22m\n"
+    },
+    {
+      "name": "會計頁 + 新交易提示",
+      "status": "PASS",
+      "detail": "會計資料載入，新交易引導正常"
+    },
+    {
+      "name": "會議速記 / 場勘 / Help 頁入口可用",
+      "status": "PASS",
+      "detail": "入口與主要按鈕可見"
+    },
+    {
+      "name": "前端常見英文殘留掃描",
+      "status": "PASS",
+      "detail": "13 個 view 無常見技術英文殘留"
+    },
+    {
+      "name": "Console 錯誤檢查",
+      "status": "FAIL",
+      "detail": "error: Failed to load resource: the server responded with a status of 400 (Bad Request)"
+    }
+  ],
+  "consoleErrors": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+    }
+  ]
+}

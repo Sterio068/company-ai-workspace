@@ -1,0 +1,219 @@
+{
+  "stamp": "20260424145333",
+  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260424145333",
+  "totals": {
+    "pass": 0,
+    "fail": 15
+  },
+  "results": [
+    {
+      "name": "登入 Launcher",
+      "status": "FAIL",
+      "detail": "locator.fill: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByLabel('電子郵件')\u001b[22m\n"
+    },
+    {
+      "name": "AI 引擎切換保持狀態",
+      "status": "FAIL",
+      "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-ai-provider=\"anthropic\"]')\u001b[22m\n"
+    },
+    {
+      "name": "工作包建立 + 列表呈現",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('工作包') to be visible\u001b[22m\n"
+    },
+    {
+      "name": "工作包交棒卡保存",
+      "status": "FAIL",
+      "detail": "locator.getAttribute: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-project-id]').filter({ hasText: 'QA-勿刪-手測工作包-20260424145333' })\u001b[22m\n"
+    },
+    {
+      "name": "CRM 新商機 + 卡片開啟",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('商機漏斗') to be visible\u001b[22m\n"
+    },
+    {
+      "name": "流程草稿產生 + 人工確認取消",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('自動化流程') to be visible\u001b[22m\n"
+    },
+    {
+      "name": "管理面板新增知識庫資料源 + 重索引",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('營運中控') to be visible\u001b[22m\n"
+    },
+    {
+      "name": "知識庫瀏覽與搜尋 QA 資料",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('知識庫') to be visible\u001b[22m\n"
+    },
+    {
+      "name": "媒體名單新增 + 推薦入口",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('媒體名單') to be visible\u001b[22m\n"
+    },
+    {
+      "name": "社群排程建立但不立即發送",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('社群排程') to be visible\u001b[22m\n"
+    },
+    {
+      "name": "同仁管理新建 QA 帳號",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('同仁管理') to be visible\u001b[22m\n"
+    },
+    {
+      "name": "會計頁 + 新交易提示",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Timeout 12000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('會計') to be visible\u001b[22m\n"
+    },
+    {
+      "name": "會議速記 / 場勘 / Help 頁入口可用",
+      "status": "FAIL",
+      "detail": "locator.waitFor: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for getByText('會議速記') to be visible\u001b[22m\n"
+    },
+    {
+      "name": "前端常見英文殘留掃描",
+      "status": "FAIL",
+      "detail": "page.goto: Target page, context or browser has been closed"
+    },
+    {
+      "name": "Console 錯誤檢查",
+      "status": "FAIL",
+      "detail": "warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+    }
+  ],
+  "consoleErrors": [
+    {
+      "type": "warning",
+      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "text": "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+    },
+    {
+      "type": "warning",
+      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "text": "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+    },
+    {
+      "type": "warning",
+      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "text": "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+    },
+    {
+      "type": "warning",
+      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+    },
+    {
+      "type": "error",
+      "text": "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "warning",
+      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "text": "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+    },
+    {
+      "type": "warning",
+      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "text": "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+    },
+    {
+      "type": "warning",
+      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+    },
+    {
+      "type": "error",
+      "text": "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "warning",
+      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "text": "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+    },
+    {
+      "type": "warning",
+      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "text": "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+    },
+    {
+      "type": "warning",
+      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "text": "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+    },
+    {
+      "type": "warning",
+      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "text": "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+    }
+  ]
+}

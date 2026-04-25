@@ -1,0 +1,121 @@
+{
+  "stamp": "20260425002609",
+  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260425002609-delivery-10tabs-v75",
+  "totals": {
+    "pass": 10,
+    "fail": 0
+  },
+  "durationMs": 2838,
+  "results": [
+    {
+      "idx": 1,
+      "hash": "#dashboard",
+      "expectedView": "dashboard",
+      "ok": true,
+      "ms": 1561,
+      "url": "http://localhost/",
+      "activeView": "dashboard",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 2,
+      "hash": "#projects",
+      "expectedView": "projects",
+      "ok": true,
+      "ms": 2652,
+      "url": "http://localhost/#projects",
+      "activeView": "projects",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 3,
+      "hash": "#crm",
+      "expectedView": "crm",
+      "ok": true,
+      "ms": 2624,
+      "url": "http://localhost/#crm",
+      "activeView": "crm",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 4,
+      "hash": "#accounting",
+      "expectedView": "accounting",
+      "ok": true,
+      "ms": 2443,
+      "url": "http://localhost/#accounting",
+      "activeView": "accounting",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 5,
+      "hash": "#workflows",
+      "expectedView": "workflows",
+      "ok": true,
+      "ms": 2556,
+      "url": "http://localhost/#workflows",
+      "activeView": "workflows",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 6,
+      "hash": "#knowledge",
+      "expectedView": "knowledge",
+      "ok": true,
+      "ms": 1795,
+      "url": "http://localhost/#knowledge",
+      "activeView": "knowledge",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 7,
+      "hash": "#meeting",
+      "expectedView": "meeting",
+      "ok": true,
+      "ms": 1748,
+      "url": "http://localhost/#meeting",
+      "activeView": "meeting",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 8,
+      "hash": "#media",
+      "expectedView": "media",
+      "ok": true,
+      "ms": 2519,
+      "url": "http://localhost/#media",
+      "activeView": "media",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 9,
+      "hash": "#social",
+      "expectedView": "social",
+      "ok": true,
+      "ms": 2549,
+      "url": "http://localhost/#social",
+      "activeView": "social",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 10,
+      "hash": "#site",
+      "expectedView": "site",
+      "ok": true,
+      "ms": 2029,
+      "url": "http://localhost/#site",
+      "activeView": "site",
+      "badResponses": [],
+      "consoleErrors": []
+    }
+  ]
+}

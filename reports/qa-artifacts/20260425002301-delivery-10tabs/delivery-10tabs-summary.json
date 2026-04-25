@@ -1,0 +1,372 @@
+{
+  "stamp": "20260425002301",
+  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260425002301-delivery-10tabs",
+  "totals": {
+    "pass": 4,
+    "fail": 6
+  },
+  "durationMs": 15539,
+  "results": [
+    {
+      "idx": 1,
+      "hash": "#dashboard",
+      "ok": false,
+      "ms": 2701,
+      "url": "http://localhost/",
+      "activeView": "dashboard",
+      "badResponses": [
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/AccountSettings.6R1m80UO.js",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/roles/user",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/banner",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/models",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/config",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/convos",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/roles/admin",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/search/enable",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/agents/chat/active",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/user",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/endpoints",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/files",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/user/settings/favorites",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/files/speech/config/get",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/agents",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api-accounting/usage-summary",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api-accounting/projects",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api-accounting/admin/budget-status",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/convos?pageSize=5",
+          "error": "net::ERR_ABORTED"
+        }
+      ],
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ]
+    },
+    {
+      "idx": 2,
+      "hash": "#projects",
+      "ok": true,
+      "ms": 2062,
+      "url": "http://localhost/#projects",
+      "activeView": "projects",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 3,
+      "hash": "#crm",
+      "ok": false,
+      "ms": 2706,
+      "url": "http://localhost/",
+      "activeView": "dashboard",
+      "badResponses": [
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/endpoints",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/search/enable",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/agents/chat/active",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/roles/user",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/config",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/banner",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/config",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/user",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/assets/AccountSettings.6R1m80UO.js",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/user/settings/favorites",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/files/speech/config/get",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/files",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/models",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/convos",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/roles/admin",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/agents",
+          "error": "net::ERR_ABORTED"
+        }
+      ],
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ]
+    },
+    {
+      "idx": 4,
+      "hash": "#accounting",
+      "ok": true,
+      "ms": 1595,
+      "url": "http://localhost/#accounting",
+      "activeView": "accounting",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 5,
+      "hash": "#workflows",
+      "ok": true,
+      "ms": 1809,
+      "url": "http://localhost/#workflows",
+      "activeView": "workflows",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 6,
+      "hash": "#knowledge",
+      "ok": true,
+      "ms": 2128,
+      "url": "http://localhost/#knowledge",
+      "activeView": "knowledge",
+      "badResponses": [],
+      "consoleErrors": []
+    },
+    {
+      "idx": 7,
+      "hash": "#meeting",
+      "ok": false,
+      "ms": 2553,
+      "url": "http://localhost/#meeting",
+      "activeView": "meeting",
+      "badResponses": [
+        {
+          "status": "failed",
+          "url": "http://localhost/api-accounting/projects",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/agents",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/convos?pageSize=5",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api-accounting/admin/budget-status",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api-accounting/usage-summary",
+          "error": "net::ERR_ABORTED"
+        }
+      ],
+      "consoleErrors": []
+    },
+    {
+      "idx": 8,
+      "hash": "#media",
+      "ok": false,
+      "ms": 2620,
+      "url": "http://localhost/#media",
+      "activeView": "media",
+      "badResponses": [
+        {
+          "status": "failed",
+          "url": "http://localhost/api/config",
+          "error": "net::ERR_ABORTED"
+        }
+      ],
+      "consoleErrors": []
+    },
+    {
+      "idx": 9,
+      "hash": "#social",
+      "ok": false,
+      "ms": 2553,
+      "url": "http://localhost/#social",
+      "activeView": "social",
+      "badResponses": [
+        {
+          "status": "failed",
+          "url": "http://localhost/api/agents",
+          "error": "net::ERR_ABORTED"
+        }
+      ],
+      "consoleErrors": []
+    },
+    {
+      "idx": 10,
+      "hash": "#site",
+      "ok": false,
+      "ms": 15434,
+      "error": "page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#app') to be visible\u001b[22m\n\u001b[2m    - waiting for\" http://localhost/login\" navigation to finish...\u001b[22m\n\u001b[2m    - navigated to \"http://localhost/login\"\u001b[22m\n",
+      "badResponses": [
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        },
+        {
+          "status": "failed",
+          "url": "http://localhost/api/auth/refresh",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/user"
+        },
+        {
+          "status": 401,
+          "url": "http://localhost/api/auth/refresh"
+        }
+      ],
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ]
+    }
+  ]
+}
