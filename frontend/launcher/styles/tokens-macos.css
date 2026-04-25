@@ -89,7 +89,7 @@
   --r-sm:   6px;       /* button / chip */
   --r-md:   10px;      /* card */
   --r-lg:   16px;      /* sheet / modal */
-  --r-xl:   22px;      /* dock icon · macOS squircle approximation */
+  --r-xl:   14px;      /* dock icon · macOS Sequoia 22% of size · 較方 */
   --r-2xl:  28px;      /* window */
   --r-full: 9999px;    /* avatar / pill */
 

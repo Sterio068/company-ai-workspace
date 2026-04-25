@@ -29,10 +29,10 @@ import { dockStore } from "../state/dock-store.js";
 import { getDockIconSVG } from "./dock-icons.js";
 import { springEnter, slideUp, pulse } from "./motion.js";
 
-const SIGMA = 60;          // 高斯衰減半徑(px)
-const SCALE_MAX = 1.43;    // 最大放大倍率(80/56 · macOS 默認)
-const THROTTLE_MS = 16;    // ~60fps · pointermove
-
+// USER 反饋(2026-04-26):
+// - icon 不要圓 → squircle 改方(dock-icons.js radius 22%)
+// - 互動不用連動和放大 → 拿掉高斯 magnification
+// - 按的時候跳一下 → 點擊 bounce 動畫(macOS Sequoia 默認)
 let _shellEl = null;
 let _dockEl = null;
 let _icons = [];           // current rendered icons
@@ -111,8 +111,9 @@ function _renderIcon(item, idx) {
   tooltip.setAttribute("aria-hidden", "true");
   btn.appendChild(tooltip);
 
-  // click → 開 agent(if app namespace exists)
+  // click → bounce + 開 agent
   btn.addEventListener("click", () => {
+    _bounce(btn);
     if (item.type === "agent" && window.app?.openAgent) {
       window.app.openAgent(item.id);
     } else if (item.type === "workspace" && window.app?.openWorkspace) {
@@ -297,43 +298,23 @@ function _refreshActiveIndicators() {
 }
 
 // ============================================================
-// Magnification(Phase 2.4 · architect 推 CSS transform · 不用 rAF)
+// Bounce · macOS Sequoia 點擊跳一下動畫(取代 magnification)
+// USER 反饋:不要連動放大 · 按的時候跳一下
 // ============================================================
-function _throttle(fn, ms) {
-  let last = 0;
-  let scheduled = null;
-  return function (...args) {
-    const now = performance.now();
-    if (now - last >= ms) {
-      last = now;
-      fn.apply(this, args);
-    } else if (!scheduled) {
-      scheduled = setTimeout(() => {
-        scheduled = null;
-        last = performance.now();
-        fn.apply(this, args);
-      }, ms - (now - last));
-    }
-  };
-}
-
-function _onPointerMove(e) {
-  if (!_icons.length) return;
-  const dockRect = _dockEl.getBoundingClientRect();
-  const cursorX = e.clientX - dockRect.left;
-
-  _icons.forEach(icon => {
-    const iconCenter = icon.offsetLeft + icon.offsetWidth / 2;
-    const dist = Math.abs(cursorX - iconCenter);
-    const scale = 1 + (SCALE_MAX - 1) * Math.exp(-(dist * dist) / (SIGMA * SIGMA));
-    icon.style.setProperty("--scale", scale.toFixed(3));
-  });
-}
-
-const _throttledMove = _throttle(_onPointerMove, THROTTLE_MS);
-
-function _onPointerLeave() {
-  _icons.forEach(icon => icon.style.setProperty("--scale", "1"));
+function _bounce(el) {
+  if (!el || !el.animate) return;
+  // 模仿 macOS Sequoia App opening · icon 往上跳 + 微縮回
+  el.animate(
+    [
+      { transform: "translateY(0) scale(1)" },
+      { transform: "translateY(-14px) scale(1.05)", offset: 0.4 },
+      { transform: "translateY(0) scale(1)" },
+    ],
+    {
+      duration: 360,
+      easing: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+    },
+  );
 }
 
 // ============================================================
@@ -350,9 +331,9 @@ export const dock = {
     // 訂閱 store 變動(unpin / reorder / reset)· 重 render 不重彈
     dockStore.subscribe(items => _render(items));
 
-    // Magnification listeners
-    _dockEl.addEventListener("pointermove", _throttledMove);
-    _dockEl.addEventListener("pointerleave", _onPointerLeave);
+    // USER 反饋(2026-04-26):拿掉 magnification + 連動放大
+    // hover 改 CSS 微微 lift(dock.css 處理 · 不在此 JS)
+    // 點擊 bounce 在 button click handler 跑 _bounce()
 
     // 監聽 view 切換 · 更新 active indicator
     document.addEventListener("ws-changed", (e) => {

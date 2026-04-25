@@ -12,18 +12,22 @@
  * 1024 × 1024 base · 渲染時 56 × 56(default)or 80 × 80(hover)
  */
 
-/** True squircle path · 比 border-radius 平滑 · 模仿 macOS Sequoia icon 形狀
- *  size = viewBox · 通常 100
+/** Sequoia 圓角矩形 · smoothing 0.30 = ~25% radius · 接近真實 macOS 15 dock icon
+ *  之前 0.6 太圓 · USER 反饋「icon 不要圓的」
+ *  改用 SVG path with rounded corners(rx=22% of size)
  */
-function squirclePath(size = 100, smoothing = 0.6) {
-  const r = size / 2;
-  const c = size / 2;
-  const k = r * smoothing;  // control point offset
-  return `M ${c} 0
-          C ${c + k} 0 ${size} ${c - k} ${size} ${c}
-          C ${size} ${c + k} ${c + k} ${size} ${c} ${size}
-          C ${c - k} ${size} 0 ${c + k} 0 ${c}
-          C 0 ${c - k} ${c - k} 0 ${c} 0 Z`;
+function squirclePath(size = 100, _legacy_smoothing) {
+  // 對齊 macOS Sequoia · radius = 22% of size
+  const radius = size * 0.225;
+  return `M ${radius} 0
+          L ${size - radius} 0
+          Q ${size} 0 ${size} ${radius}
+          L ${size} ${size - radius}
+          Q ${size} ${size} ${size - radius} ${size}
+          L ${radius} ${size}
+          Q 0 ${size} 0 ${size - radius}
+          L 0 ${radius}
+          Q 0 0 ${radius} 0 Z`;
 }
 
 /** Common defs · gradients + filters · 跨 icon 共用 */

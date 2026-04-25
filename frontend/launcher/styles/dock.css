@@ -51,10 +51,9 @@
 }
 
 /* ============================================================
-   Dock Icon
+   Dock Icon · USER 反饋:不放大 · hover 微 lift · 點擊 bounce(JS)
    ============================================================ */
 .dock-icon {
-  --scale: 1;
   --icon-color: var(--accent);
 
   position: relative;
@@ -67,16 +66,19 @@
   cursor: pointer;
   display: grid;
   place-items: center;
-  transform: scale(var(--scale));
   transform-origin: bottom center;
-  transition: transform var(--dur-fast) var(--ease-spring);
-  will-change: transform;
+  transition: transform var(--dur-fast) var(--ease-out-quart);
 }
 
-/* 進場時 will-change 開 · 離開回收(防 RAM 占用) */
-.dock:not(:hover) .dock-icon {
-  will-change: auto;
-  transition: transform var(--dur-normal) var(--ease-spring);
+/* Hover · 微微 lift(macOS Sequoia subtle hover · 非放大) */
+.dock-icon:hover {
+  transform: translateY(-3px);
+}
+
+/* Active(被點時 mousedown · 視覺反饋) */
+.dock-icon:active {
+  transform: translateY(-1px);
+  transition-duration: 60ms;
 }
 
 /* Icon glyph · macOS 風 SVG(squircle + 多層 gradient · 直接 inline) */
