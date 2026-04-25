@@ -129,8 +129,36 @@ const STEPS = [
 • 阿銘 · 出 3 個方向 · 5/2 前
 • 小玉 · 約客戶提案會議 · 5/3</pre>
     `,
-    cta: "讚 · 完成教學",
+    cta: "讚 · 下一步看 Dock",
+    next: "dock",
+  },
+  {
+    id: "dock",
+    icon: "📌",
+    title: "Step 5 · 認識底部 Dock",
+    body: () => `
+      <p>看畫面下方那條浮起來的 macOS 風 Dock 嗎?</p>
+      <ul style="font-size:14px;line-height:1.8">
+        <li><b>滑鼠移過去</b> · icon 會像 macOS 一樣放大</li>
+        <li><b>左鍵點</b> · 直接開該助手對話</li>
+        <li><b>右鍵</b> · 跳選單可從 Dock 移除</li>
+        <li><b>拖曳</b> · 重新排序 · 自動記住</li>
+      </ul>
+      <p style="background:color-mix(in srgb, var(--accent) 8%, transparent);padding:12px;border-radius:6px;margin-top:12px;font-size:13px">
+        💡 Dock 預設放 7 個常用助手 · 你可以調整成自己的順序。順序記在這台電腦的瀏覽器裡。
+      </p>
+    `,
+    cta: "知道了 · 完成教學",
     next: "done",
+    onEnter: () => {
+      // 試圖把 dock 高亮一下
+      const dock = document.querySelector(".dock");
+      if (dock) {
+        dock.style.transform = "translateY(-8px) scale(1.02)";
+        dock.style.transition = "transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1)";
+        setTimeout(() => { dock.style.transform = ""; }, 1500);
+      }
+    },
   },
   {
     id: "done",
