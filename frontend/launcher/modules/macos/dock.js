@@ -26,6 +26,7 @@
  *   - a11y 鍵盤導航(commit 8)
  */
 import { dockStore } from "../state/dock-store.js";
+import { getDockIconSVG } from "./dock-icons.js";
 
 const SIGMA = 60;          // 高斯衰減半徑(px)
 const SCALE_MAX = 1.43;    // 最大放大倍率(80/56 · macOS 默認)
@@ -84,11 +85,17 @@ function _renderIcon(item, idx) {
   btn.title = item.label;
   btn.style.setProperty("--icon-color", item.color || "var(--accent)");
 
-  // icon 內容 · emoji + label(label 在 hover tooltip 才顯示)
-  const iconSpan = document.createElement("span");
-  iconSpan.className = "dock-icon-glyph";
-  iconSpan.textContent = item.icon || "🟦";
-  btn.appendChild(iconSpan);
+  // icon 內容 · 真 macOS 風 SVG · squircle + gradient + pictogram
+  const iconWrap = document.createElement("span");
+  iconWrap.className = "dock-icon-glyph";
+  if (item.type === "agent") {
+    iconWrap.innerHTML = getDockIconSVG(item.id, item.color || "var(--accent)");
+  } else {
+    // workspace / view fallback · 用 emoji 暫代
+    iconWrap.textContent = item.icon || "🟦";
+    iconWrap.classList.add("emoji-fallback");
+  }
+  btn.appendChild(iconWrap);
 
   // active indicator dot
   const dot = document.createElement("span");
