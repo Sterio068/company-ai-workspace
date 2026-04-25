@@ -175,6 +175,75 @@
 }
 
 /* ============================================================
+   Context Menu(right-click)· macOS NSMenu 風
+   ============================================================ */
+.dock-context-menu {
+  position: fixed;
+  z-index: var(--z-overlay, 700);
+  min-width: 200px;
+  padding: 4px;
+  background: var(--bg-elevated);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-popover);
+  font-size: 13px;
+  color: var(--label-primary);
+  user-select: none;
+}
+
+[data-theme="dark"] .dock-context-menu {
+  background: rgba(50, 50, 50, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.dock-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  background: transparent;
+  border-radius: var(--r-xs);
+  color: inherit;
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast);
+}
+
+.dock-context-menu-item:hover,
+.dock-context-menu-item:focus-visible {
+  background: var(--accent);
+  color: white;
+  outline: none;
+}
+
+.dock-context-menu-item.danger:hover,
+.dock-context-menu-item.danger:focus-visible {
+  background: var(--color-danger);
+}
+
+.cm-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.cm-label {
+  flex: 1;
+}
+
+.dock-context-menu-sep {
+  height: 1px;
+  background: var(--separator);
+  margin: 4px 6px;
+}
+
+/* ============================================================
    隱藏條件
    ============================================================ */
 

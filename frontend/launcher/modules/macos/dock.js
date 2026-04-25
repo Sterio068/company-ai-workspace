@@ -27,6 +27,7 @@
  */
 import { dockStore } from "../state/dock-store.js";
 import { getDockIconSVG } from "./dock-icons.js";
+import { springEnter, slideUp, pulse } from "./motion.js";
 
 const SIGMA = 60;          // 高斯衰減半徑(px)
 const SCALE_MAX = 1.43;    // 最大放大倍率(80/56 · macOS 默認)
@@ -121,7 +122,106 @@ function _renderIcon(item, idx) {
     }
   });
 
+  // right-click → context menu
+  btn.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    _showContextMenu(e, item, idx);
+  });
+
   return btn;
+}
+
+// ============================================================
+// Context Menu(right-click)
+// ============================================================
+let _menuEl = null;
+
+function _closeContextMenu() {
+  if (_menuEl) {
+    _menuEl.remove();
+    _menuEl = null;
+  }
+  document.removeEventListener("click", _closeContextMenu);
+  document.removeEventListener("keydown", _onMenuKey);
+}
+
+function _onMenuKey(e) {
+  if (e.key === "Escape") _closeContextMenu();
+}
+
+function _showContextMenu(event, item, idx) {
+  _closeContextMenu();  // 關之前的
+
+  const menu = document.createElement("div");
+  menu.className = "dock-context-menu";
+  menu.setAttribute("role", "menu");
+
+  const items = [
+    {
+      label: `開啟 ${item.label}`,
+      icon: "↗",
+      action: () => {
+        if (item.type === "agent") window.app?.openAgent(item.id);
+        else if (item.type === "workspace") window.app?.openWorkspace(parseInt(item.id, 10));
+      },
+    },
+    { separator: true },
+    {
+      label: "從 Dock 移除",
+      icon: "−",
+      danger: true,
+      action: () => {
+        const removed = dockStore.unpin(item.type, item.id);
+        if (removed && window.toast) window.toast.info(`已從 Dock 移除 · ${item.label}`);
+      },
+    },
+    {
+      label: "顯示資訊",
+      icon: "ⓘ",
+      action: () => {
+        if (window.toast) window.toast.info(`#${item.id} · ${item.label}`);
+      },
+    },
+  ];
+
+  items.forEach((mi) => {
+    if (mi.separator) {
+      const sep = document.createElement("div");
+      sep.className = "dock-context-menu-sep";
+      menu.appendChild(sep);
+      return;
+    }
+    const it = document.createElement("button");
+    it.type = "button";
+    it.className = "dock-context-menu-item" + (mi.danger ? " danger" : "");
+    it.setAttribute("role", "menuitem");
+    it.innerHTML = `<span class="cm-icon" aria-hidden="true">${mi.icon}</span><span class="cm-label">${mi.label}</span>`;
+    it.addEventListener("click", () => {
+      mi.action();
+      _closeContextMenu();
+    });
+    menu.appendChild(it);
+  });
+
+  document.body.appendChild(menu);
+
+  // 定位 · 滑鼠位置 · 不超出 viewport
+  const rect = menu.getBoundingClientRect();
+  let x = event.clientX;
+  let y = event.clientY;
+  if (x + rect.width > window.innerWidth - 8) x = window.innerWidth - rect.width - 8;
+  if (y + rect.height > window.innerHeight - 8) y = window.innerHeight - rect.height - 8;
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+
+  _menuEl = menu;
+  slideUp(menu, { distance: 6, duration: 200 });
+
+  // 點外面 / Esc 關
+  setTimeout(() => {
+    document.addEventListener("click", _closeContextMenu);
+    document.addEventListener("keydown", _onMenuKey);
+  }, 0);
 }
 
 function _refreshActiveIndicators() {
@@ -181,7 +281,10 @@ export const dock = {
     _ensureShell();
     _render(dockStore.getItems());
 
-    // 訂閱 store 變動(unpin / reorder / reset)
+    // 進場動畫 · 從底部彈入(Spring · 0 dependency · WAAPI)
+    springEnter(_shellEl, { fromY: 80, toY: 0, duration: 600 });
+
+    // 訂閱 store 變動(unpin / reorder / reset)· 重 render 不重彈
     dockStore.subscribe(items => _render(items));
 
     // Magnification listeners
