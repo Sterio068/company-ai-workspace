@@ -12,6 +12,7 @@
  *   - 移到相鄰 menu(若 dropdown 開著)→ 自動切過去(macOS 風)
  */
 import { springEnter, slideUp } from "./motion.js";
+import { openWindow } from "./window.js";
 
 // ============================================================
 // Menu 結構定義
@@ -23,7 +24,7 @@ const MENUS = [
     label: APP_NAME,
     bold: true,
     items: [
-      { label: "關於 承富智慧助理", action: () => window.app?.showView?.("help"), shortcut: "" },
+      { label: "關於 承富智慧助理", action: () => _openAboutWindow(), shortcut: "" },
       { sep: true },
       { label: "偏好設定...", action: () => window.app?.showView?.("admin"), shortcut: "⌘," },
       { sep: true },
@@ -127,6 +128,65 @@ function _toggleFullscreen() {
 
 function _contactSupport() {
   window.toast?.info?.("Sterio · sterio068@gmail.com");
+}
+
+// ============================================================
+// 「關於 承富智慧助理」浮動視窗(Sprint B Phase 4 demo)
+// ============================================================
+function _openAboutWindow() {
+  openWindow({
+    id: "about",
+    title: "關於 承富智慧助理",
+    width: 480,
+    height: 420,
+    content: `
+      <div style="text-align:center; padding-top: 12px">
+        <div style="display:grid; place-items:center; margin-bottom:12px">
+          <div style="
+            width:96px; height:96px;
+            background: linear-gradient(135deg, #007AFF, #5856D6);
+            border-radius:22%;
+            display:grid; place-items:center;
+            font-size:48px; color:white;
+            box-shadow: 0 6px 20px rgba(0, 122, 255, 0.3);
+          ">承</div>
+        </div>
+        <h2 style="margin: 0 0 4px; font-size:20px; font-weight:600; letter-spacing:0.05em">承富智慧助理</h2>
+        <p style="margin: 0 0 16px; color: var(--label-secondary); font-size: 13px; letter-spacing: 0.05em">v1.4.0 · macOS 風重構</p>
+        <div style="
+          display:inline-block;
+          padding:6px 14px;
+          background: rgba(0, 122, 255, 0.1);
+          color: var(--accent);
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 500;
+          margin-bottom: 20px;
+        ">本地部署 · 100% 資料留在公司</div>
+
+        <div style="text-align:left; padding: 0 20px; margin-top: 12px; line-height: 1.8">
+          <p>承富 10 人協作專屬 · AI 助手系統</p>
+          <ul style="padding-left: 20px; color: var(--label-secondary); font-size: 13px; margin: 8px 0">
+            <li>10 個 AI 助手 · 5 個工作區</li>
+            <li>5 分鐘任務式 FTUE 教學</li>
+            <li>系統自助升級 · admin 點紅點即可</li>
+            <li>完整 macOS 設計語言(v1.4)</li>
+          </ul>
+        </div>
+
+        <p style="
+          margin-top: 24px;
+          padding-top: 16px;
+          border-top: 0.5px solid var(--separator);
+          font-size: 11px;
+          color: var(--label-tertiary);
+          letter-spacing: 0.05em
+        ">
+          Made with ❤️ by Sterio · sterio068@gmail.com
+        </p>
+      </div>
+    `,
+  });
 }
 
 // ============================================================
