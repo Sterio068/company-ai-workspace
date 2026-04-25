@@ -24,7 +24,10 @@ config-templates/.env.production
 
 # Docker 資料卷(mongo / meili / uptime)· 每個環境自己長出來
 config-templates/data/
+config-templates/data-sandbox/
 config-templates/logs/
+config-templates/uploads/
+config-templates/images/
 
 # Python
 __pycache__/
@@ -44,6 +47,8 @@ yarn-error.log*
 # Playwright / test artifacts
 tests/playwright-report/
 tests/test-results/
+tests/e2e/test-results/
+test-results/
 tests/.playwright/
 
 # Launch 會寫入目前 cwd · 本機 only
@@ -52,6 +57,7 @@ tests/.playwright/
 # Agent output / task cache
 tasks/*.output
 tasks/cache/
+tmp/
 
 # Build artifacts
 dist/
@@ -59,3 +65,4 @@ build/
 .cache/
 .claude/
 installer-run.command
+tests/rag-fixtures/
