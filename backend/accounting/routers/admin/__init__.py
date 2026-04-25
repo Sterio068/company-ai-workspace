@@ -963,3 +963,7 @@ router.include_router(_dashboard.router)
 # v1.3 · User Management UI(老闆在前端建同仁帳號)
 from . import user_mgmt as _user_mgmt
 router.include_router(_user_mgmt.router)
+
+# v1.3 vNext · 系統自動更新(check / run / rollback / history)
+from . import update as _update
+router.include_router(_update.router)

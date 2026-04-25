@@ -273,6 +273,10 @@ export const app = {
       if (usersNav) usersNav.style.display = "";
       document.documentElement.dataset.role = "admin";
       document.documentElement.dataset.userEmail = this.user.email || "";
+      // vNext C · 系統自動更新通知(admin only · lazy import 不擋首屏)
+      import("./modules/update-notifier.js").then(({ updateNotifier }) => {
+        updateNotifier.init(true);
+      }).catch(() => {/* 沒裝好不擋 */});
     }
   },
 
