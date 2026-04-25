@@ -143,14 +143,16 @@ kbd {
 /* ============================================================ Layout */
 .app {
   display: grid;
-  grid-template-columns: 260px 1fr 340px;
-  /* v1.4 macOS · 避讓頂部 menubar(28px)· body 已 padding-top */
+  /* USER 反饋 2026-04-26 · 右側 inspector 浪費空間 · 收起 · Sprint C 改 Notification Center 浮出 */
+  grid-template-columns: 260px 1fr;
   height: calc(100vh - var(--menubar-h, 0px));
 }
 
+/* inspector 完全收起 · 內容(本月用量 / 系統狀態)Sprint C 移到右滑 NC */
+.inspector { display: none !important; }
+
 @media (max-width: 1200px) {
   .app { grid-template-columns: 240px 1fr; }
-  .inspector { display: none; }
 }
 
 @media (max-width: 768px) {

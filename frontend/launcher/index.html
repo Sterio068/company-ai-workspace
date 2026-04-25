@@ -7,11 +7,11 @@
 <title>承富智慧助理 · 今日工作台 v4.3</title>
 <!-- v1.4 · macOS 設計 token 重置 · 在 launcher.css 之前載入 · :root tokens 被 launcher 引用 -->
 <link rel="stylesheet" href="/static/styles/tokens-macos.css?v=4">
-<link rel="stylesheet" href="/static/launcher.css?v=72">
+<link rel="stylesheet" href="/static/launcher.css?v=73">
 <!-- v1.4 macOS · menubar shell · 內容 Sprint B · 已預留容器 -->
-<link rel="stylesheet" href="/static/styles/menubar.css?v=2">
+<link rel="stylesheet" href="/static/styles/menubar.css?v=3">
 <!-- v1.4 macOS · Window MVP · Sprint B Phase 4 -->
-<link rel="stylesheet" href="/static/styles/window.css?v=1">
+<link rel="stylesheet" href="/static/styles/window.css?v=2">
 <!-- v1.4 macOS · Dock · phase 2 · 底部 vibrancy · hover magnification -->
 <link rel="stylesheet" href="/static/styles/dock.css?v=3">
 </head>
@@ -1003,14 +1003,12 @@
   <div class="loading-dot"></div>
 </div>
 
-<!-- ============== CAPTION ============== -->
-<div class="caption" id="caption">
-  <span><kbd>⌘K</kbd> 搜尋</span>
-  <span><kbd>⌘Enter</kbd> 快速問主管家</span>
-  <span><a href="#" onclick="tour.start();return false;" class="link">看引導</a></span>
-</div>
+<!-- USER 反饋 2026-04-26 · 底頁 caption 移除 · 跟 Dock 重複佔位
+     ⌘K / ⌘Enter / 看引導 三項已在頂部 menubar「說明」+ Dock 涵蓋
+-->
+<div class="caption" id="caption" hidden></div>
 
-<script type="module" src="/static/app.js?v=83"></script>
+<script type="module" src="/static/app.js?v=84"></script>
 <script src="/static/onboarding.js?v=65"></script>
 </body>
 </html>

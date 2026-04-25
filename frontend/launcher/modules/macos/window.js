@@ -41,7 +41,10 @@ class MacWindow {
     this.el = this._render();
     document.body.appendChild(this.el);
     this._wireEvents();
-    springEnter(this.el, { fromY: 20, toY: 0, duration: 320 });
+    // 修 2026-04-26 · 必傳 translateX:0 否則 spring 預設 -50% 會把 window 平移
+    const anim = springEnter(this.el, { fromY: 20, toY: 0, duration: 320, translateX: "0" });
+    // 動畫結束後清 transform · 防殘留影響後續 drag 計算
+    if (anim) anim.onfinish = () => { this.el.style.transform = ""; };
   }
 
   _render() {
@@ -172,7 +175,7 @@ class MacWindow {
   }
 
   close() {
-    // Spring out
+    // Spring out · 用 absolute 定位 · 不用 translateX
     if (this.el.animate) {
       this.el.animate(
         [
@@ -184,6 +187,11 @@ class MacWindow {
     } else {
       this._destroy();
     }
+  }
+
+  // 修 2026-04-26 · 確認沒殘餘 transform · 給 drag 用乾淨座標
+  _resetTransform() {
+    this.el.style.transform = "";
   }
 
   _destroy() {

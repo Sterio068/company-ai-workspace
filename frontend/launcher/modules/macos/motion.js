@@ -22,7 +22,10 @@ const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const SPRING_EASING = "cubic-bezier(0.34, 1.56, 0.64, 1)";
 const EXPO_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
-/** Dock 從底部彈起 · macOS Sequoia App opening 風格 */
+/** Dock 從底部彈起 · macOS Sequoia App opening 風格
+ *  注意:translateX 預設 "-50%"(配合 dock 用 left: 50% 居中)
+ *  Window / Modal 等絕對定位元素必須傳 translateX: "0" 否則會跳位
+ */
 export function springEnter(el, {
   fromY = 80,
   toY = 0,
@@ -30,12 +33,13 @@ export function springEnter(el, {
   toOpacity = 1,
   duration = REDUCED ? 0 : 500,
   delay = 0,
+  translateX = "-50%",  // 修 2026-04-26 · window 傳 "0"
 } = {}) {
   if (!el || !el.animate) return null;
   return el.animate(
     [
-      { transform: `translateX(-50%) translateY(${fromY}px)`, opacity: fromOpacity },
-      { transform: `translateX(-50%) translateY(${toY}px)`, opacity: toOpacity },
+      { transform: `translateX(${translateX}) translateY(${fromY}px)`, opacity: fromOpacity },
+      { transform: `translateX(${translateX}) translateY(${toY}px)`, opacity: toOpacity },
     ],
     {
       duration,
