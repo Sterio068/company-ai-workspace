@@ -1,0 +1,339 @@
+/* ============================================================
+   control-center.css · v1.4 Sprint C Phase 5b
+   ============================================================
+   右上滑出 · 跟 NC 對稱(NC 全高 · CC 較小框 · 320 wide)
+   ============================================================ */
+
+.control-center {
+  position: fixed;
+  top: calc(var(--menubar-h, 28px) + 8px);
+  right: 8px;
+  width: 320px;
+  max-height: calc(100vh - var(--menubar-h, 28px) - 100px);
+  z-index: 651;
+  background: var(--vibrancy-light);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 0.5px solid var(--separator);
+  border-radius: 14px;
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.18),
+    0 0 0 0.5px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+  /* 從上滑入 + 縮放 · macOS Sequoia 風 */
+  transform: translateY(-8px) scale(0.96);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 280ms var(--ease-spring),
+    opacity 200ms var(--ease-out-quart);
+  transform-origin: top right;
+}
+
+[data-theme="dark"] .control-center {
+  background: var(--vibrancy-dark);
+}
+
+@supports not (backdrop-filter: blur(20px)) {
+  .control-center { background: rgba(246, 246, 246, 0.97); }
+  [data-theme="dark"] .control-center { background: rgba(30, 30, 30, 0.97); }
+}
+
+.control-center.open {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  .control-center {
+    right: 4px;
+    width: calc(100vw - 8px);
+  }
+}
+
+/* ============================================================
+   Header
+   ============================================================ */
+.cc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 6px;
+}
+
+.cc-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--label-secondary);
+}
+
+.cc-close {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 50%;
+  font-size: 13px;
+  color: var(--label-secondary);
+  cursor: pointer;
+  transition: background var(--dur-fast);
+}
+
+.cc-close:hover {
+  background: rgba(0, 0, 0, 0.12);
+  color: var(--label-primary);
+}
+
+[data-theme="dark"] .cc-close {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ============================================================
+   Tiles container
+   ============================================================ */
+.cc-tiles {
+  padding: 6px 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cc-tile {
+  background: rgba(255, 255, 255, 0.6);
+  border: 0.5px solid var(--separator);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+[data-theme="dark"] .cc-tile {
+  background: rgba(60, 60, 60, 0.6);
+}
+
+.cc-tile-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.cc-tile-footer {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin-top: 4px;
+}
+
+.cc-tile-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--label-tertiary);
+  margin-bottom: 8px;
+}
+
+/* ============================================================
+   Engine grid · 2 col 大按鈕
+   ============================================================ */
+.cc-engine-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.cc-engine-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all var(--dur-fast);
+  font-family: inherit;
+}
+
+.cc-engine-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.cc-engine-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.cc-engine-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.cc-engine-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.cc-engine-desc {
+  font-size: 10px;
+  color: var(--label-tertiary);
+  letter-spacing: 0.02em;
+}
+
+.cc-engine-btn.active .cc-engine-desc {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ============================================================
+   Segmented(主題切)
+   ============================================================ */
+.cc-segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+[data-theme="dark"] .cc-segmented {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.cc-seg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--label-secondary);
+  transition: all var(--dur-fast);
+}
+
+.cc-seg-icon {
+  font-size: 14px;
+}
+
+.cc-seg.active {
+  background: white;
+  color: var(--label-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .cc-seg.active {
+  background: rgba(80, 80, 80, 0.95);
+  color: white;
+}
+
+/* ============================================================
+   Toggle (rect button)
+   ============================================================ */
+.cc-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 0.5px solid var(--separator);
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--label-primary);
+  transition: all var(--dur-fast);
+}
+
+[data-theme="dark"] .cc-toggle {
+  background: rgba(60, 60, 60, 0.6);
+}
+
+.cc-toggle:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.cc-toggle.on {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.cc-toggle-icon {
+  font-size: 16px;
+}
+
+/* ============================================================
+   Quick Actions · 2 col
+   ============================================================ */
+.cc-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.cc-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--label-primary);
+  transition: background var(--dur-fast);
+  text-align: left;
+}
+
+.cc-action:hover {
+  background: rgba(0, 0, 0, 0.07);
+}
+
+[data-theme="dark"] .cc-action {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--label-primary);
+}
+
+[data-theme="dark"] .cc-action:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.cc-action.danger {
+  width: 100%;
+  justify-content: center;
+  background: rgba(255, 59, 48, 0.1);
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.cc-action.danger:hover {
+  background: var(--color-danger);
+  color: white;
+}

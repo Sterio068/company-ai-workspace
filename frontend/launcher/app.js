@@ -52,6 +52,8 @@ import "./modules/macos/pwa-detect.js";
 import { dock as macosDock } from "./modules/macos/dock.js";
 // v1.4 macOS · Menubar(頂部 · 6 menu + 5 status item)· Sprint B Phase 3
 import { menubar as macosMenubar } from "./modules/macos/menubar.js";
+// v1.4 macOS · Sprint C Phase 6 · 全套鍵盤快捷(全域 listen)
+import "./modules/macos/shortcuts.js";
 import { shortcuts } from "./modules/shortcuts.js";
 import { health } from "./modules/health.js";
 import { mobile } from "./modules/mobile.js";

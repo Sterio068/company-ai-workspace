@@ -135,6 +135,18 @@
   transform: translateX(-50%) scale(1);
 }
 
+/* Sprint C Phase 7 polish · active 加微弱發光 · macOS Sequoia 風 */
+.dock-icon.active::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  box-shadow: 0 0 16px 0 var(--icon-color);
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: -1;
+}
+
 /* Tooltip · macOS Sequoia 風(暗色 vibrancy + 白字 + 微 chevron) */
 .dock-icon-tooltip {
   position: absolute;

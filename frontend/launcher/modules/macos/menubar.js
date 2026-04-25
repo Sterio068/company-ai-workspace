@@ -246,20 +246,26 @@ function _renderMenubar() {
 function _renderStatusModel() {
   const el = document.createElement("button");
   el.type = "button";
-  el.className = "menubar-status-item";
-  // 預設 OpenAI · localStorage 記
+  el.className = "menubar-status-item engine-toggle";
+  el.title = "控制中心(⌃⌘C)";
   const cur = localStorage.getItem("chengfu-engine") || "openai";
   el.innerHTML = `
     <span class="status-icon">🤖</span>
     <span class="status-label">${cur === "openai" ? "OpenAI" : "Claude"}</span>
     <span class="status-chevron">▾</span>
   `;
-  el.addEventListener("click", () => {
-    const next = cur === "openai" ? "anthropic" : "openai";
-    localStorage.setItem("chengfu-engine", next);
-    _renderMenubar();
-    window.toast?.info?.(`已切到 ${next === "openai" ? "OpenAI" : "Claude"}`);
+  // 改開 Control Center · 點 → 完整快速設定 panel(模型 / 主題 / 全螢幕 / 動作)
+  el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    import("./control-center.js").then(m => m.toggle()).catch(err => {
+      // 退回舊行為 · 直接 toggle 引擎
+      const next = cur === "openai" ? "anthropic" : "openai";
+      localStorage.setItem("chengfu-engine", next);
+      _renderMenubar();
+    });
   });
+  // 監聽 engine-changed · 重 render 顯示新名字
+  document.addEventListener("engine-changed", () => _renderMenubar(), { once: true });
   return el;
 }
 
