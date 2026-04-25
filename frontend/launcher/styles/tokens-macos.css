@@ -1,0 +1,195 @@
+/* ============================================================
+   tokens-macos.css · v1.4 · macOS Sequoia 設計 token
+   ============================================================
+   被 launcher.css :root 吸收 · 取代既有 hardcode 色 / motion
+   原 launcher.css :root 仍保留 · 此檔覆寫 / 補
+
+   load 順序(index.html):
+     1. tokens-macos.css(:root 系統 token)
+     2. launcher.css      (元件 style · 用 var(--token))
+     3. dock.css           (Phase 2)
+     4. menubar.css        (Sprint B)
+   ============================================================ */
+
+:root {
+  /* ============================================================
+     1.1 字型 stack(Apple official)
+     ============================================================ */
+  --font-system: -apple-system, BlinkMacSystemFont,
+                 "SF Pro Display", "SF Pro Text",
+                 "PingFang TC", "Helvetica Neue", sans-serif;
+  --font-mono:   "SF Mono", "Menlo", "Monaco",
+                 "Roboto Mono", monospace;
+
+  /* ============================================================
+     1.2 顏色系統(macOS Sequoia 對齊 · light)
+     ============================================================ */
+
+  /* 主色 · macOS system blue */
+  --accent:          #007AFF;
+  --accent-hover:    #2693FF;
+  --accent-pressed:  #0051D5;
+
+  /* macOS labels · 依 Apple HIG opacity */
+  --label-primary:    rgba(0, 0, 0, 0.85);
+  --label-secondary:  rgba(0, 0, 0, 0.5);
+  --label-tertiary:   rgba(0, 0, 0, 0.25);
+  --label-quaternary: rgba(0, 0, 0, 0.1);
+
+  /* Surface · 桌面 / 內容 / 浮層 */
+  --bg-base:      #ECECEC;          /* macOS 桌面 */
+  --bg-content:   rgba(255, 255, 255, 0.88);
+  --bg-elevated:  #FFFFFF;
+  --bg-overlay:   rgba(0, 0, 0, 0.4);
+
+  /* Vibrancy / 毛玻璃 · macOS NSVisualEffectView 模仿 */
+  --vibrancy-light: rgba(246, 246, 246, 0.72);
+  --vibrancy-dark:  rgba(30, 30, 30, 0.72);
+  --blur-vibrancy:  saturate(180%) blur(20px);
+
+  /* Separator / Border */
+  --separator:      rgba(0, 0, 0, 0.08);
+  --border:         rgba(0, 0, 0, 0.1);
+  --border-strong:  rgba(0, 0, 0, 0.18);
+
+  /* Semantic colors · macOS system */
+  --color-success: #34C759;
+  --color-warning: #FF9500;
+  --color-danger:  #FF3B30;
+  --color-info:    #5AC8FA;
+  --color-purple:  #AF52DE;
+  --color-pink:    #FF2D55;
+
+  /* ============================================================
+     1.3 Spacing · 8px grid
+     ============================================================ */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* macOS standard heights */
+  --menubar-h:        0;        /* default 0 · [data-pwa="1"] 才 24px */
+  --dock-h:           72px;     /* 56 icon + 16 padding */
+  --dock-icon:        56px;
+  --dock-icon-hover:  80px;     /* scale 1.43 · macOS Sequoia 默認 */
+  --dock-margin:      12px;     /* dock 距 viewport bottom */
+
+  /* ============================================================
+     1.4 Border radius
+     ============================================================ */
+  --r-xs:   4px;
+  --r-sm:   6px;       /* button / chip */
+  --r-md:   10px;      /* card */
+  --r-lg:   16px;      /* sheet / modal */
+  --r-xl:   22px;      /* dock icon · macOS squircle approximation */
+  --r-2xl:  28px;      /* window */
+  --r-full: 9999px;    /* avatar / pill */
+
+  /* ============================================================
+     1.5 Motion · Apple-like spring
+     ============================================================ */
+
+  /* 對齊 Apple Spring(Sonoma SwiftUI default) */
+  --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in-out:    cubic-bezier(0.45, 0, 0.55, 1);
+
+  /* Duration */
+  --dur-fast:    150ms;  /* hover / tap */
+  --dur-normal:  280ms;  /* sheet / view transition */
+  --dur-slow:    480ms;  /* mission control / window animation */
+  --dur-spring:  500ms;  /* spring 完整週期 */
+
+  /* ============================================================
+     1.6 Shadow · macOS layered
+     ============================================================ */
+
+  /* 三層 shadow stack · 模仿 macOS window */
+  --shadow-window: 0 10px 30px rgba(0, 0, 0, 0.18),
+                   0 4px 12px rgba(0, 0, 0, 0.10),
+                   0 0 0 0.5px rgba(0, 0, 0, 0.10);
+  --shadow-dock:   0 -8px 32px rgba(0, 0, 0, 0.12),
+                   0 0 0 0.5px rgba(0, 0, 0, 0.08);
+  --shadow-card:   0 1px 3px rgba(0, 0, 0, 0.08),
+                   0 0 0 0.5px rgba(0, 0, 0, 0.04);
+  --shadow-popover: 0 6px 18px rgba(0, 0, 0, 0.16),
+                    0 0 0 0.5px rgba(0, 0, 0, 0.10);
+
+  /* z-index · 由低至高 */
+  --z-base:     1;
+  --z-sticky:   100;
+  --z-dock:     500;
+  --z-menubar:  600;
+  --z-overlay:  700;
+  --z-modal:    800;
+  --z-toast:    900;
+  --z-tutorial: 1000;
+}
+
+/* ============================================================
+   Dark mode · macOS 對齊
+   ============================================================ */
+[data-theme="dark"] {
+  /* labels · 反轉 */
+  --label-primary:    rgba(255, 255, 255, 0.85);
+  --label-secondary:  rgba(255, 255, 255, 0.5);
+  --label-tertiary:   rgba(255, 255, 255, 0.25);
+  --label-quaternary: rgba(255, 255, 255, 0.1);
+
+  /* Surface */
+  --bg-base:      #1E1E1E;
+  --bg-content:   rgba(40, 40, 40, 0.88);
+  --bg-elevated:  #2C2C2E;
+  --bg-overlay:   rgba(0, 0, 0, 0.6);
+
+  /* Vibrancy 反轉 */
+  --vibrancy-light: rgba(40, 40, 40, 0.72);
+  --vibrancy-dark:  rgba(20, 20, 20, 0.72);
+
+  --separator:     rgba(255, 255, 255, 0.1);
+  --border:        rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.2);
+
+  /* shadow 在 dark 較不明顯 · 加強 */
+  --shadow-window: 0 10px 30px rgba(0, 0, 0, 0.4),
+                   0 4px 12px rgba(0, 0, 0, 0.25),
+                   0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  --shadow-dock:   0 -8px 32px rgba(0, 0, 0, 0.4),
+                   0 0 0 0.5px rgba(255, 255, 255, 0.08);
+}
+
+/* ============================================================
+   prefers-reduced-motion · 全套縮 0.001ms
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast:   0.001ms;
+    --dur-normal: 0.001ms;
+    --dur-slow:   0.001ms;
+    --dur-spring: 0.001ms;
+  }
+}
+
+/* ============================================================
+   PWA 全螢幕模式 · menubar 顯示
+   ============================================================ */
+[data-pwa="1"] {
+  --menubar-h: 24px;
+}
+
+/* ============================================================
+   全域 body padding · 給 menubar 留位
+   ============================================================ */
+body {
+  padding-top: var(--menubar-h);
+  font-family: var(--font-system);
+}
