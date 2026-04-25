@@ -11,9 +11,11 @@
 let _modules = null;
 async function _loadModules() {
   if (_modules) return _modules;
+  // 字串拼接 · 防 esbuild 在 build 時 try-resolve(這是 runtime 由 nginx 提供的絕對路徑)
+  const base = "/static/modules/";
   const [tutorialMod, stateMod] = await Promise.all([
-    import("/static/modules/help-tutorial.js"),
-    import("/static/modules/help-state.js"),
+    import(base + "help-tutorial.js"),
+    import(base + "help-state.js"),
   ]);
   _modules = {
     helpTutorial: tutorialMod.helpTutorial,
