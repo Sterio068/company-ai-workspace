@@ -452,6 +452,11 @@ export const app = {
     if (view !== "workspace") {
       document.querySelectorAll(".sidebar-item.ws-nav").forEach(el => el.classList.remove("active"));
     }
+    // vNext C · view 第一次進 · 自動 fade-in 教學提示 + 注入 ❓ 按鈕
+    import("./modules/help-tip.js").then(({ helpTip }) => {
+      helpTip.maybeShow(view);
+      this._injectViewHelpBtn(view);
+    }).catch(() => {/* helpTip 沒裝好不擋 */});
     // V1.1 §E-3 · 切到 knowledge 自動載入
     if (view === "knowledge") knowledge.loadBrowser();
     if (view === "admin") knowledge.loadAdmin();
@@ -476,6 +481,25 @@ export const app = {
         localizeVisibleText(document.querySelector(".chat-panel"));
       }, delay);
     });
+  },
+
+  // vNext C · 在當前 active view header 注入 ❓ 按鈕
+  _injectViewHelpBtn(view) {
+    document.querySelectorAll(".view-help-btn").forEach(b => b.remove());
+    const activeView = document.querySelector(`.view[data-view="${view}"].active`);
+    if (!activeView) return;
+    const header = activeView.querySelector(".view-header, .main-header");
+    if (!header) return;
+    if (header.querySelector(".view-help-btn")) return;
+    if (getComputedStyle(header).position === "static") header.style.position = "relative";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "view-help-btn";
+    btn.textContent = "?";
+    btn.title = "看本頁教學";
+    btn.setAttribute("aria-label", "看本頁教學");
+    btn.onclick = () => window.helpTip?.showFor(view);
+    header.appendChild(btn);
   },
 
   openCreateSource() { knowledge.openCreateModal(); },

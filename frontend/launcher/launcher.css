@@ -5021,3 +5021,403 @@ button:focus-visible,
   background: transparent;
   padding: 0;
 }
+
+/* ============================================================
+   v1.3 · 教學大幅優化 · A+B+C+D+E+G
+   ============================================================ */
+
+/* C · view inline tip · 右上角 toast 樣式 */
+#view-help-tip {
+  position: fixed;
+  top: 80px;
+  right: 24px;
+  width: 340px;
+  max-width: calc(100vw - 48px);
+  background: var(--bg-content);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--r-2xl);
+  box-shadow: var(--shadow-3);
+  padding: 16px;
+  z-index: 200;
+  opacity: 0;
+  transform: translateX(20px);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+#view-help-tip.open {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+#view-help-tip .tip-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+#view-help-tip .tip-icon { font-size: 18px; }
+#view-help-tip .tip-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+  color: var(--text-primary);
+}
+#view-help-tip .tip-close {
+  width: 28px; height: 28px;
+  border: none; background: transparent;
+  font-size: 18px; cursor: pointer;
+  color: var(--text-tertiary);
+  border-radius: 50%;
+  transition: background 0.12s;
+}
+#view-help-tip .tip-close:hover { background: var(--bg-base); color: var(--text-primary); }
+#view-help-tip .tip-body {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  margin: 0 0 12px;
+}
+#view-help-tip .tip-cta {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+#view-help-tip .tip-cta:hover { background: var(--accent-hover, #1a3556); }
+#view-help-tip .tip-foot {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+/* view 右上角 ❓ 按鈕 · 強制叫出 tip */
+.view-help-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-content);
+  font-size: 14px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  transition: all 0.12s;
+  z-index: 5;
+}
+.view-help-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: scale(1.05);
+}
+
+/* A+E · 任務式 FTUE · backdrop + bubble */
+.tutorial-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 600;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.tutorial-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.tutorial-bubble {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, calc(-50% + 30px));
+  width: min(540px, 92vw);
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--bg-content);
+  border-radius: var(--r-3xl);
+  padding: 32px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+  z-index: 601;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tutorial-bubble.open {
+  opacity: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+.tutorial-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.tutorial-step-num {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+.tutorial-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--bg-base);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.tutorial-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tutorial-icon {
+  font-size: 48px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.tutorial-title {
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  margin: 0 0 16px;
+  letter-spacing: -0.3px;
+  color: var(--text-primary);
+}
+.tutorial-body {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-primary);
+}
+.tutorial-body p { margin: 0 0 10px; }
+.tutorial-body ul, .tutorial-body ol { padding-left: 20px; margin: 8px 0; }
+.tutorial-body code { font-family: var(--font-mono); font-size: 12px; }
+.tutorial-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+.tutorial-actions button {
+  padding: 10px 18px;
+  border-radius: var(--r-md);
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.tutorial-actions .btn-ghost {
+  background: var(--bg-base);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.tutorial-actions .btn-ghost:hover {
+  background: var(--border);
+  color: var(--text-primary);
+}
+.tutorial-actions .btn-primary {
+  background: var(--accent);
+  color: white;
+}
+.tutorial-actions .btn-primary:hover { background: var(--accent-hover, #1a3556); }
+.tutorial-role-reset {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.tutorial-role-reset:hover { color: var(--accent); border-color: var(--accent); }
+
+/* highlight · tutorial onEnter 可指 selector */
+.tutorial-highlight {
+  position: relative;
+  z-index: 602;
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--r-md);
+  animation: tutorial-pulse 1.4s ease-in-out infinite;
+}
+@keyframes tutorial-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent); }
+  50% { box-shadow: 0 0 0 12px color-mix(in srgb, var(--accent) 0%, transparent); }
+}
+
+/* confetti · 完成教學的小慶祝 */
+.tutorial-confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 700;
+  overflow: hidden;
+}
+.tutorial-confetti span {
+  position: absolute;
+  top: -20px;
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+  animation: tutorial-confetti-fall 2.5s ease-out forwards;
+}
+@keyframes tutorial-confetti-fall {
+  0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+
+/* B · 角色 selector · 教學頁第一屏 */
+.help-role-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 16px 0 24px;
+}
+.help-role-card {
+  padding: 16px;
+  background: var(--bg-content);
+  border: 2px solid var(--border);
+  border-radius: var(--r-2xl);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.12s;
+  font-family: inherit;
+}
+.help-role-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+}
+.help-role-card.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+.help-role-icon { font-size: 28px; margin-bottom: 8px; }
+.help-role-label { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+.help-role-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+/* D · 進度 bar · 角色 task 完成度 */
+.help-progress-card {
+  padding: 14px 16px;
+  background: var(--bg-content);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: 16px;
+}
+.help-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.help-progress-text {
+  font-size: 13px;
+  color: var(--text-primary);
+  flex: 1;
+}
+.help-progress-pct {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+.help-progress-bar-outer {
+  height: 6px;
+  background: var(--bg-base);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.help-progress-bar-inner {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 70%, var(--green)));
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.help-task-list { list-style: none; padding: 0; margin: 0; }
+.help-task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: 13px;
+}
+.help-task-item.done { color: var(--text-secondary); text-decoration: line-through; }
+.help-task-check {
+  width: 20px;
+  text-align: center;
+}
+.help-task-item.done .help-task-check { color: var(--green); }
+.help-task-item:not(.done) .help-task-check { color: var(--text-tertiary); }
+
+/* G · 教學搜尋 box */
+.help-search-box {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  font-size: 14px;
+  background: var(--bg-content);
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+.help-search-box:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.help-search-results {
+  background: var(--bg-content);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  margin-top: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.help-search-result {
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  transition: background 0.1s;
+}
+.help-search-result:hover { background: var(--bg-base); }
+.help-search-result:last-child { border-bottom: none; }
+.help-search-result mark {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  padding: 1px 3px;
+  border-radius: 2px;
+  color: inherit;
+}
+
+/* mobile · tip 改 bottom · bubble 縮 */
+@media (max-width: 768px) {
+  #view-help-tip {
+    top: auto;
+    bottom: 80px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+  }
+  .tutorial-bubble {
+    padding: 24px 20px;
+    width: calc(100vw - 32px);
+  }
+  .tutorial-icon { font-size: 40px; }
+  .tutorial-title { font-size: 19px; }
+}
