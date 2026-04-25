@@ -75,17 +75,43 @@ bash scripts/rag-verify.sh
 
 ---
 
-## 2 · DMG 內容
+## 2 · 安裝路徑(主推 curl · DMG 留 backup)
+
+### 主路徑 · curl 一行(2026-04-25 改主推)
+
+承富 IT 在 Mac mini 開 Terminal · 貼:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sterio068/chengfu-ai/main/installer/install.sh | bash
+```
+
+優點:
+- **0 macOS Gatekeeper**(沒下載 .app/.command 沒簽章問題)
+- 永遠拉最新 main · 不用重打 DMG
+- 6 步流程清楚 · 哪步炸看 step heading
+- 自動 cp `.env` + 啟容器 + health check + 開瀏覽器
+
+詳見 `installer/install.sh` 開頭註解。
+
+### 備援路徑 · DMG(若 IT 無法用 curl · 例如離線部署)
 
 ```
 installer/dist/ChengFu-AI-Installer.dmg  ·  59 MB
+GitHub Release · https://github.com/Sterio068/chengfu-ai/releases/tag/v1.3.0
 ```
 
 包含:
-- `ChengFu-AI-Installer.app` · macOS .applescript 包裝的 7 步安裝精靈
+- `ChengFu-AI-Installer.app` · 7 步 .applescript 安裝精靈
+- `打開我.command` · 自動清 quarantine + 跑 .app
+- `ChengFu-source.tar.gz`(58M)· 完整 repo 快照
 - `讀我.txt` · 中文 README
-- `source.tar.gz`(58M)· 完整 repo 快照(scripts / backend / frontend / docs)
-- `icon.icns`(若有)
+
+⚠ DMG 因沒 Apple Developer 簽章 · 第一次必須:
+```bash
+xattr -cr "/Volumes/承富 AI 安裝精靈/ChengFu-AI-Installer.app"
+open "/Volumes/承富 AI 安裝精靈/ChengFu-AI-Installer.app"
+```
+或對 .app 右鍵 →「打開」→ 跳警告再「打開」。
 
 ---
 
@@ -98,19 +124,22 @@ installer/dist/ChengFu-AI-Installer.dmg  ·  59 MB
 - [ ] **10 同仁 email 列表** · 用來建 LibreChat user
 - [ ] **承富既有 PDF 知識庫** · 拷到隨身碟(投標 / 結案 / SOP)
 
-### Day 1 · Mac mini 到 → 安裝(預估 2 小時)
+### Day 1 · Mac mini 到 → 安裝(預估 30 分鐘 · 跌停 1 小時)
 
 1. **拆機** · 接電 + 網路 + UPS · 開機設 macOS 帳號
-2. **拷 DMG** · USB / Drive 把 ChengFu-AI-Installer.dmg 拖到 Applications
-3. **第一次右鍵打開**(Gatekeeper)
-4. **跑 7 步安裝精靈**:
-   - Step 1 · Docker Desktop 偵測(沒裝 → 帶去下載)
-   - Step 2 · API key 輸入(Anthropic / OpenAI / Fal · 寫 Keychain)
-   - Step 3 · Mongo 容器啟動 + healthcheck
-   - Step 4 · LibreChat 啟動 + smoke
-   - Step 5 · accounting 啟動 + healthz
-   - Step 6 · nginx + 注入 launcher
-   - Step 7 · 建 admin user(老闆 email + 密碼)
+2. **裝 Docker Desktop** · https://www.docker.com/products/docker-desktop/ → 等右上角 docker 圖示變綠
+3. **跑 curl 一行**:
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/Sterio068/chengfu-ai/main/installer/install.sh | bash
+   ```
+4. **6 步自動跑完**:
+   - Step 1 · 環境預檢(git / docker / disk / RAM)
+   - Step 2 · git clone 到 ~/ChengFu
+   - Step 3 · setup-keychain 互動輸 API key(OpenAI 必填)
+   - Step 4 · cp .env + 啟容器(`docker compose up -d --build`)
+   - Step 5 · 30 秒 warmup + health check 兩個 endpoint
+   - Step 6 · 自動開瀏覽器 http://localhost
+5. **建 admin user**(進 launcher 第一次 setup wizard)
 5. **安裝 launchd cron**:
    ```bash
    cd ~/chengfu-ai

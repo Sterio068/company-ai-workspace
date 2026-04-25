@@ -4,6 +4,21 @@
 
 ---
 
+## ⚡ 快速安裝(承富 IT)
+
+Mac mini 接好網路 + 裝好 [Docker Desktop](https://www.docker.com/products/docker-desktop/) 後 · 開 Terminal 貼一行:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sterio068/chengfu-ai/main/installer/install.sh | bash
+```
+
+6 步自動跑完 · 約 5 分鐘 · 完成後自動開 http://localhost
+
+> 不能用 curl?走 [DMG 備援路徑](https://github.com/Sterio068/chengfu-ai/releases/tag/v1.3.0)(需 `xattr -cr` 清 macOS Gatekeeper)
+> 完整 SOP · [docs/SHIP-v1.3.md](docs/SHIP-v1.3.md)
+
+---
+
 ## 🤔 這系統能幫我什麼?
 
 你是 **PM?** → 招標 PDF 10 分鐘判標、建議書 5 章 2.5 小時寫完、結案報告框架 1 小時產
