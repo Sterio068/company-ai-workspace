@@ -19,11 +19,13 @@ cache: true
 # ==================== 介面客製化 ====================
 interface:
   customWelcome: "讓 AI 成為承富的第 11 位同事"
+  # 預設指 GitHub 上 docs · 確保是有效 URL · 不會炸 LibreChat URL 解析
+  # 設好 Cloudflare Tunnel 後改成 https://ai.<承富domain>.com/privacy
   privacyPolicy:
-    externalUrl: "https://<承富domain>.com/privacy"
+    externalUrl: "https://github.com/Sterio068/chengfu-ai/blob/main/docs/05-SECURITY.md"
     openNewTab: true
   termsOfService:
-    externalUrl: "https://<承富domain>.com/terms"
+    externalUrl: "https://github.com/Sterio068/chengfu-ai/blob/main/README.md"
     openNewTab: true
   endpointsMenu: true
   modelSelect: true
