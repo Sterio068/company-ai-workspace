@@ -109,5 +109,5 @@ export function operationError(action, e, retryFn) {
 
 /** 權限不足 toast */
 export function permissionError(action) {
-  toast.error(`${action} · 需 admin 權限`, { detail: "聯絡 Champion 開通" });
+  toast.error(`${action} · 需管理員權限`, { detail: "聯絡 Champion 開通" });
 }

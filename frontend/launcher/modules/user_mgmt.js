@@ -31,6 +31,7 @@ export const userMgmt = {
   _users: [],
   _catalog: null,  // lazy load
   _presets: null,
+  _enforcement: null,
 
   async init() {
     const root = document.getElementById("view-users-content");
@@ -48,8 +49,9 @@ export const userMgmt = {
       const body = await r.json();
       this._catalog = body.catalog;
       this._presets = body.presets;
+      this._enforcement = body.enforcement || null;
     } catch (e) {
-      networkError("讀取權限 catalog", e, () => this._loadCatalog());
+      networkError("讀取權限目錄", e, () => this._loadCatalog());
     }
   },
 
@@ -76,13 +78,15 @@ export const userMgmt = {
       <div class="users-toolbar">
         <div class="users-stats">
           <span class="users-stat-item">👥 <b>${activeCount}</b> 活躍</span>
-          <span class="users-stat-item">🔴 <b>${adminCount}</b> admin</span>
+          <span class="users-stat-item">🔴 <b>${adminCount}</b> 管理員</span>
           <span class="users-stat-item">💤 <b>${this._users.length - activeCount}</b> 停用</span>
         </div>
         <div class="users-actions">
           <button class="btn-primary" id="users-new-btn">+ 建新同仁</button>
         </div>
       </div>
+
+      ${this._renderEnforcementNotice()}
 
       ${this._users.length === 0 ? `
         <div class="empty-state">
@@ -94,7 +98,7 @@ export const userMgmt = {
         <table class="users-table" role="grid">
           <thead>
             <tr>
-              <th>Email</th>
+              <th>電子郵件</th>
               <th>姓名</th>
               <th>頭銜</th>
               <th>角色</th>
@@ -112,8 +116,8 @@ export const userMgmt = {
                 <td>${u.title ? `<span class="users-title-badge">${escapeHtml(u.title)}</span>` : "—"}</td>
                 <td>
                   ${u.role === "ADMIN"
-                    ? `<span class="users-role-badge users-role-admin">🔴 ADMIN</span>`
-                    : `<span class="users-role-badge users-role-user">🟡 USER</span>`}
+                    ? `<span class="users-role-badge users-role-admin">🔴 管理員</span>`
+                    : `<span class="users-role-badge users-role-user">🟡 一般同仁</span>`}
                 </td>
                 <td><span title="${escapeHtml(u.permissions.join(", "))}"><b>${u.permissions.length}</b> 項</span></td>
                 <td>${u.active ? "✅" : "💤 停用"}</td>
@@ -131,6 +135,21 @@ export const userMgmt = {
       `}
     `;
     this._bindEvents();
+  },
+
+  _renderEnforcementNotice() {
+    const enf = this._enforcement;
+    if (!enf) return "";
+    const count = (enf.enforced_permissions || []).length;
+    const summary = String(enf.summary || "逐步啟用")
+      .replace(/\bADMIN\b/g, "管理員角色")
+      .replace(/\bchengfu_permissions\b/g, "承富權限設定");
+    return `
+      <div class="v10-notice" style="margin:12px 0">
+        權限狀態:${escapeHtml(summary)}
+        <br><small>目前後端強制 ${count} 項高風險權限；其餘勾選先作為職務配置與後續啟用依據。</small>
+      </div>
+    `;
   },
 
   _formatTime(iso) {
@@ -177,22 +196,22 @@ export const userMgmt = {
     m.className = "modal2-overlay";
     m.setAttribute("role", "dialog");
     m.setAttribute("aria-modal", "true");
-    m.setAttribute("aria-labelledby", "um-title");
+    m.setAttribute("aria-labelledby", "um-dialog-title");
 
     const initialPerms = existing?.permissions || [];
     const initialTitle = existing?.title || "";
 
     m.innerHTML = `
       <div class="modal2-box" style="max-width:720px; max-height:90vh; overflow-y:auto">
-        <div class="modal2-header" id="um-title">${isEdit ? "✏️ 編輯同仁" : "➕ 建新同仁"}</div>
+        <div class="modal2-header" id="um-dialog-title">${isEdit ? "✏️ 編輯同仁" : "➕ 建新同仁"}</div>
 
         <div class="um-section">
           <h4>基本資料</h4>
           <div class="um-grid-2">
-            <label>Email <em style="color:var(--red)" aria-hidden="true">*</em>
+            <label>電子郵件 <em style="color:var(--red)" aria-hidden="true">*</em>
               <input type="email" id="um-email" required value="${escapeHtml(existing?.email || "")}"
-                     placeholder="alice@chengfu.com"
-                     ${isEdit ? "disabled title='建後不能改 email · 要改請刪了重建'" : ""}>
+                     placeholder="輸入公司電子郵件"
+                     ${isEdit ? "disabled title='建後不能改電子郵件 · 要改請刪了重建'" : ""}>
             </label>
             <label>顯示名稱 <em style="color:var(--red)" aria-hidden="true">*</em>
               <input type="text" id="um-name" required value="${escapeHtml(existing?.name || "")}"
@@ -210,7 +229,7 @@ export const userMgmt = {
             </label>
           ` : `
             <p style="color:var(--text-secondary);font-size:12px">
-              💡 密碼不能在這邊改 · 請同仁自己登入後走 LibreChat reset 流程
+              💡 密碼不能在這邊改 · 請同仁自己登入後走系統重設密碼流程
             </p>
           `}
         </div>
@@ -228,8 +247,8 @@ export const userMgmt = {
             </label>
             <label>角色
               <select id="um-role">
-                <option value="USER" ${existing?.role !== "ADMIN" ? "selected" : ""}>🟡 USER(一般同仁)</option>
-                <option value="ADMIN" ${existing?.role === "ADMIN" ? "selected" : ""}>🔴 ADMIN(全權)</option>
+                <option value="USER" ${existing?.role !== "ADMIN" ? "selected" : ""}>🟡 一般同仁</option>
+                <option value="ADMIN" ${existing?.role === "ADMIN" ? "selected" : ""}>🔴 管理員(全權)</option>
               </select>
             </label>
           </div>
@@ -239,7 +258,7 @@ export const userMgmt = {
           <h4>
             權限
             <select id="um-preset" style="float:right;font-size:12px">
-              <option value="">套 preset 模板 ↓</option>
+              <option value="">套用預設模板 ↓</option>
               ${Object.keys(this._presets || {}).map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("")}
             </select>
           </h4>
@@ -261,7 +280,7 @@ export const userMgmt = {
             `).join("")}
           </div>
           <p style="font-size:11px;color:var(--text-tertiary);margin-top:8px">
-            💡 ADMIN 角色自動有全部權限 · 這邊勾選只對 USER 生效。Backend 強制 enforcement 逐步展開中(v1.3 先 admin.* 擋)
+            💡 管理員角色自動有全部權限 · 這邊勾選只對一般同仁生效。伺服器端強制權限會逐步展開(v1.3 先擋管理高風險操作)
           </p>
         </div>
 
@@ -313,7 +332,7 @@ export const userMgmt = {
     const permissions = Array.from(m.querySelectorAll('input[name="permission"]:checked')).map(cb => cb.value);
 
     if (!email || !name) {
-      toast.warn("Email 與姓名必填");
+      toast.warn("電子郵件與姓名必填");
       return;
     }
 
@@ -383,7 +402,7 @@ export const userMgmt = {
   async _showCreatedCredentials(email, password) {
     return modal.alert(
       `<div style="font-family:var(--font-mono);padding:12px;background:var(--surface-2);border-radius:8px;margin:8px 0">
-        <div><b>Email:</b> ${escapeHtml(email)}</div>
+        <div><b>電子郵件:</b> ${escapeHtml(email)}</div>
         <div><b>密碼:</b> <span id="um-cred-pwd">${escapeHtml(password)}</span>
              <button onclick="navigator.clipboard.writeText('${password.replace(/'/g, "\\'")}')"
                      style="margin-left:8px;font-size:12px">📋 複製</button></div>

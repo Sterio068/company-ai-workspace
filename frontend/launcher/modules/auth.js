@@ -13,6 +13,11 @@ import { escapeHtml } from "./util.js";
 let _jwt = null;
 let _userEmail = null;
 let _sessionExpiredNotified = false;
+const REFRESH_LOCK_KEY = "chengfu-auth-refresh-lock";
+
+function _sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 export class SessionExpiredError extends Error {
   constructor(msg = "session expired") { super(msg); this.name = "SessionExpiredError"; }
@@ -58,24 +63,69 @@ async function _doFetch(url, opts) {
 
 // 跨分頁 refresh 鎖(Web Locks API · Chrome/Safari/Firefox 都支援)
 async function _refreshWithLock() {
-  if (navigator.locks && typeof navigator.locks.request === "function") {
-    return navigator.locks.request("chengfu-auth-refresh", { mode: "exclusive" }, async () => {
-      await refreshAuth();
-    });
+  const owner = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const ttlMs = 8_000;
+  const deadline = Date.now() + ttlMs;
+  let acquired = false;
+
+  while (Date.now() < deadline && !acquired) {
+    let current = null;
+    try {
+      current = JSON.parse(localStorage.getItem(REFRESH_LOCK_KEY) || "null");
+    } catch {
+      current = null;
+    }
+    if (!current || !current.owner || Number(current.expiresAt || 0) < Date.now()) {
+      localStorage.setItem(REFRESH_LOCK_KEY, JSON.stringify({
+        owner,
+        expiresAt: Date.now() + ttlMs,
+      }));
+      try {
+        acquired = JSON.parse(localStorage.getItem(REFRESH_LOCK_KEY) || "{}").owner === owner;
+      } catch {
+        acquired = true;
+      }
+      if (acquired) break;
+    }
+    await _sleep(80 + Math.floor(Math.random() * 70));
   }
-  // Fallback · 無 Web Locks 直接打(舊瀏覽器很少)
-  await refreshAuth();
+
+  if (acquired) {
+    try {
+      return await refreshAuth();
+    } finally {
+      try {
+        const current = JSON.parse(localStorage.getItem(REFRESH_LOCK_KEY) || "{}");
+        if (current.owner === owner) localStorage.removeItem(REFRESH_LOCK_KEY);
+      } catch {
+        localStorage.removeItem(REFRESH_LOCK_KEY);
+      }
+    }
+    return;
+  }
+
+  // Lock stale 或 localStorage 不可用時仍保留原本行為,避免永久卡住登入。
+  return await refreshAuth();
 }
 
 export async function refreshAuth() {
   const r = await fetch(API.refresh, { method: "POST", credentials: "include" });
   if (!r.ok) throw new Error(`refresh ${r.status}`);
+  const contentType = r.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const text = await r.text().catch(() => "");
+    throw new Error(`refresh invalid response · ${text.slice(0, 80) || contentType || "empty body"}`);
+  }
   const data = await r.json();
   _jwt = data.token;
   // Refresh 成功 · 通知旗標歸零(下次再過期能正常提示一次)
   _sessionExpiredNotified = false;
   _hideBanner();
   return data;
+}
+
+export async function refreshAuthWithLock() {
+  return await _refreshWithLock();
 }
 
 export function getJwt() { return _jwt; }

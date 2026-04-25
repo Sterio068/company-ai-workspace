@@ -42,9 +42,13 @@ function show({ title, body, icon, buttons, autofocus }) {
     const b = document.createElement("button");
     b.className = `btn-${btn.variant || "primary"}`;
     b.textContent = btn.text;
-    b.onclick = () => {
-      const ok = btn.handler ? btn.handler() : true;
-      if (ok !== false) close();
+    b.onclick = async () => {
+      try {
+        const ok = btn.handler ? await btn.handler() : true;
+        if (ok !== false) close();
+      } catch (err) {
+        console.error("[modal] action failed", err);
+      }
     };
     actions.appendChild(b);
   });
@@ -141,21 +145,38 @@ export const modal = {
     }));
   },
 
-  prompt(fields, { title = "輸入", primary = "確定", cancel = "取消", icon = "✏️" } = {}) {
+  prompt(fields, { title = "輸入", primary = "確定", submitText = "", cancel = "取消", icon = "✏️" } = {}) {
     return new Promise(resolve => {
       const fid = "f_" + Math.random().toString(36).slice(2);
       // v1.3 batch3 · aria-required + label for + 驗證錯誤訊息(不只紅框)
       const html = fields.map((f, i) => {
         const inputId = `${fid}_${i}`;
         const errId = `${inputId}_err`;
+        const fieldValue = String(f.value ?? f.default ?? "");
         // v1.3 batch6 · WCAG 1.4.1 · 必填非只靠紅色 · 加 badge 文字 + 圖示
         const labelText = `${escapeHtml(f.label)}${f.required ? ' <span class="modal2-req-badge" aria-hidden="true">必填</span>' : ""}`;
         const ariaReq = f.required ? "aria-required=\"true\"" : "";
         const ariaErr = `aria-describedby="${errId}"`;
         const inputCommon = `id="${inputId}" placeholder="${escapeHtml(f.placeholder || "")}" ${ariaReq} ${ariaErr}`;
-        const inputEl = f.type === "textarea"
-          ? `<textarea ${inputCommon} rows="${f.rows || 3}" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:14px">${escapeHtml(f.default || "")}</textarea>`
-          : `<input ${inputCommon} type="${f.type || "text"}" value="${escapeHtml(f.default || "")}" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:14px">`;
+        const baseStyle = "width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:14px";
+        let inputEl;
+        if (f.type === "textarea") {
+          inputEl = `<textarea ${inputCommon} rows="${f.rows || 3}" style="${baseStyle};font-family:inherit">${escapeHtml(fieldValue)}</textarea>`;
+        } else if (f.type === "select") {
+          const options = (f.options || []).map(opt => {
+            const value = typeof opt === "object" ? String(opt.value ?? opt.label ?? "") : String(opt);
+            const label = typeof opt === "object" ? String(opt.label ?? opt.value ?? "") : String(opt);
+            return `<option value="${escapeHtml(value)}" ${value === fieldValue ? "selected" : ""}>${escapeHtml(label)}</option>`;
+          }).join("");
+          inputEl = `<select ${inputCommon} style="${baseStyle}">${options}</select>`;
+        } else {
+          const numericAttrs = [
+            f.min != null ? `min="${escapeHtml(String(f.min))}"` : "",
+            f.max != null ? `max="${escapeHtml(String(f.max))}"` : "",
+            f.step != null ? `step="${escapeHtml(String(f.step))}"` : "",
+          ].filter(Boolean).join(" ");
+          inputEl = `<input ${inputCommon} type="${escapeHtml(f.type || "text")}" value="${escapeHtml(fieldValue)}" ${numericAttrs} style="${baseStyle}">`;
+        }
         return `
           <div style="margin-bottom:12px">
             <label for="${inputId}" style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px">
@@ -170,7 +191,7 @@ export const modal = {
         title, icon, body: html, autofocus: `${fid}_0`,
         buttons: [
           { text: cancel,  variant: "ghost",   handler: () => resolve(null) },
-          { text: primary, variant: "primary", handler: () => {
+          { text: submitText || primary, variant: "primary", handler: () => {
             const result = {}; let valid = true; let firstErr = null;
             fields.forEach((f, i) => {
               const el = document.getElementById(`${fid}_${i}`);

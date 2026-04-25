@@ -97,7 +97,7 @@ export const accounting = {
 
   newTransaction() {
     modal.alert(
-      "新交易請透過 <strong>💰 財務試算</strong> 助手輸入,它會自動呼叫會計 API 處理。<br><br>或直接用 API:<code>POST /api-accounting/transactions</code>",
+      "新交易請透過 <strong>💰 財務試算</strong> 助手輸入,它會自動呼叫會計介接處理。<br><br>管理員也可使用內部介接:<code>POST /api-accounting/transactions</code>",
       { title: "新交易", icon: "💰", primary: "知道了" }
     );
   },

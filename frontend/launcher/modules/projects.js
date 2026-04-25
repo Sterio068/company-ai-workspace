@@ -2,6 +2,8 @@
  * Projects 模組 · MongoDB API 優先 · localStorage fallback(離線)
  * v4.5:加 BroadcastChannel · 多分頁變動會即時同步(避免髒資料)
  */
+import { authFetch } from "./auth.js";
+
 const API = "/api-accounting/projects";
 const FALLBACK_KEY = "chengfu-projects-v1";
 
@@ -19,20 +21,35 @@ function _broadcast(type) {
 export const Projects = {
   _cache: [],
   _online: true,
+  _authBlocked: false,
+  _lastError: null,
   _onChange: null,  // app 注入 callback · 收到其他分頁變動時 re-render
 
   bindOnChange(cb) { this._onChange = cb; },
 
   async refresh() {
     try {
-      const r = await fetch(API);
-      if (!r.ok) throw new Error(r.statusText);
+      const r = await authFetch(API);
+      if (!r.ok) {
+        const err = new Error(r.statusText || `HTTP ${r.status}`);
+        err.status = r.status;
+        throw err;
+      }
       this._cache = (await r.json()).map(p => ({ ...p, id: p._id }));
       this._online = true;
+      this._authBlocked = false;
+      this._lastError = null;
       localStorage.setItem(FALLBACK_KEY, JSON.stringify(this._cache));
-    } catch {
+    } catch (e) {
       this._online = false;
-      try { this._cache = JSON.parse(localStorage.getItem(FALLBACK_KEY) || "[]"); } catch { this._cache = []; }
+      this._lastError = e;
+      if (e?.status === 401 || e?.status === 403) {
+        this._authBlocked = true;
+        this._cache = [];
+      } else {
+        this._authBlocked = false;
+        try { this._cache = JSON.parse(localStorage.getItem(FALLBACK_KEY) || "[]"); } catch { this._cache = []; }
+      }
     }
     return this._cache;
   },
@@ -42,8 +59,9 @@ export const Projects = {
 
   // Codex R3.7 · 檢查 r.ok · server 500 不應誤報成功
   async add(data) {
+    if (this._authBlocked) throw new Error("登入已過期或權限不足 · 請重新登入後再儲存專案");
     if (this._online) {
-      const r = await fetch(API, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(data) });
+      const r = await authFetch(API, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(data) });
       if (!r.ok) {
         const err = await r.text().catch(() => r.statusText);
         throw new Error(`新建專案失敗(${r.status}):${err.substring(0, 100)}`);
@@ -59,8 +77,9 @@ export const Projects = {
   },
 
   async update(id, data) {
+    if (this._authBlocked) throw new Error("登入已過期或權限不足 · 請重新登入後再儲存專案");
     if (this._online) {
-      const r = await fetch(`${API}/${id}`, { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify(data) });
+      const r = await authFetch(`${API}/${id}`, { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify(data) });
       if (!r.ok) {
         const err = await r.text().catch(() => r.statusText);
         throw new Error(`更新專案失敗(${r.status}):${err.substring(0, 100)}`);
@@ -75,8 +94,9 @@ export const Projects = {
   },
 
   async remove(id) {
+    if (this._authBlocked) throw new Error("登入已過期或權限不足 · 請重新登入後再刪除專案");
     if (this._online) {
-      const r = await fetch(`${API}/${id}`, { method: "DELETE" });
+      const r = await authFetch(`${API}/${id}`, { method: "DELETE" });
       if (!r.ok) {
         const err = await r.text().catch(() => r.statusText);
         throw new Error(`刪除專案失敗(${r.status}):${err.substring(0, 100)}`);

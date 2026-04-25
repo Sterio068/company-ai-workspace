@@ -1,30 +1,59 @@
 # Launcher ES Modules
 
-app.js(1400+ 行)太大,拆成 modules:
+`app.js` 是 Launcher entry/controller,但 v1.4 開始會把獨立責任逐步拆出,避免所有 view 與快捷鍵都綁在單檔。
 
-| Module | 職責 | 依賴 |
-|---|---|---|
-| `util.js` | fetchJSON / formatDate / greetingFor / timeAgo / escapeHtml / formatMoney / skeletonCards | 無 |
-| `toast.js` | Toast 通知(success/warn/error/info) | util |
-| `modal.js` | Modal v2(alert/confirm/prompt async 版) | util |
-| `health.js` | Service Health 指示器 | 無 |
-| `mobile.js` | 漢堡選單 + Drawer | 無 |
-| `projects.js` | Projects CRUD(API + localStorage fallback) | 無 |
-| `errors.js` | Error boundary + global handler | toast, util |
+## 目前模組
 
-## v3.0 待拆(目前仍在 app.js 中)
+| Module | 職責 |
+|---|---|
+| `config.js` | API path / AI provider / Agent / Skill / Workspace 靜態設定 |
+| `util.js` | 日期、金額、escape、skeleton、前端中文化等純工具 |
+| `tpl.js` | HTML template clone/render helper |
+| `auth.js` | LibreChat JWT refresh、`authFetch`、session 過期處理 |
+| `projects.js` | 工作包 CRUD、MongoDB API 優先、localStorage fallback、多分頁同步 |
+| `state/project-store.js` | 跨模組 current project 狀態 |
+| `chat.js` | 內建 chat pane、附件、SSE、feedback、回答回寫工作包 |
+| `palette.js` | ⌘K palette UI 與 async source |
+| `palette-items.js` | ⌘K 指令資料源(v1.4 從 `app.js` 拆出) |
+| `keyboard.js` | 全域快捷鍵(v1.4 從 `app.js` 拆出) |
+| `router.js` | hash routing、view active 狀態、Workspace sync(v1.4 從 `app.js` 拆出) |
+| `work-package.js` | 工作包排序、搜尋、可交接度、類型判斷、AI 動作建議與回寫設定 |
+| `theme.js` | 深淺色切換與持久化 |
+| `toast.js` | Toast 通知 |
+| `modal.js` | Modal v2(alert/confirm/prompt async 版) |
+| `health.js` | Service health 指示器 |
+| `mobile.js` | 漢堡選單、mobile shell |
+| `shortcuts.js` | `?` 快捷鍵 overlay |
+| `voice.js` | 語音輸入 |
+| `errors.js` | 全域錯誤處理 |
+| `accounting.js` | 會計 view |
+| `admin.js` | 管理儀表板 |
+| `user_mgmt.js` | 同仁帳號管理 |
+| `knowledge.js` | 公司知識庫瀏覽、搜尋、管理 |
+| `tenders.js` | 標案通知 |
+| `workflows.js` | Workflow 草稿與執行 |
+| `crm.js` | CRM / 客戶案子追蹤 |
+| `meeting.js` | 會議速記 |
+| `media.js` | 生圖/素材工具 |
+| `social.js` | 社群 OAuth / 發文 |
+| `site_survey.js` | 場勘流程 |
+| `design.js` | `/design` 生圖入口 |
+| `help.js` | 使用教學 |
 
-- `app-core.js` - app init / user / theme / keyboard
-- `agents.js` - CORE_AGENTS 定義 + render
-- `accounting.js` - accounting view
-- `admin.js` - admin dashboard
-- `tenders.js` - 標案監測
-- `workflows.js` - Workflow 執行
-- `crm.js` - Kanban
-- `onboarding.js`(已獨立)
-- `voice.js` - 語音輸入
-- `palette.js` - ⌘K palette
-- `shortcuts.js` - ? overlay
+## 仍在 `app.js`
+
+- Bootstrap / user setup / data loading orchestration
+- Dashboard / Today workbench render
+- Projects list / work detail DOM render
+- Project drawer / handoff form
+- View-specific side effects(accounting/admin/workflow lazy load 等)
+
+## v1.4 拆分順序
+
+1. `palette-items.js` + `keyboard.js` 已拆出。
+2. `router.js` 已拆出,view-specific lazy load 仍留 `app.js`。
+3. `work-package.js` 已拆出純邏輯,下一步拆 `today-view.js`、`projects/work-detail.js`、`projects/drawer.js` DOM render。
+4. 最後讓 `app.js` 收斂到 bootstrap + dependency injection。
 
 ## 載入方式
 

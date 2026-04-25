@@ -7,12 +7,12 @@
 
 // 5 個 workspace 對應的底部 nav · 加 + Dashboard 共 6 個
 const BOTTOM_NAV = [
-  { ws: "0", icon: "🏠", label: "首頁",   href: "#dashboard" },
-  { ws: "1", icon: "🎯", label: "投標",   href: "#tenders" },
-  { ws: "2", icon: "🎪", label: "活動",   href: "#projects" },
-  { ws: "3", icon: "🎨", label: "設計",   href: "#chat" },
-  { ws: "4", icon: "📣", label: "公關",   href: "#meeting" },
-  { ws: "5", icon: "📊", label: "營運",   href: "#accounting" },
+  { ws: "0", icon: "🏠", label: "首頁", href: "#dashboard" },
+  { ws: "1", icon: "🎯", label: "投標", href: "#workspace-1" },
+  { ws: "2", icon: "🎪", label: "活動", href: "#workspace-2" },
+  { ws: "3", icon: "🎨", label: "設計", href: "#workspace-3" },
+  { ws: "4", icon: "📣", label: "公關", href: "#workspace-4" },
+  { ws: "5", icon: "📊", label: "營運", href: "#workspace-5" },
 ];
 
 export const mobile = {
@@ -61,6 +61,9 @@ export const mobile = {
     nav.addEventListener("click", e => {
       const item = e.target.closest(".mobile-bottom-item");
       if (!item) return;
+      e.preventDefault();
+      if (item.dataset.ws === "0") window.app?.showView?.("dashboard");
+      else window.app?.openWorkspace?.(Number(item.dataset.ws));
       nav.querySelectorAll(".mobile-bottom-item").forEach(el => {
         el.classList.remove("active");
         el.removeAttribute("aria-current");

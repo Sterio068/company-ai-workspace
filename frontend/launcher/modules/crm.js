@@ -1,7 +1,7 @@
 /**
  * CRM Pipeline · Kanban 拖拉 · 標案 → 得標 → 執行 閉環
  */
-import { escapeHtml } from "./util.js";
+import { escapeHtml, localizeVisibleText } from "./util.js";
 import { modal } from "./modal.js";
 import { toast, networkError, operationError } from "./toast.js";
 import { tpl } from "./tpl.js";
@@ -47,7 +47,7 @@ export const crm = {
       }
     } catch (e) {
       this.leads = [];
-      networkError("讀取 CRM 商機", e, () => this.load());
+      networkError("讀取商機漏斗", e, () => this.load());
     }
   },
 
@@ -85,9 +85,10 @@ export const crm = {
       root.innerHTML = `
         <div class="empty-state" style="grid-column:1/-1">
           <div class="empty-state-icon">💼</div>
-          <div class="empty-state-title">CRM Pipeline 空</div>
+          <div class="empty-state-title">商機漏斗目前是空的</div>
           <div class="empty-state-hint">點上方「+ 新商機」開始 · 或「📢 從標案匯入」一鍵帶入「有興趣」標案</div>
         </div>`;
+      localizeVisibleText(root);
       return;
     }
 
@@ -113,10 +114,12 @@ export const crm = {
         const ric = window.requestIdleCallback || ((cb) => setTimeout(cb, 16));
         ric(() => {
           leads.slice(FIRST_BATCH).forEach(lead => col.appendChild(this.renderCard(lead)));
+          localizeVisibleText(col);
         });
       }
     });
     this.bindDnD(root);
+    localizeVisibleText(root);
   },
 
   renderCard(lead) {
@@ -125,7 +128,7 @@ export const crm = {
     const deadline = lead.deadline ? `📅 ${lead.deadline.slice(5)}` : "";
     const prob     = lead.probability ? `${Math.round(lead.probability * 100)}%` : "";
     const source   = lead.source === "tender_alert" ? "📢 採購網" : "";
-    return tpl("tpl-lead-card", {
+    const card = tpl("tpl-lead-card", {
       title:    lead.title || "未命名",
       client:   lead.client || "",
       budget,
@@ -135,6 +138,8 @@ export const crm = {
     }, {
       attrs: { "data-lead-id": id },
     });
+    localizeVisibleText(card);
+    return card;
   },
 
   bindDnD(root) {

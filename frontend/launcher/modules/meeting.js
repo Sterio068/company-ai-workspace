@@ -48,7 +48,7 @@ export const meeting = {
       </div>
 
       <p class="meeting-help">
-        音檔(m4a/mp3/wav · ≤ 25MB)→ Whisper STT → Haiku 整理 → 自動填 Handoff<br>
+        音檔(m4a/mp3/wav · ≤ 25MB)→ 語音轉文字 → 快速模型整理 → 自動填交棒卡<br>
         🔒 PDPA · 處理完音檔自動刪 · 只留逐字稿 + 結構化
       </p>
 
@@ -125,16 +125,16 @@ export const meeting = {
           <label>音檔(m4a / mp3 / wav · ≤ 25MB)
             <input type="file" name="audio" accept="audio/*,video/mp4" required>
           </label>
-          <label>專案 ID(選填 · 完成後可一鍵推到 Handoff)
+          <label>專案 ID(選填 · 完成後可一鍵推到交棒卡)
             <input type="text" name="project_id" placeholder="留空也 OK">
           </label>
           <div style="font-size:12px; color: var(--text-tertiary); margin:8px 0">
             ⏱ 處理時間約 音檔長度 × 0.3(10 分鐘音檔 → 3 分鐘)<br>
-            🔒 PDPA · 處理完音檔自動刪 · 只留逐字稿 + 結構化 JSON
+            🔒 PDPA · 處理完音檔自動刪 · 只留逐字稿 + 結構化內容
           </div>
           <div class="modal2-actions">
             <button type="button" data-cancel>取消</button>
-            <button type="submit" class="primary">開始 · Whisper + Haiku</button>
+            <button type="submit" class="primary">開始 · 轉錄並整理</button>
           </div>
         </form>
       </div>
@@ -162,7 +162,7 @@ export const meeting = {
           operationError("上傳音檔", err);
           submitBtn.disabled = false;
           cancelBtn.disabled = false;
-          submitBtn.innerHTML = "開始 · Whisper + Haiku";
+          submitBtn.innerHTML = "開始 · 轉錄並整理";
           return;
         }
         const body = await r.json();
@@ -176,14 +176,14 @@ export const meeting = {
         networkError("上傳音檔", e);
         submitBtn.disabled = false;
         cancelBtn.disabled = false;
-        submitBtn.innerHTML = "開始 · Whisper + Haiku";
+        submitBtn.innerHTML = "開始 · 轉錄並整理";
       }
     });
   },
 
   _showProcessingBanner(meetingId) {
     // UX 改善 · main view 上方加 banner · 不只 toast 一閃即失
-    const root = document.getElementById("meeting-content");
+    const root = document.getElementById("view-meeting-content");
     if (!root) return;
     let banner = document.getElementById("meeting-processing-banner");
     if (!banner) {
@@ -196,13 +196,13 @@ export const meeting = {
     banner.innerHTML = `<div class="loading-spinner" style="width:18px; height:18px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite;"></div>
       <div style="flex:1">
         <div style="font-weight:600">🎤 處理中(meeting_id ${meetingId.slice(-6)})</div>
-        <div id="meeting-banner-timer" style="font-size:12px; color:var(--text-secondary)">已 ${elapsed}s · Whisper STT 中 · 完成自動跳結果</div>
+        <div id="meeting-banner-timer" style="font-size:12px; color:var(--text-secondary)">已 ${elapsed}s · 語音轉文字中 · 完成自動跳結果</div>
       </div>`;
     if (this._bannerTimer) clearInterval(this._bannerTimer);
     this._bannerTimer = setInterval(() => {
       elapsed += 1;
       const t = document.getElementById("meeting-banner-timer");
-      if (t) t.textContent = `已 ${elapsed}s · Whisper STT 中 · 完成自動跳結果`;
+      if (t) t.textContent = `已 ${elapsed}s · 語音轉文字中 · 完成自動跳結果`;
     }, 1000);
   },
 
@@ -226,7 +226,7 @@ export const meeting = {
         clearInterval(this._pollTimer);
         this._hideProcessingBanner();
         toast.error("處理超時(3 分鐘)", {
-          detail: "OpenAI API Key 可能無效或過期",
+          detail: "語音服務金鑰可能無效或過期",
           action: { label: "看設定", onClick: () => location.hash = "#help" },
         });
         return;
@@ -301,7 +301,7 @@ export const meeting = {
 
         <div class="modal2-actions">
           <button type="button" data-close>關閉</button>
-          ${body.project_id ? `<button type="button" class="primary" data-push>推到 Handoff</button>` : ""}
+          ${body.project_id ? `<button type="button" class="primary" data-push>推到交棒卡</button>` : ""}
         </div>
       </div>
     `;
@@ -315,14 +315,14 @@ export const meeting = {
         );
         if (!r.ok) {
           const err = await r.json().catch(() => ({}));
-          operationError("推到 Handoff", err);
+          operationError("推到交棒卡", err);
           return;
         }
         const body = await r.json();
-        toast.success(`已推 ${body.next_actions_count} 項待辦到 Handoff`);
+        toast.success(`已推 ${body.next_actions_count} 項待辦到交棒卡`);
         modal.remove();
       } catch (e) {
-        networkError("推到 Handoff", e);
+        networkError("推到交棒卡", e);
       }
     });
   },

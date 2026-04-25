@@ -1,7 +1,7 @@
 {
-  "name": "承富 AI 協作平台",
-  "short_name": "承富 AI",
-  "description": "承富創意整合行銷 · 10 人 AI 協作平台 · 內建 10 專家 Agent + 會計模組 + 標案監測",
+  "name": "承富智慧助理協作平台",
+  "short_name": "承富智慧助理",
+  "description": "承富創意整合行銷 · 10 人智慧協作平台 · 內建 10 位專家助手 + 會計模組 + 標案監測",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F5F5F7",
@@ -27,21 +27,21 @@
     {
       "name": "主管家",
       "short_name": "主管家",
-      "description": "直接開承富 AI 主管家對話",
+      "description": "直接開承富智慧助理主管家對話",
       "url": "/chat?agent=00",
       "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "場勘 PWA",
+      "name": "場勘工具",
       "short_name": "場勘",
-      "description": "iPhone 拍照 + GPS + 語音 · v1.3 新",
+      "description": "iPhone 拍照 + 定位 + 語音 · v1.3 新",
       "url": "/#site",
       "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "會議速記",
       "short_name": "會議",
-      "description": "上傳音檔 · Whisper STT · v1.3 新",
+      "description": "上傳音檔 · 語音轉文字 · v1.3 新",
       "url": "/#meeting"
     },
     {

@@ -50,7 +50,7 @@ export const knowledge = {
         <div class="empty-state">
           <div class="empty-state-icon">😓</div>
           <div class="empty-state-title">無法載入資料源</div>
-          <div class="empty-state-hint">${escapeHtml(e.message || "後端 API 可能未啟動")}</div>
+          <div class="empty-state-hint">${escapeHtml(e.message || "後端介接可能未啟動")}</div>
           <button class="btn-ghost" onclick="window.knowledge?.loadAdmin()" style="margin-top:12px">重試</button>
         </div>`;
     }
@@ -122,7 +122,7 @@ export const knowledge = {
           <select name="type">
             <option value="local">本機 / 外接</option>
             <option value="smb">SMB(NAS)</option>
-            <option value="symlink">Symlink</option>
+            <option value="symlink">捷徑連結</option>
             <option value="usb">USB</option>
           </select>
         </label>
@@ -132,10 +132,10 @@ export const knowledge = {
                  placeholder="/Volumes/ChengFu-NAS/projects/"
                  required
                  style="font-family:var(--font-mono)">
-          <small class="hint">必須在 KNOWLEDGE_ALLOWED_ROOTS 白名單內(預設 /Volumes, /Users, /mnt, /data)</small>
+          <small class="hint">必須在允許讀取的資料夾白名單內(預設 /Volumes, /data, /tmp/chengfu-test-sources)</small>
         </label>
         <label>
-          <span>排除 pattern(逗號分隔)</span>
+          <span>排除規則(逗號分隔)</span>
           <input type="text" name="excludes"
                  value="*.lock, ~$*, .DS_Store, Thumbs.db, .git/*"
                  style="font-family:var(--font-mono)">
@@ -146,7 +146,7 @@ export const knowledge = {
             <input type="number" name="max_size_mb" value="50" min="1" max="500">
           </label>
           <label>
-            <span>Agent 可讀(空=所有 · 逗號分隔編號)</span>
+            <span>助手可讀(空=所有 · 逗號分隔編號)</span>
             <input type="text" name="agent_access" placeholder="例:01,03,09">
           </label>
         </div>
@@ -201,7 +201,7 @@ export const knowledge = {
     if (lastCount > 500 && !opts.silent && !opts.confirmed) {
       const ok = await modal.confirm(
         `這個資料源上次有 ${lastCount} 個檔 · 重索引可能要 1-3 分鐘 · 期間視窗會卡住。<br>` +
-        `<small style='color:var(--text-secondary)'>大 source 建議改用每日 02:00 cron 自動跑,不用手動。</small>`,
+        `<small style='color:var(--text-secondary)'>大型資料源建議改用每日 02:00 自動排程跑,不用手動。</small>`,
         { title: "重索引耗時警告", icon: "⏳", primary: "我知道,繼續", cancel: "取消" }
       );
       if (!ok) return;
@@ -221,7 +221,7 @@ export const knowledge = {
       const stats = await r.json();
       if (!opts.silent) {
         const meili = stats.meili === "indexed" ? "已進全文索引"
-                    : stats.meili === "unavailable" ? "已抽字但搜尋暫未啟用 · 下次 cron 補" : "已抽字";
+                    : stats.meili === "unavailable" ? "已抽字但搜尋暫未啟用 · 下次排程補" : "已抽字";
         const took = stats.index_seconds ? ` · ${stats.index_seconds}s` : "";
         toast.success(`索引完成 · ${stats.file_count} 檔 · ${stats.errors} 錯${took} · ${meili}`);
       }
@@ -244,7 +244,7 @@ export const knowledge = {
       }
       const h = await r.json();
       if (h.status === "ok") {
-        toast.success(`✓ 路徑正常 · ${h.entry_count} 個 top-level 項`);
+        toast.success(`✓ 路徑正常 · ${h.entry_count} 個第一層項目`);
       } else {
         toast.warn("資料源狀態異常", { detail: `${h.status} · ${h.issue || ""}` });
       }
@@ -314,7 +314,7 @@ export const knowledge = {
         <div class="empty-state">
           <div class="empty-state-icon">📚</div>
           <div class="empty-state-title">尚無資料源</div>
-          <div class="empty-state-hint">${isAdmin() ? '到 <a href="#" class="link" data-goto-admin>Admin</a> 新增資料源' : "請 Champion 新增"}</div>
+          <div class="empty-state-hint">${isAdmin() ? '到 <a href="#" class="link" data-goto-admin>管理</a> 新增資料源' : "請 Champion 新增"}</div>
         </div>`;
       root.querySelector("[data-goto-admin]")?.addEventListener("click", e => {
         e.preventDefault();

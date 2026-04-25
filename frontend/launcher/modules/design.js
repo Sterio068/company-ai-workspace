@@ -47,7 +47,7 @@ export const design = {
           status: "unconfigured",
           images: [],
           friendly_message: body.detail?.friendly_message
-            || "設計助手尚未啟用 · 請管理員設定 FAL_API_KEY",
+            || "設計助手尚未啟用 · 請管理員設定生圖服務金鑰",
         };
       }
       if (!r.ok) {
@@ -148,7 +148,7 @@ export const design = {
     const formHtml = `
       <form id="design-form" class="modal2-form">
         <label>
-          <span>描述(越具體越好 · 避免真人寫實 / 政府 logo)</span>
+          <span>描述(越具體越好 · 避免真人寫實 / 政府標誌)</span>
           <textarea name="prompt" rows="4" required minlength="4"
             placeholder="例:中秋節品牌主視覺 · 橘黃色調 · 扁平幾何 · 月亮與兔子剪影"></textarea>
         </label>
@@ -156,7 +156,7 @@ export const design = {
           <label>
             <span>尺寸</span>
             <select name="image_size">
-              <option value="square_hd">方形 HD</option>
+              <option value="square_hd">高畫質方形</option>
               <option value="portrait_16_9">直式 16:9</option>
               <option value="landscape_16_9">橫式 16:9</option>
             </select>
@@ -206,7 +206,7 @@ export const design = {
           progressEl.textContent = result.friendly_message || "失敗";
           toast.error(result.friendly_message || "生圖失敗");
         }
-        return false;  // 不關 modal · 讓 user 看圖 / 重生
+        return false;  // 不關 modal · 讓使用者看圖 / 重生
       },
     });
   },

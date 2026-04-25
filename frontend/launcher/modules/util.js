@@ -66,3 +66,133 @@ export function skeletonCards(count = 3) {
     </div>
   `).join("");
 }
+
+const UI_TEXT_REPLACEMENTS = [
+  [/Strict Validation Response/g, "嚴格驗收回覆"],
+  [/Legacy Assistant Cleanup Test/g, "舊版助手清理測試"],
+  [/Reinstallation Seventh Round Normal/g, "重新安裝第七輪正常"],
+  [/drawer smoke/g, "抽屜流程測試"],
+  [/\br13-test\b/g, "商機測試"],
+  [/\be2e\b/g, "測試資料源"],
+  [/\bunknown\b/g, "未分類助手"],
+  [/\bOpenAI\b/g, "主力引擎"],
+  [/\bClaude\b/g, "備援引擎"],
+  [/\bAnthropic\b/g, "備援模型服務"],
+  [/\bADMIN\b/g, "管理員"],
+  [/\bUSER\b/g, "一般同仁"],
+  [/\bchengfu_permissions\b/g, "承富權限設定"],
+  [/\bMongoDB\b/g, "資料庫"],
+  [/\bMongo\b/g, "資料庫"],
+  [/\bMeilisearch\b/g, "全文搜尋服務"],
+  [/\bNAS\b/g, "網路儲存"],
+  [/\bUSB\b/g, "隨身碟"],
+  [/\bPlaybook\b/g, "作業劇本"],
+  [/\bAP Style\b/g, "新聞寫作格式"],
+  [/\bhook\b/gi, "開場鉤子"],
+  [/\bchecklist\b/gi, "檢查清單"],
+  [/\bPDPA\b/g, "個資法"],
+  [/\bSlash\b/g, "快速命令"],
+  [/\bUTC\b/g, "國際標準時間"],
+  [/\bTTL\b/g, "保存期限"],
+  [/\bKPI\b/g, "成效指標"],
+  [/\bcron\b/gi, "排程服務"],
+  [/\bPDF\b/g, "文件"],
+  [/\bAPI\b/g, "介接"],
+  [/\bSTT\b/g, "語音轉文字"],
+  [/\bWhisper\b/g, "語音轉文字"],
+  [/\bgpt-image-2\b/g, "高品質生圖模型"],
+  [/\bApp Password\b/g, "應用程式密碼"],
+  [/\bSMTP\b/g, "寄信服務"],
+  [/\bcookie\b/g, "登入憑證"],
+  [/\bLibreChat\b/g, "對話系統"],
+  [/\bschema\b/gi, "資料結構"],
+  [/\btimeout\b/gi, "逾時"],
+  [/\btoken\b/gi, "權杖"],
+  [/\btokens\b/gi, "權杖"],
+  [/\bProvider\b/g, "服務商"],
+  [/\bprovider\b/g, "服務商"],
+  [/\bPM\b/g, "專案窗口"],
+  [/\bDB\b/g, "資料庫"],
+  [/\bCRUD\b/g, "增查改刪"],
+  [/\bReindex\b/g, "重新索引"],
+  [/\breindex\b/g, "重新索引"],
+  [/\bindex\b/g, "索引"],
+  [/\bDay 0\b/g, "上線第一天"],
+  [/\bTier\b/g, "級別"],
+  [/\bUSD\b/g, "美金"],
+  [/\.env/g, "環境設定"],
+  [/\bANTHROPIC_API_KEY\b/g, "備援模型服務金鑰"],
+  [/\bOPENAI_API_KEY\b/g, "主力模型服務金鑰"],
+  [/\bFAL_API_KEY\b/g, "生圖服務金鑰"],
+  [/\bIMAGE_PROVIDER\b/g, "生圖服務商設定"],
+  [/\bEMAIL_USERNAME\b/g, "寄信帳號"],
+  [/\bEMAIL_PASSWORD\b/g, "寄信密碼"],
+  [/\bJWT_REFRESH_SECRET\b/g, "登入安全密鑰"],
+  [/\bECC_INTERNAL_TOKEN\b/g, "內部通行權杖"],
+  [/\bMEILI_MASTER_KEY\b/g, "全文搜尋主密鑰"],
+  [/SMTP Username/g, "寄信帳號"],
+  [/SMTP Password/g, "寄信密碼"],
+  [/JWT Refresh Secret/g, "登入安全密鑰"],
+  [/Meilisearch Master Key/g, "全文搜尋主密鑰"],
+  [/\bclaude-sonnet-4-6\b/g, "備援模型"],
+  [/\bgpt-5\.4\b/g, "主力模型"],
+  [/\bTENDER_MONITOR_KEYWORDS\b/g, "標案關鍵字設定"],
+  [/scripts\/tender-monitor\.py/g, "標案監測排程"],
+  [/DEPLOY\.md Phase 4\.5/g, "交付手冊的排程章節"],
+  [/\bAdmin\b/g, "管理員"],
+  [/\badmin\b/g, "管理員"],
+  [/\bWorkspace\b/g, "工作區"],
+  [/\bworkspace\b/g, "工作區"],
+  [/\bAgent\b/g, "助手"],
+  [/\bAgents\b/g, "助手"],
+  [/\bProject\b/g, "工作包"],
+  [/\bProjects\b/g, "工作包"],
+  [/\bHandoff\b/g, "交棒卡"],
+  [/\bDashboard\b/g, "首頁"],
+  [/\bdashboard\b/g, "首頁"],
+  [/\bBrief\b/g, "需求單"],
+  [/\bEmail\b/g, "電子郵件"],
+  [/\bemail\b/g, "電子郵件"],
+  [/\bURL\b/g, "網路連結"],
+  [/\bPII\b/g, "個人資料"],
+  [/\bL1\b/g, "第一級"],
+  [/\bL2\b/g, "第二級"],
+  [/\bL3\b/g, "第三級"],
+  [/\bLevel\b/g, "級別"],
+  [/\bCSV\b/g, "表格"],
+  [/\bPWA\b/g, "行動版網頁"],
+  [/\bmock\b/g, "練習模式"],
+  [/\bstatus\b/g, "狀態"],
+  [/\bpending\b/g, "處理中"],
+  [/\bdone\b/g, "完成"],
+  [/\bfailed\b/g, "失敗"],
+  [/\bactive\b/g, "啟用"],
+  [/\bclosed\b/g, "結案"],
+  [/\baudio note\b/gi, "語音備註"],
+  [/\bprompt\b/gi, "指令"],
+  [/\bquota\b/gi, "用量額度"],
+  [/\baudit\b/gi, "稽核紀錄"],
+];
+
+export function localizeVisibleText(root = document.body) {
+  if (!root || typeof document === "undefined") return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const parent = node.parentElement;
+      if (!parent) return NodeFilter.FILTER_REJECT;
+      const tag = parent.tagName;
+      if (["SCRIPT", "STYLE", "TEXTAREA", "INPUT", "SELECT"].includes(tag)) return NodeFilter.FILTER_REJECT;
+      if (!/[A-Za-z]/.test(node.nodeValue || "")) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(node => {
+    let text = node.nodeValue;
+    UI_TEXT_REPLACEMENTS.forEach(([pattern, replacement]) => {
+      text = text.replace(pattern, replacement);
+    });
+    node.nodeValue = text;
+  });
+}

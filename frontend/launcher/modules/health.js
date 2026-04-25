@@ -22,7 +22,7 @@ async function update() {
 
   if (el) {
     el.className = "health-indicator " + (all ? "ok" : some ? "warn" : "err");
-    el.title = `LibreChat: ${r.librechat ? "✓" : "✗"} | 會計 API: ${r.accounting ? "✓" : "✗"}`;
+    el.title = `對話服務:${r.librechat ? "✓" : "✗"} | 會計介接:${r.accounting ? "✓" : "✗"}`;
     const text = el.querySelector(".health-text");
     if (text) text.textContent = all ? "系統正常" : some ? "部分降級" : "後端離線";
   }
@@ -31,7 +31,7 @@ async function update() {
   if (!some && !_offlineBannerShown) {
     _offlineBannerShown = true;
     _showBanner({
-      message: "⚠ 後端服務離線 · AI 對話暫時無法使用。請等待系統恢復,或通知管理員。",
+      message: "⚠ 後端服務離線 · 智慧對話暫時無法使用。請等待系統恢復,或通知管理員。",
       actionLabel: "重試",
       onClick: () => update(),
       variant: "error",

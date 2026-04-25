@@ -1,7 +1,7 @@
 // 承富 Launcher · SW 自我銷毀腳本
 // ============================================================
-// 這個 SW 被註冊後 · 立刻把自己 unregister · 並清所有 cache
-// 用途:清除 LibreChat v0.8.4 留下的 Workbox SW 殘影
+// 這個 SW 被註冊後 · 立刻把自己 unregister
+// 不清同 origin cache,避免傷到 LibreChat 或未來 PWA。
 // ============================================================
 
 self.addEventListener("install", () => {
@@ -10,9 +10,6 @@ self.addEventListener("install", () => {
 
 self.addEventListener("activate", async (event) => {
   event.waitUntil((async () => {
-    // 清所有 cache
-    const keys = await caches.keys();
-    await Promise.all(keys.map(k => caches.delete(k)));
     // 取所有 clients
     const clients = await self.clients.matchAll({ type: "window" });
     // unregister 自己

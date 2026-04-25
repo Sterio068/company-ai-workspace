@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#081522">
+  <title>承富 AI 工作台 · UI/UX 演示</title>
+  <link rel="stylesheet" href="/static/ui-vnext-demo.css?v=5">
+</head>
+<body>
+  <main class="workspace" data-mode="mission" data-state="idle">
+    <header class="topbar">
+      <a class="brand-lockup" href="/ui-demo" aria-label="承富 AI 工作台">
+        <span class="brand-glyph">承</span>
+        <span>
+          <strong>承富 AI 工作台</strong>
+          <small>任務、附件、交付品集中處理</small>
+        </span>
+      </a>
+
+      <nav class="mode-switcher" aria-label="工作區切換">
+        <button class="mode-chip active" type="button" data-mode="mission">任務處理</button>
+        <button class="mode-chip" type="button" data-mode="canvas">交付預覽</button>
+        <button class="mode-chip" type="button" data-mode="sources">資料來源</button>
+        <button class="mode-chip" type="button" data-mode="flows">流程設定</button>
+      </nav>
+
+      <div class="top-actions">
+        <button class="round-btn" type="button" id="theme-toggle">明暗</button>
+        <a class="round-btn" href="/">正式版</a>
+      </div>
+    </header>
+
+    <section class="workspace-shell">
+      <aside class="task-panel panel" aria-label="新增任務">
+        <div class="panel-eyebrow">01 · 任務輸入</div>
+        <h1>輸入任務</h1>
+        <p class="panel-copy">不用先選功能或 Agent。把需求和附件放進來，系統會判斷任務類型並建立第一版交付草稿。</p>
+
+        <form class="intake-form" id="intake-form">
+          <label for="mission-input">輸入需求</label>
+          <textarea id="mission-input" rows="8" placeholder="例：用這份招標須知做 Go / No-Go，整理缺件清單、送件風險與今天要分派的工作。"></textarea>
+
+          <div class="prompt-bank" aria-label="範例任務">
+            <button type="button" data-prompt="用這份招標須知做 Go / No-Go，整理缺件清單、送件風險與今天要分派的工作。">標案判斷</button>
+            <button type="button" data-prompt="把會議紀錄整理成客戶確認信、內部分工表和下次會議待確認事項。">會議交棒</button>
+            <button type="button" data-prompt="根據活動需求建立企劃大綱、現場動線、廠商清單和預算注意事項。">活動企劃</button>
+          </div>
+
+          <div class="drop-zone" id="drop-zone">
+            <input id="mission-files" type="file" hidden multiple>
+            <button type="button" id="attach-trigger">
+              <span>＋</span>
+              加入附件
+            </button>
+            <small>拖放或選取，最多 6 個檔案</small>
+          </div>
+
+          <div class="file-ribbon" id="file-ribbon" aria-live="polite"></div>
+
+          <button class="primary-action" type="submit">
+            建立任務草稿
+            <span>⌘ Enter</span>
+          </button>
+        </form>
+
+        <div class="quick-hint">輸入後會自動建立摘要、來源、分工與交付草稿。</div>
+      </aside>
+
+      <section class="work-panel panel" aria-label="任務處理與交付預覽">
+        <div class="work-header">
+          <div>
+            <p class="panel-eyebrow">02 · 自動處理</p>
+            <h2 id="map-title">自動整理、分派與產出</h2>
+            <p id="map-description">系統會讀取需求與附件，建立摘要、分工、資料來源與交付草稿。使用者只需要確認結果。</p>
+          </div>
+          <span class="state-pill" id="system-state">待輸入</span>
+        </div>
+
+        <div class="classification-card" aria-label="系統判斷">
+          <div>
+            <span>任務類型</span>
+            <strong id="task-type">投標 / 專案判斷</strong>
+          </div>
+          <div>
+            <span>建議處理模組</span>
+            <strong>投標、營運、設計</strong>
+          </div>
+          <div>
+            <span>需要人工確認</span>
+            <strong>保險文件、交通維持、預算格式</strong>
+          </div>
+        </div>
+
+        <ol class="process-list" id="process-list" aria-label="處理流程">
+          <li class="done">
+            <span>已完成</span>
+            <strong>讀取需求</strong>
+            <p>辨識任務目標、期限、交付格式與缺漏資料。</p>
+          </li>
+          <li class="active">
+            <span>處理中</span>
+            <strong>檢查附件與知識庫</strong>
+            <p>比對招標文件、公司案例、承富語氣規則與常用模板。</p>
+          </li>
+          <li>
+            <span>下一步</span>
+            <strong>自動分派模組</strong>
+            <p>依任務內容分派投標、營運、設計或公關模組。</p>
+          </li>
+          <li>
+            <span>可輸出</span>
+            <strong>建立交付草稿</strong>
+            <p>產出摘要、缺件清單、分工表與文件草稿。</p>
+          </li>
+        </ol>
+
+        <div class="artifact-window" id="artifact-window">
+          <div class="artifact-toolbar">
+            <span id="artifact-title">文化節標案 · 任務草稿</span>
+            <div>
+              <button type="button" data-artifact="brief" class="active">摘要</button>
+              <button type="button" data-artifact="tasks">任務</button>
+              <button type="button" data-artifact="delivery">交付</button>
+              <button type="button" data-artifact="handoff">交棒</button>
+            </div>
+          </div>
+          <div class="artifact-body" id="artifact-body">
+            <p class="panel-eyebrow">摘要</p>
+            <h3>建議先做「有條件投標」</h3>
+            <p>理由：主題契合、履約案例可補，但交通維持與保險文件是送件前風險。今天先補三份材料即可往前推。</p>
+            <ol>
+              <li>補過往文化活動履約實績。</li>
+              <li>建立交通與人流風險表。</li>
+              <li>把預算表轉成送審格式。</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <aside class="insight-panel" aria-label="來源、分派與交棒">
+        <section class="panel source-card">
+          <p class="panel-eyebrow">03 · 資料來源</p>
+          <h2>本次任務使用的資料</h2>
+          <div class="confidence-meter" aria-label="來源完整度">
+            <span style="--score: 78%"></span>
+          </div>
+          <small>來源完整度 78%，仍需確認保險與交通維持資料。</small>
+          <div class="source-list" id="source-list">
+            <button type="button">招標須知.pdf <span>已讀</span></button>
+            <button type="button">公司履約案例 <span>引用</span></button>
+            <button type="button">承富語氣規則 <span>套用</span></button>
+          </div>
+        </section>
+
+        <section class="panel module-card">
+          <p class="panel-eyebrow">自動分派結果</p>
+          <div class="module-row"><strong>投標模組</strong><span>Go / No-Go</span></div>
+          <div class="module-row"><strong>營運模組</strong><span>風險與分工</span></div>
+          <div class="module-row"><strong>設計模組</strong><span>視覺素材</span></div>
+        </section>
+
+        <section class="panel output-card">
+          <p class="panel-eyebrow">可輸出內容</p>
+          <button type="button" data-output="摘要">任務摘要</button>
+          <button type="button" data-output="缺件清單">缺件清單</button>
+          <button type="button" data-output="分工表">分工表</button>
+          <button type="button" data-output="提案大綱">提案大綱</button>
+          <button class="save-output" type="button" id="save-package">存成工作包</button>
+        </section>
+      </aside>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <script src="/static/ui-vnext-demo.js?v=5" defer></script>
+</body>
+</html>

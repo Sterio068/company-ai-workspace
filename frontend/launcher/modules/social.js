@@ -86,7 +86,7 @@ export const social = {
         <div class="empty-state">
           <div class="empty-state-icon">📣</div>
           <div class="empty-state-title">尚無社群排程</div>
-          <div class="empty-state-hint">點「+ 新排程」發一篇 FB / IG / LinkedIn 貼文</div>
+          <div class="empty-state-hint">點「+ 新排程」發一篇臉書 / Instagram / 領英貼文</div>
         </div>
       ` : `
         ${this._renderSection("⏰ 排程中", queued, true)}
@@ -184,7 +184,7 @@ export const social = {
           value: existing?.platform || "facebook" },
         { name: "content", label: "貼文內容(< 3000 字)", type: "textarea",
           value: existing?.content || "", rows: 6 },
-        { name: "image_url", label: "圖片 URL(IG 必填)", type: "text",
+        { name: "image_url", label: "圖片連結(Instagram 必填)", type: "text",
           value: existing?.image_url || "" },
         { name: "schedule_at", label: "排定時間(本地時區)", type: "datetime-local",
           value: existing ? localIso(new Date(existing.schedule_at)) : defaultIso },

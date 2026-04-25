@@ -46,7 +46,7 @@ export const siteSurvey = {
       ${heicWarn}
       <div class="site-toolbar">
         <h2>📸 場勘紀錄</h2>
-        <p class="site-desc">拍 1-5 張現場照片 · GPS 自動帶入 · AI 產結構化 brief</p>
+        <p class="site-desc">拍 1-5 張現場照片 · 定位自動帶入 · 智慧助理產結構化場勘摘要</p>
       </div>
 
       <div class="site-form">
@@ -69,7 +69,7 @@ export const siteSurvey = {
         </div>
 
         <div class="site-section">
-          <h3>2. GPS</h3>
+          <h3>2. 定位</h3>
           ${this._gps ? `
             <div class="site-gps-ok">
               📍 緯度 ${this._gps.lat.toFixed(5)} · 經度 ${this._gps.lng.toFixed(5)}
@@ -77,7 +77,7 @@ export const siteSurvey = {
               <button class="btn-tiny" id="site-gps-clear">清除</button>
             </div>
           ` : `
-            <button class="btn-secondary" id="site-gps-btn">📍 取得 GPS</button>
+            <button class="btn-secondary" id="site-gps-btn">📍 取得定位</button>
             <small class="site-help">瀏覽器會請求位置權限</small>
           `}
         </div>
@@ -89,15 +89,15 @@ export const siteSurvey = {
         </div>
 
         <div class="site-section">
-          <h3>4. 綁專案(選填 · 才能一鍵推 Handoff)</h3>
+          <h3>4. 綁工作包(選填 · 才能一鍵推交棒卡)</h3>
           <input type="text" id="site-project" value="${escapeHtml(this._projectId)}"
-                 placeholder="project_id(從 Projects 頁複製)">
+                 placeholder="工作包編號(從工作包頁複製)">
         </div>
 
         <div class="site-actions">
           <button class="btn-primary" id="site-submit-btn"
                   ${this._images.length === 0 ? "disabled" : ""}>
-            🚀 上傳 + AI 分析
+            🚀 上傳 + 智慧分析
           </button>
         </div>
       </div>
@@ -178,10 +178,10 @@ export const siteSurvey = {
 
   _getGPS() {
     if (!navigator.geolocation) {
-      toast.error("瀏覽器不支援 GPS", { detail: "請改用 iPhone Safari 或 Chrome" });
+      toast.error("瀏覽器不支援定位", { detail: "請改用 iPhone Safari 或 Chrome" });
       return;
     }
-    toast.info("取得 GPS 中...");
+    toast.info("取得定位中...");
     navigator.geolocation.getCurrentPosition(
       pos => {
         this._gps = {
@@ -189,12 +189,12 @@ export const siteSurvey = {
           lng: pos.coords.longitude,
           accuracy: pos.coords.accuracy,
         };
-        toast.success("GPS 已取得");
+        toast.success("定位已取得");
         this.render();
       },
       err => {
         const hint = err.code === 1 ? "已被拒絕 · 到「設定 → 隱私 → 定位」開啟" : err.message;
-        toast.error("GPS 取得失敗", {
+        toast.error("定位取得失敗", {
           detail: hint,
           action: { label: "教學", onClick: () => location.hash = "#help" },
         });
@@ -234,13 +234,13 @@ export const siteSurvey = {
         operationError("上傳場勘照片", err, () => this._submit());
         if (submitBtn) {
           submitBtn.disabled = false;
-          submitBtn.innerHTML = "🚀 上傳 + AI 分析";
+          submitBtn.innerHTML = "🚀 上傳 + 智慧分析";
         }
         return;
       }
       const body = await r.json();
       this._currentSurveyId = body.survey_id;
-      toast.success(`AI 分析中(約 ${this._images.length * 6} 秒)`);
+      toast.success(`智慧分析中(約 ${this._images.length * 6} 秒)`);
       // R24#6 · revoke objectURLs 釋放 memory
       this._revokeObjectUrls();
       this._images = [];
@@ -253,7 +253,7 @@ export const siteSurvey = {
       networkError("上傳場勘照片", e, () => this._submit());
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = "🚀 上傳 + AI 分析";
+        submitBtn.innerHTML = "🚀 上傳 + 智慧分析";
       }
     }
   },
@@ -272,14 +272,14 @@ export const siteSurvey = {
     let elapsed = 0;
     banner.innerHTML = `<div class="loading-spinner" style="width:18px; height:18px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite;"></div>
       <div style="flex:1">
-        <div style="font-weight:600">📸 場勘 AI 分析中(survey ${surveyId.slice(-6)})</div>
-        <div id="site-banner-timer" style="font-size:12px; color:var(--text-secondary)">已 ${elapsed}s · Claude Vision 處理 ${imageCount} 張照片中</div>
+        <div style="font-weight:600">📸 場勘智慧分析中(紀錄 ${surveyId.slice(-6)})</div>
+        <div id="site-banner-timer" style="font-size:12px; color:var(--text-secondary)">已 ${elapsed}s · 視覺模型處理 ${imageCount} 張照片中</div>
       </div>`;
     if (this._bannerTimer) clearInterval(this._bannerTimer);
     this._bannerTimer = setInterval(() => {
       elapsed += 1;
       const t = document.getElementById("site-banner-timer");
-      if (t) t.textContent = `已 ${elapsed}s · Claude Vision 處理中`;
+      if (t) t.textContent = `已 ${elapsed}s · 視覺模型處理中`;
     }, 1000);
   },
 
@@ -302,8 +302,8 @@ export const siteSurvey = {
       if (attempts > 30) {
         clearInterval(this._pollTimer);
         this._hideProcessingBanner();
-        toast.error("AI 分析超時(90 秒)", {
-          detail: "可能 ANTHROPIC_API_KEY 失效 · 或 Anthropic 服務暫慢",
+        toast.error("智慧分析超時(90 秒)", {
+          detail: "可能模型服務金鑰失效 · 或模型服務暫慢",
           action: { label: "看歷史", onClick: () => this._loadHistory() },
         });
         return;
@@ -336,7 +336,7 @@ export const siteSurvey = {
     m.className = "modal2-overlay";
     m.innerHTML = `
       <div class="modal2-box" style="max-width:600px; max-height:80vh; overflow-y:auto">
-        <div class="modal2-header">✅ 場勘 AI 分析完成</div>
+        <div class="modal2-header">✅ 場勘智慧分析完成</div>
 
         ${s.venue ? `
           <h3>🏛 場地</h3>
@@ -361,7 +361,7 @@ export const siteSurvey = {
         ` : ""}
 
         <details style="margin-top:16px">
-          <summary>各照片 AI 描述(${(body.media || []).length} 張)</summary>
+          <summary>各照片智慧描述(${(body.media || []).length} 張)</summary>
           ${(body.media || []).map((p, i) => `
             <div style="margin-top:8px; padding:8px; background:var(--surface-2); border-radius:6px">
               <b>照片 ${i + 1}:</b> ${escapeHtml(p.caption_ai || "")}
@@ -371,7 +371,7 @@ export const siteSurvey = {
         </details>
 
         <details style="margin-top:16px" open>
-          <summary>🎙 audio note(${(body.audio_notes || []).length})</summary>
+          <summary>🎙 語音備註(${(body.audio_notes || []).length})</summary>
           <div id="site-audio-list">
             ${(body.audio_notes || []).map((a, i) => `
               <div style="margin-top:8px; padding:8px; background:var(--surface-2); border-radius:6px">
@@ -393,7 +393,7 @@ export const siteSurvey = {
 
         <div class="modal2-actions">
           <button type="button" data-close>關閉</button>
-          ${body.project_id ? `<button type="button" class="primary" data-push>推到 Handoff</button>` : ""}
+          ${body.project_id ? `<button type="button" class="primary" data-push>推到交棒卡</button>` : ""}
         </div>
       </div>
     `;
@@ -408,14 +408,14 @@ export const siteSurvey = {
         const r = await authFetch(`${BASE}/site-survey/${this._currentSurveyId}/push-to-handoff`, { method: "POST" });
         if (!r.ok) {
           const err = await r.json().catch(() => ({}));
-          operationError("推到 Handoff", err);
+          operationError("推到交棒卡", err);
           return;
         }
         const body = await r.json();
-        toast.success(`已推 · ${body.issues_count} 個 issues 進 Handoff`);
+        toast.success(`已推 · ${body.issues_count} 個問題進交棒卡`);
         m.remove();
       } catch (e) {
-        networkError("推到 Handoff", e);
+        networkError("推到交棒卡", e);
       }
     });
   },
@@ -432,7 +432,7 @@ export const siteSurvey = {
           <div class="empty-state">
             <div class="empty-state-icon">📸</div>
             <div class="empty-state-title">尚無場勘紀錄</div>
-            <div class="empty-state-hint">拍 1-5 張現場照片 + GPS · AI 自動結構化</div>
+            <div class="empty-state-hint">拍 1-5 張現場照片 + 定位 · 智慧助理自動結構化</div>
           </div>`;
         return;
       }
@@ -442,7 +442,7 @@ export const siteSurvey = {
           <span>${escapeHtml(s.venue_type || "未分析")}</span>
           <span>${s.issues_count > 0 ? `⚠️ ${s.issues_count} 問題` : "✅ 無問題"}</span>
           <span class="site-history-time">${this._formatTime(s.created_at)}</span>
-          <span class="site-history-status status-${s.status}">${s.status}</span>
+          <span class="site-history-status status-${s.status}">${this._statusLabel(s.status)}</span>
         </div>
       `).join("");
     } catch (e) {
@@ -463,6 +463,14 @@ export const siteSurvey = {
     } catch { return iso; }
   },
 
+  _statusLabel(status) {
+    return {
+      pending: "處理中",
+      done: "完成",
+      failed: "失敗",
+    }[status] || "未知";
+  },
+
   // B4(v1.3)· 30 秒錄音 + 上傳 + Whisper STT
   async _recordAudio(modal) {
     const status = modal.querySelector("#site-audio-status");
@@ -472,7 +480,7 @@ export const siteSurvey = {
       return;
     }
     if (!window.MediaRecorder) {
-      status.textContent = "❌ MediaRecorder API 不支援";
+      status.textContent = "❌ 瀏覽器錄音功能不支援";
       return;
     }
     btn.disabled = true;
@@ -513,7 +521,7 @@ export const siteSurvey = {
         stream.getTracks().forEach(t => t.stop());
         const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
         const durationSec = (Date.now() - startTime) / 1000;
-        status.textContent = "📤 上傳 · STT 中…";
+        status.textContent = "📤 上傳 · 語音轉文字中…";
         try {
           const fd = new FormData();
           // .webm / .mp4 副檔名以便 Whisper 識別
@@ -530,7 +538,7 @@ export const siteSurvey = {
             resolve(false);
             return;
           }
-          status.textContent = "✅ 上傳成功 · STT 背景跑 · 重 open 看結果";
+          status.textContent = "✅ 上傳成功 · 語音轉文字背景處理中 · 重新開啟可看結果";
           resolve(true);
         } catch (e) {
           status.textContent = `❌ 網路錯:${String(e)}`;

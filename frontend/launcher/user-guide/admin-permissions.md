@@ -2,6 +2,8 @@
 
 > v1.3.0 · 誰能看 / 操作什麼 · 權限邊界一覽
 
+> vNext Phase D 更新:同仁管理 UI 的 28 個權限勾選已可儲存與套用 preset,且第一批高風險功能已接上 backend enforcement。後台仍會顯示哪些權限已真正強制,避免把 advisory 權限誤認為完整 RBAC。
+
 ---
 
 ## 3 層權限模型
@@ -34,6 +36,28 @@
 
 ## 完整對照表
 
+### 目前已強制的權限邊界
+
+| 類型 | 狀態 |
+|---|---|
+| Admin-only endpoints | 已由 `ADMIN_EMAILS` / `users.role=ADMIN` 強制 |
+| 知識庫管理 `/admin/sources/*` | 已強制 admin |
+| 媒體 CRM 編輯 / 匯出 | 已強制 admin |
+| PDPA delete-all / audit log / admin dashboard | 已強制 admin |
+| 28 個細部 `chengfu_permissions` | 第一批已 enforcement,其餘以後台 catalog 標示為準 |
+
+目前已由 backend 實際強制的細部權限:
+- `accounting.view` / `accounting.edit`
+- `social.post_own`
+- `site.survey`
+- `knowledge.manage`
+- `media_crm.edit` / `media_crm.export`
+- `admin.dashboard` / `admin.audit` / `admin.pdpa`
+
+仍屬 advisory / 待下一輪接上的代表項:
+- `social.post_all`:尚未拆出「可管理全公司貼文」的跨作者權限。
+- 部分 Agent 使用權限如 `press.draft`,目前主要作為 UI / preset 管理資訊。
+
 | 功能 | 匿名 | 一般同事 | Admin |
 |---|---|---|---|
 | **登入頁** | ✅ | ✅ | ✅ |
@@ -46,16 +70,16 @@
 | **會議速記上傳 + 看自己** | ❌ | ✅ | ✅ |
 | **會議速記看別人** | ❌ | ❌ 403 | ✅ |
 | **媒體 CRM 列表** | ❌ | ✅(phone 遮) | ✅(phone 顯) |
-| **媒體 CRM 編輯 / 推薦 / 匯出 CSV** | ❌ | ❌ | ✅ |
+| **媒體 CRM 編輯 / 推薦 / 匯出 CSV** | ❌ | 需 `media_crm.edit/export` | ✅ |
 | **場勘 PWA 拍照 + 看自己** | ❌ | ✅ | ✅ |
 | **場勘看別人** | ❌ | ❌ 403 | ✅ |
 | **場勘 audio_note(只 owner)** | ❌ | ✅ 自己的 survey | ✅ 任何 survey |
-| **社群排程貼文(自己 author)** | ❌ | ✅ | ✅ |
+| **社群排程貼文(自己 author)** | ❌ | 需 `social.post_own` | ✅ |
 | **社群排程看別人** | ❌ | ❌ | ✅ |
 | **社群 OAuth 連 FB/IG/LinkedIn** | ❌ | ✅ 連自己 | ✅ |
 | **社群 OAuth status(誰連了什麼)** | ❌ | ❌ | ✅ |
 | **知識庫搜 / 讀** | ❌ | ✅ | ✅ |
-| **知識庫管理(/admin/sources)** | ❌ | ❌ | ✅ |
+| **知識庫管理(/admin/sources)** | ❌ | 需 `knowledge.manage` 或 admin | ✅ |
 | **回饋 👍👎** | ❌ | ✅ | ✅ |
 | **回饋 stats** | ❌ | ❌ | ✅ |
 | **設計助手生圖** | ❌ | ✅(用自己 quota) | ✅ |

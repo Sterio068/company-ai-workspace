@@ -63,8 +63,8 @@ export const admin = {
       root.innerHTML = `
         <div class="empty-state">
           <div class="empty-state-icon">🔌</div>
-          <div class="empty-state-title">無法連線 API</div>
-          <div class="empty-state-hint">檢查 <code>docker compose ps</code> accounting 是否 up</div>
+          <div class="empty-state-title">無法連線介接服務</div>
+          <div class="empty-state-hint">檢查 <code>docker compose ps</code> 會計服務是否啟動</div>
           <button class="btn-ghost" onclick="window.admin?.loadAgentStats()" style="margin-top:12px">重試</button>
         </div>`;
     }
@@ -81,14 +81,14 @@ export const admin = {
           <div class="empty-state">
             <div class="empty-state-icon">📊</div>
             <div class="empty-state-title">尚無成本資料</div>
-            <div class="empty-state-hint">LibreChat transactions 尚未累積 · 有對話後才有統計</div>
+          <div class="empty-state-hint">對話交易紀錄尚未累積 · 有對話後才有統計</div>
           </div>`;
         return;
       }
       root.innerHTML = d.by_model.map(m => `
         <div class="recent-item">
           <div class="recent-title">${escapeHtml(m._id || "unknown")}</div>
-          <span class="recent-agent">${(m.input_tokens || 0).toLocaleString()} in / ${(m.output_tokens || 0).toLocaleString()} out</span>
+          <span class="recent-agent">${(m.input_tokens || 0).toLocaleString()} 輸入 / ${(m.output_tokens || 0).toLocaleString()} 輸出</span>
           <div class="recent-time">${m.count} 次呼叫</div>
         </div>
       `).join("");
@@ -97,7 +97,7 @@ export const admin = {
         <div class="empty-state">
           <div class="empty-state-icon">🔌</div>
           <div class="empty-state-title">無法載入成本</div>
-          <div class="empty-state-hint">檢查 accounting 服務是否啟動</div>
+          <div class="empty-state-hint">檢查會計服務是否啟動</div>
           <button class="btn-ghost" onclick="window.admin?.loadCost()" style="margin-top:12px">重試</button>
         </div>`;
     }

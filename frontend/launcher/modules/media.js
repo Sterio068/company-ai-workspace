@@ -42,7 +42,7 @@ export const media = {
       this._contacts = body.items || [];
     } catch (e) {
       this._contacts = [];
-      networkError("讀取媒體 CRM", e, () => this.init(this._isAdmin));
+      networkError("讀取媒體名單", e, () => this.init(this._isAdmin));
     }
   },
 
@@ -64,7 +64,7 @@ export const media = {
         <div class="media-actions">
           <button class="btn-secondary" id="media-recommend-btn">🎯 推薦記者</button>
           ${this._isAdmin ? `
-            <button class="btn-secondary" id="media-import-btn">📥 CSV 匯入</button>
+            <button class="btn-secondary" id="media-import-btn">📥 表格匯入</button>
             <button class="btn-primary" id="media-new-btn">+ 新增記者</button>
           ` : ""}
         </div>
@@ -84,7 +84,7 @@ export const media = {
 
       <table class="media-table">
         <thead><tr>
-          <th>姓名</th><th>媒體</th><th>負責主題</th><th>email</th>
+          <th>姓名</th><th>媒體</th><th>負責主題</th><th>電子郵件</th>
           <th>發過 / 接受</th><th>操作</th>
         </tr></thead>
         <tbody>
@@ -93,7 +93,7 @@ export const media = {
               <div class="empty-state">
                 <div class="empty-state-icon">📰</div>
                 <div class="empty-state-title">尚無媒體記者</div>
-                <div class="empty-state-hint">${this._isAdmin ? "點「+ 新增」或「CSV 匯入」開始" : "請 Champion 建檔"}</div>
+                <div class="empty-state-hint">${this._isAdmin ? "點「+ 新增」或「表格匯入」開始" : "請內部負責窗口建檔"}</div>
               </div>
             </td></tr>
           ` : this._contacts.map(c => `
@@ -157,8 +157,8 @@ export const media = {
         { name: "name", label: "姓名", type: "text", value: existing?.name || "" },
         { name: "outlet", label: "媒體", type: "text", value: existing?.outlet || "" },
         { name: "beats", label: "負責主題(用 | 分隔)", type: "text", value: (existing?.beats || []).join("|") },
-        { name: "email", label: "email", type: "email", value: existing?.email || "" },
-        { name: "phone", label: "手機(選配 · 只 admin 看)", type: "text", value: existing?.phone || "" },
+        { name: "email", label: "電子郵件", type: "email", value: existing?.email || "" },
+        { name: "phone", label: "手機(選配 · 只管理員看)", type: "text", value: existing?.phone || "" },
         { name: "notes", label: "備註", type: "textarea", value: existing?.notes || "", rows: 3 },
       ],
       { title: existing ? "編輯記者" : "新增記者", icon: "📇" },
@@ -216,7 +216,7 @@ export const media = {
   async openRecommendModal() {
     const r = await modal.prompt(
       [
-        { name: "topic", label: "新聞稿主題(用 | 分隔多個 tags)", type: "text",
+        { name: "topic", label: "新聞稿主題(用 | 分隔多個標籤)", type: "text",
           placeholder: "例:環保|減塑|政府" },
       ],
       { title: "🎯 記者推薦", icon: "🎯", submitText: "推薦" },
@@ -254,13 +254,13 @@ export const media = {
       <div class="modal2-box" style="max-width:720px; max-height:80vh; overflow-y:auto">
         <div class="modal2-header">🎯 推薦結果 · ${topics.join(" + ")}</div>
         <p style="color:var(--text-tertiary); font-size:13px">
-          從 ${body.total_candidates} 位 active 記者推 · ${body.recommended} 位匹配
+          從 ${body.total_candidates} 位啟用記者推薦 · ${body.recommended} 位匹配
         </p>
         ${body.items.length === 0 ? `
           <div class="empty-state">
             <div class="empty-state-icon">🔍</div>
             <div class="empty-state-title">找不到匹配記者</div>
-            <div class="empty-state-hint">試試其他 topic · 例如「環保 / 政策 / AI」</div>
+            <div class="empty-state-hint">試試其他主題 · 例如「環保 / 政策 / 科技」</div>
           </div>
         ` : `
           <table class="media-table">
@@ -273,8 +273,8 @@ export const media = {
                   <td>${escapeHtml(c.outlet)}</td>
                   <td><b>${c.score}</b></td>
                   <td><small>
-                    匹配:${(c.reason.matched_topics || []).map(escapeHtml).join("/")} · jaccard=${escapeHtml(String(c.reason.jaccard))}<br>
-                    接受率 ${c.accepted_count}/${c.pitched_count} · recency=${escapeHtml(String(c.reason.recency_weight))}
+                    匹配:${(c.reason.matched_topics || []).map(escapeHtml).join("/")} · 主題重疊=${escapeHtml(String(c.reason.jaccard))}<br>
+                    接受率 ${c.accepted_count}/${c.pitched_count} · 近期權重=${escapeHtml(String(c.reason.recency_weight))}
                   </small></td>
                 </tr>
               `).join("")}
@@ -296,12 +296,12 @@ export const media = {
     m.className = "modal2-overlay";
     m.innerHTML = `
       <div class="modal2-box" style="max-width:480px">
-        <div class="modal2-header">📥 CSV 匯入</div>
+        <div class="modal2-header">📥 表格匯入</div>
         <form id="csv-form" class="modal2-form">
           <p style="font-size:13px; color:var(--text-secondary)">
-            必含欄位:<code>name, outlet, email</code><br>
-            選填:<code>beats(用 | 分隔)、phone, notes</code><br>
-            重複 email 自動 update(不覆寫 pitched_count)
+            必含欄位代號:<code>name, outlet, email</code>(姓名、媒體、電子郵件)<br>
+            選填欄位代號:<code>beats, phone, notes</code>(主題用 | 分隔、手機、備註)<br>
+            重複電子郵件會自動更新(不覆寫發稿次數)
           </p>
           <input type="file" name="file" accept=".csv,text/csv" required>
           <div class="modal2-actions">
@@ -323,7 +323,7 @@ export const media = {
         });
         if (!r.ok) {
           const err = await r.json().catch(() => ({}));
-          operationError("CSV 匯入", err);
+          operationError("表格匯入", err);
           return;
         }
         const body = await r.json();
@@ -332,7 +332,7 @@ export const media = {
         await this.load();
         this.render();
       } catch (e) {
-        networkError("CSV 匯入", e);
+        networkError("表格匯入", e);
       }
     });
   },

@@ -1,15 +1,15 @@
 /**
- * 承富 AI · Onboarding(v4.3 · 任務型 3 步)
+ * 承富智慧助理 · 首次引導(v4.3 · 任務型 3 步)
  *
  * 對齊老闆 top 3 任務:設計 / 提案撰寫 / 廠商聯繫
- * 不嚇跑資深同仁:不講 Level 03、不露技術字
+ * 不嚇跑資深同仁:不講第三級機敏、不露技術字
  * localStorage 記進度 · 中途離開可繼續
  */
 
 const STEPS = [
   {
-    title: "🎨 任務 1/5:設計 Brief 一鍵到位",
-    body: `資深設計師 90 分鐘寫 Brief、你 3 分鐘搞定。<br><br>
+    title: "🎨 任務 1/5:設計需求單一鍵到位",
+    body: `資深設計師 90 分鐘寫需求單、你 3 分鐘搞定。<br><br>
       <strong>試試:</strong>按 <kbd>⌘3</kbd> 進設計協作,告訴助手:<br>
       <code>「幫我想 3 個中秋節 FB / IG / LINE 主視覺方向,
       品牌是 XX 客戶,預算 5 萬,3 天要」</code><br><br>
@@ -22,10 +22,10 @@ const STEPS = [
   },
   {
     title: "🎯 任務 2/5:貼一段招標看值不值得投",
-    body: `60 頁招標須知,10 分鐘判斷 Go / No-Go。<br><br>
+    body: `60 頁招標須知,10 分鐘判斷承接或不承接。<br><br>
       <strong>試試:</strong>按 <kbd>⌘1</kbd> 進投標,把招標須知整段貼進對話,說:<br>
-      <code>「幫我 Go/No-Go · 我們有 8 週準備」</code><br><br>
-      它會回:8 維度評分 + 明確建議 + 如果 Go 要先做什麼。`,
+      <code>「幫我做承接評估 · 我們有 8 週準備」</code><br><br>
+      它會回:8 維度評分 + 明確建議 + 如果承接要先做什麼。`,
     next: "試了 · 下一步",
     action: () => {
       document.querySelector('[data-ws="1"]')?.scrollIntoView({ block: "center" });
@@ -47,37 +47,37 @@ const STEPS = [
   },
   {
     title: "🎤 任務 4/5:會議速記(v1.3 新)",
-    body: `週會錄音 1 小時 → 30 秒看完摘要 + action_items。<br><br>
-      <strong>試試:</strong>左側 sidebar「🎤 會議速記」<br>
+    body: `週會錄音 1 小時 → 30 秒看完摘要 + 待辦事項。<br><br>
+      <strong>試試:</strong>左側側邊欄「🎤 會議速記」<br>
       <ol>
         <li>上傳 m4a/mp3/wav(≤ 25MB)</li>
-        <li>等 1-3 分鐘 · Whisper 轉文字 + Haiku 結構化</li>
-        <li>看到摘要 / 決策 / action_items / 風險</li>
-        <li>「推到 Handoff」一鍵 append 到 project</li>
+        <li>等 1-3 分鐘 · 語音轉文字 + 快速模型結構化</li>
+        <li>看到摘要 / 決策 / 待辦事項 / 風險</li>
+        <li>「推到交棒卡」一鍵附加到專案</li>
       </ol>
-      <strong>📱 iPhone 用戶 · 4 設定必看 → 教學 → user-guide</strong>`,
-    next: "下一步 · 場勘 PWA →",
+      <strong>📱 iPhone 用戶 · 4 設定必看 → 教學 → 使用手冊</strong>`,
+    next: "下一步 · 場勘工具 →",
     action: () => {
-      document.querySelector('[data-view="meeting"]')?.scrollIntoView({ block: "center" });
-      highlight('[data-view="meeting"]');
+      document.querySelector('.sidebar-item[data-view="meeting"]')?.scrollIntoView({ block: "center" });
+      highlight('.sidebar-item[data-view="meeting"]');
     },
   },
   {
-    title: "📸 任務 5/5:場勘 PWA · iPhone 拍 + audio note(v1.3 新)",
-    body: `場勘照片留你手機沒人看到 · 設計師回去問東問西<br>v1.3 解法:iPhone 拍 1-5 張 + 30s 語音補述 + GPS · AI 自動結構化<br><br>
+    title: "📸 任務 5/5:場勘工具 · iPhone 拍 + 語音備註(v1.3 新)",
+    body: `場勘照片留你手機沒人看到 · 設計師回去問東問西<br>v1.3 解法:iPhone 拍 1-5 張 + 30 秒語音補述 + 定位 · 智慧助理自動結構化<br><br>
       <strong>iPhone 場勘流程:</strong>
       <ol>
-        <li>iPhone 開 launcher · 加到主畫面(Safari → 分享 → 加入主畫面)</li>
-        <li>跳「📸 場勘」 view · 拍照 + GPS</li>
+        <li>iPhone 開工作台 · 加到主畫面(Safari → 分享 → 加入主畫面)</li>
+        <li>跳「📸 場勘」頁面 · 拍照 + 定位</li>
         <li>每張照片旁可錄 🎙 30 秒語音(光線/客戶口頭備忘)</li>
-        <li>Whisper STT 轉文字 · 設計師事後逐字看</li>
-        <li>「推到 Handoff」 · site_issues 進 project</li>
+        <li>語音轉文字 · 設計師事後逐字看</li>
+        <li>「推到交棒卡」· 場勘問題進專案</li>
       </ol>
       <strong>⌨️ 按 ? 看所有快捷 · ⌘K 全域搜 · ❓教學 看完整 13 份手冊</strong>`,
     next: "開始工作 🚀",
     action: () => {
-      document.querySelector('[data-view="site"]')?.scrollIntoView({ block: "center" });
-      highlight('[data-view="site"]');
+      document.querySelector('.sidebar-item[data-view="site"]')?.scrollIntoView({ block: "center" });
+      highlight('.sidebar-item[data-view="site"]');
     },
   },
 ];
