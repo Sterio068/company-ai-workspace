@@ -16,6 +16,7 @@ export default defineConfig({
   testDir: './.',
   timeout: 30_000,
   fullyParallel: false,
+  workers: 1,
 
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost',
@@ -26,7 +27,7 @@ export default defineConfig({
 
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile',   use: { ...devices['iPhone 13'] } },
+    { name: 'mobile',   use: { ...devices['Pixel 5'], browserName: 'chromium' } },
   ],
 
   webServer: process.env.CI ? undefined : {
