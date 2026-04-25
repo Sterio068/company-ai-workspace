@@ -1321,60 +1321,129 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 .status-dot.warn { background: var(--orange); }
 .status-dot.err { background: var(--red); }
 
-/* ============================================================ Palette (⌘K) */
+/* ============================================================ Palette (⌘K) · macOS Spotlight 風 v1.4 polish */
 .palette-backdrop {
   position: fixed; inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s;
+  transition: opacity 0.18s;
   z-index: 100;
 }
 .palette-backdrop.open { opacity: 1; pointer-events: auto; }
 
 .palette {
   position: fixed;
-  top: 20vh;
+  top: 18vh;            /* macOS Spotlight 約在螢幕上方 1/4 */
   left: 50%;
-  transform: translateX(-50%) scale(0.95);
-  width: min(560px, 90vw);
-  background: var(--bg-modal, var(--bg-content));
-  border: 1px solid var(--border);
-  border-radius: var(--r-2xl);
-  box-shadow: var(--shadow-3);
+  transform: translateX(-50%) translateY(-12px) scale(0.96);
+  width: min(640px, 90vw);
+  /* Spotlight 風 vibrancy */
+  background: rgba(245, 245, 245, 0.86);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 0.5px solid rgba(255, 255, 255, 0.5);  /* 高光邊 · 玻璃效果 */
+  border-radius: 16px;
+  box-shadow:
+    0 22px 60px rgba(0, 0, 0, 0.30),
+    0 8px 20px rgba(0, 0, 0, 0.15),
+    0 0 0 0.5px rgba(0, 0, 0, 0.12);
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
-  transition: all 0.15s;
+  transition:
+    opacity 0.18s var(--ease-out-expo),
+    transform 0.28s var(--ease-spring);
   z-index: 101;
 }
-.palette.open { opacity: 1; transform: translateX(-50%) scale(1); pointer-events: auto; }
+.palette.open {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+[data-theme="dark"] .palette {
+  background: rgba(40, 40, 40, 0.82);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+@supports not (backdrop-filter: blur(20px)) {
+  .palette { background: rgba(245, 245, 245, 0.98); }
+  [data-theme="dark"] .palette { background: rgba(40, 40, 40, 0.98); }
+}
 
 .palette-input {
   width: 100%;
-  padding: var(--s-4) var(--s-5);
-  font-size: 17px;
+  padding: 18px 22px;
+  /* Spotlight 風 · 大字 + 細字距 */
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--border);
-  color: var(--text-primary);
+  border-bottom: 0.5px solid var(--separator);
+  color: var(--label-primary);
   outline: none;
-  font-family: inherit;
+  font-family: var(--font-system);
 }
 
-.palette-results { max-height: 400px; overflow-y: auto; padding: var(--s-2); }
+.palette-input::placeholder {
+  color: var(--label-tertiary);
+  font-weight: 300;
+}
+
+.palette-results {
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
 .palette-item {
-  display: flex; gap: var(--s-3);
-  padding: var(--s-2) var(--s-3);
-  border-radius: var(--r-md);
+  display: flex;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
   cursor: pointer;
   align-items: center;
+  transition: background 60ms;  /* Spotlight hover 很快 */
 }
+
 .palette-item.active,
-.palette-item:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
-.palette-icon { width: 24px; color: var(--text-secondary); }
-.palette-label { flex: 1; font-size: 14px; }
-.palette-hint { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono); }
+.palette-item:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.palette-item.active .palette-icon,
+.palette-item.active .palette-hint,
+.palette-item:hover .palette-icon,
+.palette-item:hover .palette-hint {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.palette-icon {
+  width: 24px;
+  font-size: 18px;
+  color: var(--label-secondary);
+  display: grid;
+  place-items: center;
+}
+
+.palette-label {
+  flex: 1;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+.palette-hint {
+  font-size: 11px;
+  color: var(--label-tertiary);
+  font-family: var(--font-mono);
+  letter-spacing: 0;
+  font-feature-settings: "tnum" 1;
+}
 
 .palette-footer {
   display: flex;

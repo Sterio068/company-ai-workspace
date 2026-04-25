@@ -130,7 +130,41 @@ const GLYPHS = {
               <line x1="35" y1="42" x2="65" y2="42" stroke="${"#888"}" stroke-width="4"/>
               <line x1="35" y1="55" x2="65" y2="55" stroke="${"#888"}" stroke-width="4"/>
               <line x1="35" y1="68" x2="55" y2="68" stroke="${"#888"}" stroke-width="4"/>`,
+
+  // ============================================================
+  // Workspace icon(對應 sidebar 5 工作區 · ⌘1-5)· v1.4 polish
+  // ============================================================
+  "ws1": `<circle cx="50" cy="50" r="40" fill="none" stroke="white" stroke-width="6"/>
+          <circle cx="50" cy="50" r="26" fill="none" stroke="white" stroke-width="6"/>
+          <circle cx="50" cy="50" r="12" fill="white"/>`,  // 投標 · 同心圓靶
+
+  "ws2": `<rect x="15" y="22" width="70" height="63" rx="6" fill="none" stroke="white" stroke-width="6"/>
+          <line x1="15" y1="38" x2="85" y2="38" stroke="white" stroke-width="6"/>
+          <rect x="28" y="14" width="6" height="14" rx="2" fill="white"/>
+          <rect x="66" y="14" width="6" height="14" rx="2" fill="white"/>
+          <circle cx="35" cy="55" r="4" fill="white"/>
+          <circle cx="50" cy="55" r="4" fill="white"/>
+          <circle cx="65" cy="55" r="4" fill="white"/>`,  // 活動 · 日曆
+
+  "ws3": `<path fill="white" d="M50 12 C 28 12 12 30 12 50 C 12 65 22 75 35 75 C 38 75 40 73 40 70 C 40 68 38 66 38 63 C 38 60 40 58 43 58 L 55 58 C 73 58 88 50 88 38 C 88 22 70 12 50 12 Z"/>
+          <circle cx="32" cy="38" r="5" fill="${"#FF3B30"}"/>
+          <circle cx="48" cy="28" r="5" fill="${"#FF9500"}"/>
+          <circle cx="65" cy="32" r="5" fill="${"#FFD60A"}"/>`,  // 設計 · 顏料盤
+
+  "ws4": `<path fill="white" d="M15 38 L15 62 L 35 62 L 65 80 L 65 20 L 35 38 Z"/>
+          <path fill="none" stroke="white" stroke-width="5" stroke-linecap="round" d="M75 35 Q 88 50 75 65"/>`,  // 公關 · 喇叭
+
+  "ws5": `<polyline fill="none" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" points="15,75 35,55 50,65 70,30 85,40"/>
+          <line x1="15" y1="85" x2="85" y2="85" stroke="white" stroke-width="4" stroke-linecap="round"/>
+          <line x1="15" y1="85" x2="15" y2="20" stroke="white" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="70" cy="30" r="4" fill="white"/>`,  // 營運 · 折線圖
 };
+
+/** 拿 workspace icon SVG · 給 sidebar 用 */
+export function getWorkspaceIconSVG(wsId, color) {
+  const glyph = GLYPHS[`ws${wsId}`] || GLYPHS.default;
+  return iconWrapper(color, glyph);
+}
 
 /** 取得指定 agent id 的完整 SVG icon string · 套 squircle + gradient + glyph
  *  @param {string} agentId · "00" ~ "09"
