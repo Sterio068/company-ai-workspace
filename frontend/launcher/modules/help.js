@@ -13,8 +13,47 @@ import { authFetch } from "./auth.js";
 import { escapeHtml, localizeVisibleText } from "./util.js";
 import { toast } from "./toast.js";
 import { modal } from "./modal.js";
+// vNext B + D + G · 教學大幅優化 · 角色 / 進度 / 搜尋
+import { ROLES, getRole, setRole, getRoleProgress, getProgress, resetProgress } from "./help-state.js";
+import { helpTutorial } from "./help-tutorial.js";
 
 const BASE = "/api-accounting";
+
+// ============================================================
+// vNext D · task ID → 人話 label · 給進度卡片用
+// ============================================================
+const TASK_LABELS = {
+  // 任務式 FTUE(help-tutorial.js 的 6 步)
+  "ftue-01-first-task": "完成首次任務式教學",
+  "ftue-02-handoff-card": "用過交棒卡 4 格",
+  "ftue-03-meeting-summary": "上傳過會議錄音",
+  // 教學任務(各角色 priority_tasks 用)
+  "tutorial-attach-pdf": "知道怎麼丟附件給 AI",
+  "tutorial-handoff-copy-line": "複製過 LINE 格式交棒卡",
+  "tutorial-tender-go-no-go": "用過招標 Go/No-Go 評估",
+  "tutorial-meeting-upload": "用過會議速記上傳",
+  "tutorial-design-fal": "用過 Fal.ai 生圖",
+  "tutorial-press-release": "寫過新聞稿草稿",
+  "tutorial-social-schedule": "排程過社群貼文",
+  "tutorial-knowledge-search": "搜過知識庫",
+  "tutorial-vendor-compare": "用過廠商比價表",
+  "tutorial-budget-quote": "做過專案報價毛利試算",
+  "tutorial-classification": "看懂資料分級 L1/L2/L3",
+  "tutorial-shortcuts": "記住 ⌘1-5 / ⌘K 快捷鍵",
+};
+
+function _taskLabel(taskId) {
+  return TASK_LABELS[taskId] || taskId;
+}
+
+function _highlightQuery(text, q) {
+  const escaped = escapeHtml(text);
+  if (!q) return escaped;
+  // q 來自使用者輸入 · regex 特殊字元先 escape
+  const safe = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(${safe})`, "gi");
+  return escaped.replace(re, "<mark>$1</mark>");
+}
 
 // v1.3 · 使用手冊完整列表(對應 frontend/launcher/user-guide/*.md)
 const USER_GUIDE_DOCS = [
@@ -51,6 +90,11 @@ export const help = {
     const root = document.getElementById("help-content");
     if (!root) return;
     root.innerHTML = `
+      <!-- vNext B + D + G · 教學大幅優化 · 角色 / 進度 / 搜尋 -->
+      ${this._renderRolePicker()}
+      ${this._renderProgress()}
+      ${this._renderSearchBox()}
+
       <div class="help-container">
         <aside class="help-nav">
           <a href="#help-quickstart" class="help-nav-item active" data-section="quickstart">🚀 快速開始</a>
@@ -86,6 +130,189 @@ export const help = {
       </div>
     `;
     this._bindNav();
+    this._bindRoleAndProgress();
+    this._bindSearch();
+  },
+
+  // ============================================================
+  // vNext B · 角色 picker · 點 → setRole + re-render
+  // ============================================================
+  _renderRolePicker() {
+    const current = getRole();
+    return `
+      <section class="help-role-section" style="padding:24px;background:var(--bg-content);border-radius:var(--r-2xl);margin-bottom:16px">
+        <h2 style="margin:0 0 6px;font-size:18px">👤 你是哪個角色?</h2>
+        <p style="margin:0;color:var(--text-secondary);font-size:13px">選了之後 · 教學會優先顯示跟你相關的內容。</p>
+        <div class="help-role-picker">
+          ${Object.entries(ROLES).filter(([k]) => k !== "unknown").map(([key, meta]) => `
+            <button class="help-role-card${current === key ? " active" : ""}" type="button" data-help-role="${key}">
+              <div class="help-role-icon">${meta.icon}</div>
+              <div class="help-role-label">${escapeHtml(meta.label)}</div>
+              <div class="help-role-desc">${escapeHtml(meta.desc)}</div>
+            </button>
+          `).join("")}
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn-primary" type="button" data-help-tutorial-start style="padding:8px 16px;border-radius:var(--r-md);background:var(--accent);color:white;border:none;cursor:pointer;font-weight:500">
+            🚀 重新看 5 分鐘任務式教學
+          </button>
+          <button class="btn-ghost" type="button" data-help-progress-reset style="padding:8px 14px;border-radius:var(--r-md);background:var(--bg-base);border:1px solid var(--border);color:var(--text-secondary);cursor:pointer">
+            重設進度
+          </button>
+        </div>
+      </section>
+    `;
+  },
+
+  // ============================================================
+  // vNext D · 進度 bar · 角色 task 完成度
+  // ============================================================
+  _renderProgress() {
+    const role = getRole();
+    const meta = ROLES[role] || ROLES.unknown;
+    const { done, total, percent } = getRoleProgress();
+    const progress = getProgress();
+    if (total === 0) {
+      return `
+        <section class="help-progress-card">
+          <div class="help-progress-row">
+            <div class="help-progress-text">尚未選角色 · 選一個之後會看到「為你定制的優先學習清單」</div>
+          </div>
+        </section>
+      `;
+    }
+    return `
+      <section class="help-progress-card">
+        <div class="help-progress-row">
+          <div class="help-progress-text"><b>${meta.icon} ${escapeHtml(meta.label)}</b> · 你已掌握的核心任務</div>
+          <div class="help-progress-pct">${done} / ${total} · ${percent}%</div>
+        </div>
+        <div class="help-progress-bar-outer">
+          <div class="help-progress-bar-inner" style="width:${percent}%"></div>
+        </div>
+        <ul class="help-task-list" style="margin-top:12px">
+          ${meta.priority_tasks.map(taskId => {
+            const isDone = !!progress[taskId];
+            const label = _taskLabel(taskId);
+            return `
+              <li class="help-task-item${isDone ? " done" : ""}">
+                <span class="help-task-check">${isDone ? "✓" : "○"}</span>
+                <span>${escapeHtml(label)}</span>
+              </li>
+            `;
+          }).join("")}
+        </ul>
+      </section>
+    `;
+  },
+
+  // ============================================================
+  // vNext G · 教學搜尋 · keyword → 對應 section / doc
+  // ============================================================
+  _renderSearchBox() {
+    return `
+      <section style="margin-bottom:16px">
+        <input type="search" class="help-search-box" id="help-search-input"
+               placeholder="搜教學...(例:「會議」「招標」「LINE」「快捷鍵」)"
+               aria-label="搜尋教學">
+        <div class="help-search-results" id="help-search-results" style="display:none"></div>
+      </section>
+    `;
+  },
+
+  _bindRoleAndProgress() {
+    document.querySelectorAll("[data-help-role]").forEach(el => {
+      el.addEventListener("click", () => {
+        // dataset.helpRole(camelCase) · 對應 data-help-role(kebab)
+        setRole(el.dataset.helpRole || el.getAttribute("data-help-role"));
+        this.render();
+      });
+    });
+    document.querySelector("[data-help-tutorial-start]")?.addEventListener("click", () => {
+      helpTutorial.reset();
+      helpTutorial.start();
+    });
+    document.querySelector("[data-help-progress-reset]")?.addEventListener("click", () => {
+      if (confirm("重設教學進度?已完成的勾選會清空 · 但實際工作包不會動。")) {
+        resetProgress();
+        this.render();
+      }
+    });
+  },
+
+  _bindSearch() {
+    const input = document.getElementById("help-search-input");
+    const results = document.getElementById("help-search-results");
+    if (!input || !results) return;
+
+    // 索引:section + doc + role 標題
+    const HELP_INDEX = [
+      { id: "help-quickstart", title: "🚀 快速開始", body: "5 分鐘新人入門 工作區 對話 交棒" },
+      { id: "help-newfeatures", title: "🆕 v1.2 新功能", body: "會議速記 媒體名單 社群排程 場勘" },
+      { id: "help-workspaces", title: "🎯 5 個工作區", body: "投標 活動 設計 公關 營運" },
+      { id: "help-agents", title: "🤖 10 個助手", body: "主管家 投標顧問 設計師 公關 會計 會議速記" },
+      { id: "help-shortcuts", title: "⌨️ 快捷鍵", body: "⌘K ⌘1 ⌘2 ⌘3 ⌘4 ⌘5 ⌘P ⌘A ⌘M" },
+      { id: "help-classification", title: "🔒 資料分級", body: "L1 L2 L3 機敏 PDPA" },
+      { id: "help-doc-quickstart-v1.3", title: "🚀 v1.3 快速開始", body: "5 分鐘 新人 上手" },
+      { id: "help-doc-training-v1.3", title: "🎓 v1.3 教育訓練", body: "15 分鐘 詳細教案" },
+      { id: "help-doc-error-codes", title: "🚨 錯誤訊息對照表", body: "30+ error code 故障 修復" },
+      { id: "help-doc-troubleshooting-v1.3", title: "🔧 v1.3 故障排除", body: "21 症狀 修法" },
+      { id: "help-doc-mobile-ios", title: "📱 iPhone 完整設定", body: "場勘 PWA 拍照 GPS 麥克風" },
+      { id: "help-doc-slash-commands", title: "⌨️ 快速命令", body: "⌘K /know /meet /vendor 27 快捷鍵" },
+      { id: "help-doc-handoff-card", title: "📋 交棒 4 格卡", body: "目標 限制 素材 下一步 LINE Email" },
+      { id: "help-doc-knowledge-search", title: "📚 知識庫搜尋", body: "5 範例 全文搜 引用" },
+      { id: "help-doc-dashboard-metrics", title: "📊 首頁指標解讀", body: "用量 預算 ROI 標案漏斗" },
+      { id: "help-doc-audio-note-sop", title: "🎙 場勘語音備註", body: "30 秒 語音 STT 設計師" },
+      { id: "help-doc-social-oauth-fallback", title: "🔌 社群授權降級", body: "Meta 審核期 mock 排程" },
+      { id: "help-doc-admin-permissions", title: "🔐 管理員權限對照", body: "ADMIN USER 匿名 7 preset 28 權限" },
+      { id: "help-doc-frontend-endpoints", title: "🔌 前端 ↔ 後端對照", body: "module API 串接" },
+      { id: "help-secrets", title: "🔐 服務金鑰管理", body: "Anthropic OpenAI Fal.ai Keychain" },
+    ];
+
+    let timer;
+    input.addEventListener("input", () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const q = input.value.trim().toLowerCase();
+        if (q.length < 1) {
+          results.style.display = "none";
+          return;
+        }
+        const matches = HELP_INDEX.filter(item =>
+          item.title.toLowerCase().includes(q) ||
+          item.body.toLowerCase().includes(q)
+        ).slice(0, 8);
+        if (!matches.length) {
+          results.innerHTML = `<div class="help-search-result" style="color:var(--text-secondary)">沒找到「${escapeHtml(input.value)}」相關教學</div>`;
+          results.style.display = "block";
+          return;
+        }
+        results.innerHTML = matches.map(m => `
+          <div class="help-search-result" data-jump="${m.id}">
+            <b>${_highlightQuery(m.title, q)}</b>
+            <div style="color:var(--text-secondary);font-size:12px;margin-top:2px">${_highlightQuery(m.body, q)}</div>
+          </div>
+        `).join("");
+        results.style.display = "block";
+        results.querySelectorAll("[data-jump]").forEach(el => {
+          el.addEventListener("click", () => {
+            const target = document.getElementById(el.dataset.jump);
+            if (target) {
+              target.scrollIntoView({ behavior: "smooth", block: "start" });
+              results.style.display = "none";
+              input.value = "";
+              // 對應 nav item 也標 active
+              const navItem = document.querySelector(`.help-nav-item[data-section="${el.dataset.jump.replace("help-", "")}"], .help-nav-item[data-doc="${el.dataset.jump.replace("help-doc-", "")}"]`);
+              if (navItem) {
+                document.querySelectorAll(".help-nav-item").forEach(x => x.classList.remove("active"));
+                navItem.classList.add("active");
+                if (navItem.dataset.doc) this._loadDoc(navItem.dataset.doc);
+              }
+            }
+          });
+        });
+      }, 200);
+    });
   },
 
   _bindNav() {

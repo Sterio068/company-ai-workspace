@@ -1,142 +1,101 @@
 /**
- * 承富智慧助理 · 首次引導(v4.3 · 任務型 3 步)
+ * 承富智慧助理 · 首次引導(v4.3 + vNext 整合)
  *
- * 對齊老闆 top 3 任務:設計 / 提案撰寫 / 廠商聯繫
- * 不嚇跑資深同仁:不講第三級機敏、不露技術字
- * localStorage 記進度 · 中途離開可繼續
+ * 主路徑:角色 picker → helpTutorial(任務式 6 步)
+ * 對齊老闆 top 5 任務(舊 STEPS 內容已移到 help-tutorial.js)
+ *
+ * 此檔保留 window.tour 介面 · 給 app.js 呼叫 · 真實作在 modules/help-tutorial.js
+ * Note · 此檔仍是 non-module(<script src> 載入) · 用 dynamic import 拿 module。
  */
 
-const STEPS = [
-  {
-    title: "🎨 任務 1/5:設計需求單一鍵到位",
-    body: `資深設計師 90 分鐘寫需求單、你 3 分鐘搞定。<br><br>
-      <strong>試試:</strong>按 <kbd>⌘3</kbd> 進設計協作,告訴助手:<br>
-      <code>「幫我想 3 個中秋節 FB / IG / LINE 主視覺方向,
-      品牌是 XX 客戶,預算 5 萬,3 天要」</code><br><br>
-      它會直接產出:3 組方向 + 色調建議 + 每個尺寸的素材清單。`,
-    next: "試了 · 下一步",
-    action: () => {
-      document.querySelector('[data-ws="3"]')?.scrollIntoView({ block: "center" });
-      highlight('[data-ws="3"]');
-    },
-  },
-  {
-    title: "🎯 任務 2/5:貼一段招標看值不值得投",
-    body: `60 頁招標須知,10 分鐘判斷承接或不承接。<br><br>
-      <strong>試試:</strong>按 <kbd>⌘1</kbd> 進投標,把招標須知整段貼進對話,說:<br>
-      <code>「幫我做承接評估 · 我們有 8 週準備」</code><br><br>
-      它會回:8 維度評分 + 明確建議 + 如果承接要先做什麼。`,
-    next: "試了 · 下一步",
-    action: () => {
-      document.querySelector('[data-ws="1"]')?.scrollIntoView({ block: "center" });
-      highlight('[data-ws="1"]');
-    },
-  },
-  {
-    title: "🎪 任務 3/5:廠商比價信一鍵產",
-    body: `發 10 家廠商問報價,不用再複製貼上 10 次。<br><br>
-      <strong>試試:</strong>按 <kbd>⌘2</kbd> 進活動執行,說:<br>
-      <code>「請 5 家音響廠商報『200 人記者會 · 3 小時 · 台北』,
-      給我比價信範本」</code><br><br>
-      送前人工看一次,再手動送(v1.1 會加自動群發)。`,
-    next: "下一步 · 看 v1.3 新功能 →",
-    action: () => {
-      document.querySelector('[data-ws="2"]')?.scrollIntoView({ block: "center" });
-      highlight('[data-ws="2"]');
-    },
-  },
-  {
-    title: "🎤 任務 4/5:會議速記(v1.3 新)",
-    body: `週會錄音 1 小時 → 30 秒看完摘要 + 待辦事項。<br><br>
-      <strong>試試:</strong>左側側邊欄「🎤 會議速記」<br>
-      <ol>
-        <li>上傳 m4a/mp3/wav(≤ 25MB)</li>
-        <li>等 1-3 分鐘 · 語音轉文字 + 快速模型結構化</li>
-        <li>看到摘要 / 決策 / 待辦事項 / 風險</li>
-        <li>「推到交棒卡」一鍵附加到專案</li>
-      </ol>
-      <strong>📱 iPhone 用戶 · 4 設定必看 → 教學 → 使用手冊</strong>`,
-    next: "下一步 · 場勘工具 →",
-    action: () => {
-      document.querySelector('.sidebar-item[data-view="meeting"]')?.scrollIntoView({ block: "center" });
-      highlight('.sidebar-item[data-view="meeting"]');
-    },
-  },
-  {
-    title: "📸 任務 5/5:場勘工具 · iPhone 拍 + 語音備註(v1.3 新)",
-    body: `場勘照片留你手機沒人看到 · 設計師回去問東問西<br>v1.3 解法:iPhone 拍 1-5 張 + 30 秒語音補述 + 定位 · 智慧助理自動結構化<br><br>
-      <strong>iPhone 場勘流程:</strong>
-      <ol>
-        <li>iPhone 開工作台 · 加到主畫面(Safari → 分享 → 加入主畫面)</li>
-        <li>跳「📸 場勘」頁面 · 拍照 + 定位</li>
-        <li>每張照片旁可錄 🎙 30 秒語音(光線/客戶口頭備忘)</li>
-        <li>語音轉文字 · 設計師事後逐字看</li>
-        <li>「推到交棒卡」· 場勘問題進專案</li>
-      </ol>
-      <strong>⌨️ 按 ? 看所有快捷 · ⌘K 全域搜 · ❓教學 看完整 13 份手冊</strong>`,
-    next: "開始工作 🚀",
-    action: () => {
-      document.querySelector('.sidebar-item[data-view="site"]')?.scrollIntoView({ block: "center" });
-      highlight('.sidebar-item[data-view="site"]');
-    },
-  },
-];
+let _modules = null;
+async function _loadModules() {
+  if (_modules) return _modules;
+  const [tutorialMod, stateMod] = await Promise.all([
+    import("/static/modules/help-tutorial.js"),
+    import("/static/modules/help-state.js"),
+  ]);
+  _modules = {
+    helpTutorial: tutorialMod.helpTutorial,
+    setRole: stateMod.setRole,
+    getRole: stateMod.getRole,
+    ROLES: stateMod.ROLES,
+  };
+  return _modules;
+}
 
-function highlight(selector) {
-  document.querySelectorAll(".onboarding-highlight").forEach(el => el.classList.remove("onboarding-highlight"));
-  const el = document.querySelector(selector);
-  if (el) {
-    el.classList.add("onboarding-highlight");
-    setTimeout(() => el.classList.remove("onboarding-highlight"), 3000);
+/**
+ * 第一次登入 · 沒選過角色 → 先角色 picker · 再開 tutorial
+ * 已選過角色 → 直接開 tutorial
+ */
+async function _showRolePickerThenTutorial() {
+  const { helpTutorial, setRole, getRole, ROLES } = await _loadModules();
+  // 已選 OK · 直接開 tutorial
+  if (getRole() !== "unknown") {
+    helpTutorial.start();
+    return;
   }
+
+  // 沒選 · 用簡單 modal 問
+  const overlay = document.createElement("div");
+  overlay.className = "tutorial-backdrop open";
+  overlay.style.zIndex = "650";
+
+  const box = document.createElement("div");
+  box.className = "tutorial-bubble open";
+  box.style.zIndex = "651";
+  box.innerHTML = `
+    <div class="tutorial-icon">👋</div>
+    <h2 class="tutorial-title">歡迎來到承富 AI</h2>
+    <p class="tutorial-body" style="text-align:center;color:var(--text-secondary)">
+      先告訴我你的角色 · 我會給你最相關的教學
+    </p>
+    <div class="help-role-picker" id="onboarding-role-picker">
+      ${Object.entries(ROLES).filter(([k]) => k !== "unknown").map(([key, meta]) => `
+        <button class="help-role-card" type="button" data-role="${key}">
+          <div class="help-role-icon">${meta.icon}</div>
+          <div class="help-role-label">${meta.label}</div>
+          <div class="help-role-desc">${meta.desc}</div>
+        </button>
+      `).join("")}
+    </div>
+    <div class="tutorial-actions">
+      <button class="btn-ghost" id="onboarding-skip-role">先不選 · 直接開始</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.body.appendChild(box);
+
+  function close() {
+    overlay.remove();
+    box.remove();
+  }
+
+  box.querySelectorAll(".help-role-card").forEach(card => {
+    card.addEventListener("click", () => {
+      setRole(card.dataset.role);
+      close();
+      helpTutorial.start();
+    });
+  });
+  box.querySelector("#onboarding-skip-role").addEventListener("click", () => {
+    close();
+    helpTutorial.start();
+  });
 }
 
 const tour = {
-  idx: 0,
-
+  /** 啟動 · 配合舊 app.js 介面 */
   start() {
-    const savedIdx = parseInt(localStorage.getItem("chengfu-tour-idx") || "0");
-    this.idx = (savedIdx > 0 && savedIdx < STEPS.length) ? savedIdx : 0;
-    document.getElementById("tour-backdrop").classList.add("open");
-    document.getElementById("tour-bubble").classList.add("open");
-    document.getElementById("tour-step-total").textContent = STEPS.length;
-    this.render();
+    _showRolePickerThenTutorial().catch(e => console.warn("[onboarding] start failed", e));
   },
 
-  render() {
-    const step = STEPS[this.idx];
-    document.getElementById("tour-step-n").textContent = this.idx + 1;
-    document.getElementById("tour-title").innerHTML = step.title;
-    document.getElementById("tour-body").innerHTML = step.body;
-    document.getElementById("tour-next").textContent = step.next;
-    if (step.action) {
-      try { step.action(); } catch (e) {}
-    }
-    localStorage.setItem("chengfu-tour-idx", this.idx);
-  },
-
-  next() {
-    this.idx++;
-    if (this.idx >= STEPS.length) this.finish();
-    else this.render();
-  },
-
-  skip() { this.finish(); },
-
-  finish() {
-    document.getElementById("tour-backdrop").classList.remove("open");
-    document.getElementById("tour-bubble").classList.remove("open");
+  /** 跳過 */
+  async skip() {
+    const { helpTutorial } = await _loadModules();
+    helpTutorial.skip();
     localStorage.setItem("chengfu-tour-done", new Date().toISOString());
-    localStorage.removeItem("chengfu-tour-idx");
-    document.querySelectorAll(".onboarding-highlight").forEach(el => el.classList.remove("onboarding-highlight"));
-    if (window.toast) toast.success("🎉 完成!有問題隨時按 ? 查快捷鍵,或 ⌘K 全域搜尋");
   },
 };
 
 window.tour = tour;
-
-document.addEventListener("keydown", e => {
-  if (e.key === "Escape" && document.getElementById("tour-bubble")?.classList.contains("open")) {
-    tour.skip();
-  }
-});
