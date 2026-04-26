@@ -69,21 +69,30 @@ def _ensure_aware(dt):
     return dt
 
 
-def compute_meta(db, conv: dict, last_seen: Optional[datetime] = None) -> dict:
+def compute_meta(db, conv: dict, last_seen: Optional[datetime] = None,
+                 _msgs: Optional[list] = None) -> dict:
     """從 conversation doc + messages 計算單一對話 meta
 
     Args:
         db: pymongo db
         conv: conversation doc(LibreChat conversations collection)
         last_seen: user 最後看 conversation 的時間(算未讀)
+        _msgs: v1.10 perf · 由 caller 預先批次查好的 messages list
+              (避免 N+1 · get_recent_metas 改 $in batch query)
+              不傳則 fallback 走原本 per-conv query
     """
     conv_id = conv.get("conversationId") or str(conv.get("_id"))
     title = conv.get("title") or "(無標題)"
 
     # 拿最近 20 訊 · 算 last_user / last_assistant / mentions
-    msgs = list(db.messages.find(
-        {"conversationId": conv_id}
-    ).sort("createdAt", -1).limit(20))
+    if _msgs is not None:
+        # batch 模式 · _msgs 已經是這個 conv 的訊息 · 已 sort
+        msgs = _msgs[:20]
+    else:
+        # legacy 單筆模式 · per-conv query(N+1 · 不建議)
+        msgs = list(db.messages.find(
+            {"conversationId": conv_id}
+        ).sort("createdAt", -1).limit(20))
 
     last_user = None
     last_asst = None
@@ -165,10 +174,35 @@ def get_user_last_seen(db, user_email: str) -> dict:
 
 
 def get_recent_metas(db, user_email: str, user_id, limit: int = 100) -> list:
-    """一次拿 user 所有最近對話的 metadata · 給 Smart Folder 查詢用"""
+    """一次拿 user 所有最近對話的 metadata · 給 Smart Folder 查詢用
+
+    v1.10 perf · 改 batch query · 從 1+N(82 query)降到 1+1+1=3 query
+      1. user_preferences.find_one(last_seen)
+      2. conversations.find(user) sorted limit=N
+      3. messages.find(conversationId IN [N convs]) sorted
+
+    對應 perf-optimizer 黃 2 修
+    """
     last_seen_map = get_user_last_seen(db, user_email)
+    convs = list(iter_user_conversations(db, user_id, limit=limit))
+    if not convs:
+        return []
+
+    # v1.10 batch · 一次拿所有 conv 的 messages · 端 client 分組
+    conv_ids = [c.get("conversationId") or str(c.get("_id")) for c in convs]
+    # 加 conversationId index 後 · 此 query 走 indexed lookup(v1.8 main.py 加的)
+    all_msgs = list(db.messages.find(
+        {"conversationId": {"$in": conv_ids}}
+    ).sort([("conversationId", 1), ("createdAt", -1)]))
+    msgs_by_conv: dict = {}
+    for m in all_msgs:
+        cid = m.get("conversationId")
+        # 每個 conv 只留 20 筆(原 limit)
+        if len(msgs_by_conv.setdefault(cid, [])) < 20:
+            msgs_by_conv[cid].append(m)
+
     metas = []
-    for conv in iter_user_conversations(db, user_id, limit=limit):
+    for conv in convs:
         try:
             cid = conv.get("conversationId") or str(conv.get("_id"))
             last_seen_iso = last_seen_map.get(cid)
@@ -176,7 +210,13 @@ def get_recent_metas(db, user_email: str, user_id, limit: int = 100) -> list:
                 datetime.fromisoformat(last_seen_iso)
                 if isinstance(last_seen_iso, str) else None
             )
-            metas.append(compute_meta(db, conv, last_seen=last_seen))
+            # 傳預先 batch 好的 _msgs 進去 · compute_meta 不再單獨 query
+            cached_msgs = msgs_by_conv.get(cid, [])
+            meta = compute_meta(db, conv, last_seen=last_seen, _msgs=cached_msgs)
+            # v1.10 · 把 batch 好的 messages 也黏在 meta 上 · 給 detect_deadline 重用
+            # 用 _ 前綴避免污染 public schema(API 序列化時前端不會看到)
+            meta["_cached_msgs"] = cached_msgs
+            metas.append(meta)
         except Exception as e:
             logger.warning("[conv-meta] compute fail %s: %s", conv.get("_id"), e)
     return metas
