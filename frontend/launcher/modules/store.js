@@ -89,9 +89,16 @@ function _fire(key, val) {
   // legacy CustomEvent · 給沒換過來的舊 module
   const def = SCHEMA[key];
   if (def?.legacyEvent && typeof document !== "undefined") {
-    document.dispatchEvent(new CustomEvent(def.legacyEvent, {
-      detail: key === "engine" ? { id: val } : (key === "activeWorkspace" ? { ws: val } : { value: val }),
-    }));
+    let detail;
+    if (key === "engine") {
+      detail = { id: val };
+    } else if (key === "activeWorkspace") {
+      // v1.13 · dock.js / mobile.js 需要 { ws, view } · 維持原 ws-changed event 契約
+      detail = { ws: val == null ? "" : String(val), view: "workspace" };
+    } else {
+      detail = { value: val };
+    }
+    document.dispatchEvent(new CustomEvent(def.legacyEvent, { detail }));
   }
 }
 

@@ -1346,7 +1346,9 @@ export const app = {
     document.querySelectorAll(".sidebar-item.ws-nav").forEach(el => {
       el.classList.toggle("active", String(el.dataset.ws) === String(n));
     });
-    document.dispatchEvent(new CustomEvent("ws-changed", { detail: { ws: String(n), view: "workspace" } }));
+    // v1.13 · 透過 store 派 ws-changed event(取代手動 dispatchEvent)
+    // store 內部會 fire engine-changed event 兼容 legacy listener
+    store.set("activeWorkspace", String(n));
     if (options.replaceHash !== false) history.pushState("", document.title, `#workspace-${n}`);
   },
 
