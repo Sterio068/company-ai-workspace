@@ -17,7 +17,8 @@ v1.8 hardening:
   - 加 hashlib.sha256 stable id(取代 Python hash())· 跨重啟 dismiss 仍有效
 """
 from datetime import datetime, timedelta, timezone
-from typing import Optional, List
+from typing import Optional, List, Dict
+import asyncio
 import logging
 
 from fastapi import APIRouter, HTTPException, Request
@@ -30,6 +31,17 @@ router = APIRouter(tags=["admin"])
 
 # Cache TTL · 30 分鐘 · 對齊「掃描頻率」承諾
 CACHE_TTL_SECONDS = 30 * 60
+
+# v1.10 perf · per-user scan lock · 防 thundering herd
+# 10 admin 同時 cache miss → 全部撞 _run_scan → 80 conv × 3 query × 10 = 大量 query
+# 加 lock 後同 user 同時只跑一個 scan · 後到的 cooperate cache
+_scan_locks: Dict[str, asyncio.Lock] = {}
+
+
+def _get_scan_lock(user_email: str) -> asyncio.Lock:
+    if user_email not in _scan_locks:
+        _scan_locks[user_email] = asyncio.Lock()
+    return _scan_locks[user_email]
 
 # ============================================================
 # Models
@@ -114,17 +126,35 @@ def _run_scan(db, user_email: str) -> list:
 # Endpoints
 # ============================================================
 @router.get("/admin/ai-suggestions")
-def list_ai_suggestions(request: Request, _admin: str = require_admin_dep()):
-    """讀 cache · 沒就掃 · 自動過濾 dismissed · cron 路徑解 X-User-Email"""
+async def list_ai_suggestions(request: Request, _admin: str = require_admin_dep()):
+    """讀 cache · 沒就掃 · 自動過濾 dismissed · cron 路徑解 X-User-Email
+
+    v1.10 perf · async + per-user scan lock(防 thundering herd)
+    cache miss 時 · 同 user 同時只一個 scan · 其餘等 lock 後讀 cache
+    """
     from main import db
     _admin = _resolve_admin_email(request, _admin)
     cache = _get_cache(db, _admin)
+
     if cache:
         suggestions = cache["suggestions"]
         scanned_at = cache["scanned_at"]
     else:
-        suggestions = _run_scan(db, _admin)
-        scanned_at = datetime.now(timezone.utc)
+        # cache miss · 走 lock · 防 N 個並發 request 撞同一掃描
+        lock = _get_scan_lock(_admin)
+        async with lock:
+            # 拿 lock 後再 check cache · 前一個 holder 可能已寫入
+            cache = _get_cache(db, _admin)
+            if cache:
+                suggestions = cache["suggestions"]
+                scanned_at = cache["scanned_at"]
+            else:
+                # 真要掃 · sync 函式放 thread pool · 不阻塞 event loop
+                loop = asyncio.get_event_loop()
+                suggestions = await loop.run_in_executor(
+                    None, _run_scan, db, _admin
+                )
+                scanned_at = datetime.now(timezone.utc)
 
     dismissed = _get_dismissed_ids(db, _admin)
     suggestions = [s for s in suggestions if s.get("id") not in dismissed]

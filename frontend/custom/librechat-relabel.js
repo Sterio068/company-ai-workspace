@@ -15,7 +15,7 @@
   "use strict";
 
   // ============================================================
-  // 路線 A · 所有 /c/* 或 /chat/* URL 都強制彈回承富 Launcher
+  // 路線 A · 所有 /c/* 或 /chat/* URL 都強制彈回 Launcher
   // 含:初次載入 + React SPA 導航(監聽 history 變化)
   // ============================================================
   // v4.6 · 同時抓 pathname 與 hash · 防 LibreChat 升版改成 hash router
@@ -35,7 +35,7 @@
     const hashRaw = (window.location.hash || "").replace(/^#/, "");
     const target = _matchChatPath(path) || _matchChatPath(hashRaw);
     if (target) {
-      console.info("[ChengFu] 重導到承富 Launcher:", target, "from", path, hashRaw);
+      console.info("[launcher-relabel] redirect to launcher:", target, "from", path, hashRaw);
       window.location.replace(target);
       return true;
     }

@@ -66,18 +66,26 @@ def extract_dates(text: str, base_year: int = None) -> list:
 # ============================================================
 # Detector 1 · deadline
 # ============================================================
-def detect_deadline(db, conv_meta: dict) -> Optional[dict]:
+def detect_deadline(db, conv_meta: dict, _msgs: Optional[list] = None) -> Optional[dict]:
     """掃對話最近 20 訊找日期 · 若有 < 14 天的 deadline 觸發
+
+    Args:
+        db: pymongo db(_msgs 給就不用)
+        conv_meta: meta dict from conversation_meta.compute_meta
+        _msgs: v1.10 perf · caller 預先 batch 好的 messages list
+              (避免 N+1 · detect_all 改 batch)
 
     Returns:
         suggestion dict or None
     """
     conv_id = conv_meta["conversation_id"]
-    msgs = list(db.messages.find({"conversationId": conv_id})
-                .sort("createdAt", -1).limit(20))
+    if _msgs is not None:
+        msgs = _msgs[:20]
+    else:
+        msgs = list(db.messages.find({"conversationId": conv_id})
+                    .sort("createdAt", -1).limit(20))
 
     all_dates = []
-    sample_text = []
     last_msg_time = None
     for m in msgs:
         text = m.get("text") or m.get("content") or ""
@@ -88,7 +96,6 @@ def detect_deadline(db, conv_meta: dict) -> Optional[dict]:
             last_msg_time = ts
         dates = extract_dates(text)
         all_dates.extend(dates)
-        sample_text.append(text[:80])
 
     if not all_dates:
         return None
@@ -206,13 +213,18 @@ def detect_all(db, metas: list, suppressed_types: set = None) -> list:
         db: pymongo db
         metas: list of conversation meta dicts(來自 conversation_meta.get_recent_metas)
         suppressed_types: user 已關閉的 type set
+
+    v1.10 perf · 一次 batch 拿所有 conv 的 messages · 避免 detect_deadline N+1
     """
     suppressed_types = suppressed_types or set()
     results = []
 
+    # v1.10 perf · meta 內若有 _cached_msgs(get_recent_metas batch 好的)
+    # detect_deadline 用 cache · 否則 fallback per-conv query
     for meta in metas:
+        cached = meta.get("_cached_msgs")
         for detector_fn, name in [
-            (lambda m: detect_deadline(db, m), "deadline"),
+            (lambda m, c=cached: detect_deadline(db, m, _msgs=c), "deadline"),
             (lambda m: detect_reply(m), "reply"),
             (lambda m: detect_stale(m), "stale"),
         ]:
