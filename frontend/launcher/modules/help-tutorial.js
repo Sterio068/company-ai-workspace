@@ -22,7 +22,7 @@ const STEPS = [
   {
     id: "welcome",
     icon: "👋",
-    title: "歡迎來到承富 AI",
+    title: "歡迎使用",
     body: () => {
       const role = getRole();
       const meta = ROLES[role] || ROLES.unknown;
@@ -80,7 +80,7 @@ const STEPS = [
       <p>點下去 · 系統會把這串對話 + AI 整理的清單 · 包裝成一個「工作包」。</p>
       <p style="background:color-mix(in srgb, var(--blue) 8%, transparent);padding:10px;border-radius:6px;font-size:13px;border-left:3px solid var(--blue)">
         <b>為什麼要包裝?</b><br>
-        ChatGPT 的對話只是聊天紀錄。承富的「工作包」會把客戶、預算、期限、對話、附件、下一步、誰負責、交棒卡 · 全部結構化保存。下次接續不用從頭講。
+        ChatGPT 的對話只是聊天紀錄。你的「工作包」會把客戶、預算、期限、對話、附件、下一步、誰負責、交棒卡 · 全部結構化保存。下次接續不用從頭講。
       </p>
     `,
     cta: "懂了 · 下一步",
@@ -148,10 +148,9 @@ const STEPS = [
         💡 Dock 預設放 7 個常用助手 · 你可以調整成自己的順序。順序記在這台電腦的瀏覽器裡。
       </p>
     `,
-    cta: "知道了 · 完成教學",
-    next: "done",
+    cta: "下一步 · 看頂部 menu bar",
+    next: "macos-menubar",
     onEnter: () => {
-      // 試圖把 dock 高亮一下
       const dock = document.querySelector(".dock");
       if (dock) {
         dock.style.transform = "translateY(-8px) scale(1.02)";
@@ -160,12 +159,63 @@ const STEPS = [
       }
     },
   },
+  // v1.7 · 加 4 step · 教 macOS 新元件
+  {
+    id: "macos-menubar", icon: "📋",
+    title: "Step 6 · 頂部 Menu Bar",
+    body: () => `
+      <p>畫面最上面藍色那條 · 就像 macOS 系統選單列。</p>
+      <ul style="font-size:14px;line-height:1.8">
+        <li><b>檔案</b> · 新對話 ⌘N · 知識庫搜尋 ⌘K</li>
+        <li><b>顯示</b> · 切工作區 ⌘1-5 · 切深淺色 ⌘⇧L</li>
+        <li><b>視窗</b> · 最小化 ⌘M · 全螢幕 ⌃⌘F</li>
+        <li><b>右上 status</b> · 模型 / 用量 / 通知 / 用戶 / 時間</li>
+      </ul>`,
+    cta: "下一步 · 看通知中心", next: "macos-nc",
+  },
+  {
+    id: "macos-nc", icon: "🔔",
+    title: "Step 7 · 通知中心(Admin)",
+    body: () => `
+      <p>點頂部右上 🔔 · 從右滑出 4 widget:</p>
+      <ul style="font-size:14px;line-height:1.8">
+        <li><b>本月用量</b> / <b>系統狀態</b> / <b>主管家建議</b> / <b>小提示</b></li>
+      </ul>
+      <p style="font-size:13px;color:var(--text-secondary);margin-top:12px">⌃⌘N 一鍵開關</p>`,
+    cta: "下一步 · 看控制中心", next: "macos-cc",
+  },
+  {
+    id: "macos-cc", icon: "⚙",
+    title: "Step 8 · 控制中心(快速設定)",
+    body: () => `
+      <p>點頂部 🤖 模型 status · 從右上滑出快選:</p>
+      <ul style="font-size:14px;line-height:1.8">
+        <li>切模型 · 主題切換 · 全螢幕 · 新對話 · 知識庫 · 教學 · 檢查更新 · 登出</li>
+      </ul>
+      <p style="font-size:13px;color:var(--text-secondary);margin-top:12px">⌃⌘C 一鍵開關</p>`,
+    cta: "下一步 · 看主畫面", next: "macos-dashboard",
+  },
+  {
+    id: "macos-dashboard", icon: "🎯",
+    title: "Step 9 · 主畫面 Smart Folder + AI 建議",
+    body: () => `
+      <p>主畫面像 macOS Finder · 上方 widget · 中間對話圖示牆。</p>
+      <ul style="font-size:14px;line-height:1.8">
+        <li><b>Smart Folder</b> · 橘色標籤 自動分類(今天回過 / @我 / 待我審 / 3 天沒動)</li>
+        <li><b>+ 自訂條件</b> · 開 Builder · 條件化儲存自己的篩選</li>
+        <li><b>AI banner</b> · 信心 > 80% 才上(帶來源 + 信心度)</li>
+        <li><b>主管家建議</b> · 點 widget 開 Inbox · 「不再提示這類」</li>
+      </ul>
+      <p style="font-size:13px;color:var(--text-secondary);margin-top:12px">鍵盤 j/k/h/l 移動 · space 預覽 · ↵ 開啟</p>`,
+    cta: "完成 · 開始使用 🚀", next: "done",
+    onEnter: () => { window.app?.showView?.("dashboard"); },
+  },
   {
     id: "done",
     icon: "🎉",
     title: "完成!你已經會 80% 的核心流程",
     body: () => `
-      <p style="font-size:15px">你剛才走的這條路 · 就是承富 AI 跟 ChatGPT 最大差別:</p>
+      <p style="font-size:15px">你剛才走的這條路 · 就是這個 跟 ChatGPT 最大差別:</p>
       <ul style="font-size:14px;line-height:1.8">
         <li>✅ 工作會被結構化保存(不只是對話)</li>
         <li>✅ AI 會幫你預填交棒卡(不只是回答)</li>
