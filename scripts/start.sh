@@ -117,6 +117,22 @@ done
 
 echo "  ✅ Keychain 讀取完成"
 
+# ------------------ Launcher bundle (v1.9 perf) ------------------
+# index.html 指向 /static/dist/app.<hash>.js · 若 dist/ 不存在 nginx 會 404
+LAUNCHER_DIR="${PROJECT_DIR}/frontend/launcher"
+DIST_APP=$(grep -oE 'dist/app\.[A-Z0-9]+\.js' "${LAUNCHER_DIR}/index.html" 2>/dev/null | head -1)
+if [[ -n "$DIST_APP" ]] && [[ ! -f "${LAUNCHER_DIR}/${DIST_APP}" ]]; then
+    echo "  🔨 launcher dist/ 缺 · 跑 npm build..."
+    if command -v npm > /dev/null 2>&1; then
+        (cd "${LAUNCHER_DIR}" && \
+         { [[ -d node_modules ]] || npm install --silent; } && \
+         npm run build) | tail -5
+    else
+        echo "  ⚠ 沒裝 npm · 跳過 bundle build · launcher 可能 404"
+        echo "     請 brew install node 或手動 cd frontend/launcher && npm install && npm run build"
+    fi
+fi
+
 # ------------------ 啟動容器 ------------------
 echo "[2/3] 啟動 docker compose..."
 cd "${PROJECT_DIR}/config-templates"

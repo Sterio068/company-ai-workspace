@@ -1,24 +1,24 @@
 /**
- * v1.3 A3 · esbuild build config(launcher prod bundle)
+ * v1.9 perf · esbuild build config(launcher prod bundle)
  *
  * 目的:
  *   29 個 .js module 慢網下並行 RTT 堆積 · launcher 進入 1.2s
- *   bundle 後 1 個檔 + minify + sourcemap · 進入 < 0.5s 估
+ *   bundle + minify + content-hash + 1-year immutable cache → 進入 < 0.5s
  *
  * 用法:
  *   cd frontend/launcher
  *   npm install   # 第一次裝 esbuild
- *   npm run build # 產 dist/app.[hash].js + dist/manifest.json
+ *   npm run build # 產 dist/* + dist/manifest.json + 注入 index.html
  *
- * 切換 nginx 改 mount /static/ → dist/(此 PR 不做 · 留 v1.4 cutover)
- *   見 docs/04-OPERATIONS.md §A3 cutover
+ * v1.9 cutover · build 後自動把 index.html 的 <script src> 改指 dist/ hash 檔
+ * nginx 已加 /static/dist/ immutable cache(default.conf v1.9)
  *
  * watch mode(dev):
  *   npm run build:watch
  */
 import esbuild from "esbuild";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -67,8 +67,57 @@ async function build() {
     }
   }
   writeFileSync("dist/manifest.json", JSON.stringify(manifest, null, 2));
-  console.log("✅ build done · dist/manifest.json:");
+  console.log("✅ bundle done · dist/manifest.json:");
   console.log(JSON.stringify(manifest, null, 2));
+
+  // v1.9 · 自動把 index.html 的 <script src="/static/app.js?v=N">
+  //              改成 <script src="/static/dist/app.<hash>.js">
+  // 找 BUNDLE_INJECT 標記區塊一次替換 · 安全可重跑
+  patchIndexHtml(manifest);
+}
+
+function patchIndexHtml(manifest) {
+  const htmlPath = join(__dirname, "index.html");
+  if (!existsSync(htmlPath)) {
+    console.warn("⚠ index.html 不在 · skip patch");
+    return;
+  }
+  let html = readFileSync(htmlPath, "utf8");
+
+  // 標記區塊(若不存在 · 第一次 build 自動加)
+  const startTag = "<!-- BUILD_INJECT_BUNDLE_START -->";
+  const endTag = "<!-- BUILD_INJECT_BUNDLE_END -->";
+
+  const appHash = manifest["app.js"];
+  const onbHash = manifest["onboarding.js"];
+  if (!appHash || !onbHash) {
+    console.error("❌ manifest 缺 app.js / onboarding.js · skip patch");
+    return;
+  }
+
+  const newBlock = `${startTag}
+<script type="module" src="/static/dist/${appHash}"></script>
+<script type="module" src="/static/dist/${onbHash}"></script>
+${endTag}`;
+
+  if (html.includes(startTag) && html.includes(endTag)) {
+    // 替換已有區塊
+    const re = new RegExp(`${startTag}[\\s\\S]*?${endTag}`, "g");
+    html = html.replace(re, newBlock);
+    console.log("📝 index.html · 替換 BUILD_INJECT_BUNDLE 區塊");
+  } else {
+    // 找原始 <script src="/static/app.js"...> + onboarding 並包入標記
+    const oldRe = /<script[^>]*src="\/static\/app\.js[^"]*"[^>]*><\/script>\s*<script[^>]*src="\/static\/onboarding\.js[^"]*"[^>]*><\/script>/;
+    if (oldRe.test(html)) {
+      html = html.replace(oldRe, newBlock);
+      console.log("📝 index.html · 首次注入 · 替換原始 script tag");
+    } else {
+      console.warn("⚠ index.html 找不到原始 script tag · skip(請手動加標記)");
+      return;
+    }
+  }
+  writeFileSync(htmlPath, html);
+  console.log(`✅ index.html · 指向 dist/${appHash} + dist/${onbHash}`);
 }
 
 build().catch((err) => {
