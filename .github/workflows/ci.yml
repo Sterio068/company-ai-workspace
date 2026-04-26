@@ -52,6 +52,16 @@ jobs:
           cd frontend/launcher
           test -f dist/manifest.json
           python3 -c "import json; m=json.load(open('dist/manifest.json')); assert 'app.js' in m and 'onboarding.js' in m, m"
+      # v1.15 · store.js 11 個 unit test 跑(headless Chromium · 不需 docker)
+      - name: Install Playwright(for store unit tests)
+        run: |
+          cd tests/e2e
+          npm install --silent
+          npx playwright install --with-deps chromium
+      - name: Run store.js unit tests
+        run: |
+          cd tests/e2e
+          npx playwright test store-unit.spec.ts --project=chromium
 
   test-integration:
     name: 真 Mongo 整合測試(v1.3 C1)

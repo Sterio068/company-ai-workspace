@@ -17,7 +17,15 @@
 <div id="results"></div>
 
 <script type="module">
-import { store } from "/static/modules/store.js";
+// 雙路徑相容:
+//   - nginx (/static/* → /launcher/*) → /static/modules/store.js
+//   - python http.server(CI · cd frontend/ && python -m http.server)→ ../modules/store.js
+let store;
+try {
+  ({ store } = await import("../modules/store.js"));
+} catch {
+  ({ store } = await import("/static/modules/store.js"));
+}
 
 const results = document.getElementById("results");
 let pass = 0, fail = 0;
