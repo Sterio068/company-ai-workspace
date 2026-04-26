@@ -30,7 +30,7 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from .._deps import require_admin_dep, require_auth_dep
+from .._deps import require_admin_dep
 
 
 router = APIRouter(tags=["admin"])
