@@ -72,9 +72,11 @@
     }
   }, 300);
 
-  // ============================== 術語對照表 ==============================
-  const TERMS = {
-    // 英文 → 繁中(對 AI 小白友善)
+  // ============================== 術語對照表(v1.14 multi-tenant) ==============================
+  // 預設 fallback dict · 後端 GET /api/i18n 拉到後 hot-swap
+  // 兩處保持同步:此 fallback ≈ backend ZH_TW_TERMS · CI 應有 sync test
+  let TERMS = {
+    // 英文 → 繁中(對 AI 小白友善)· fallback only · backend i18n 為 truth
     "Endpoint": "AI 引擎",
     "endpoint": "AI 引擎",
     "Preset": "助手模板",
@@ -126,6 +128,41 @@
     "System": "跟隨系統",
     "Toggle theme": "切換深淺色",
   };
+
+  // v1.14 · 從 backend 拉 i18n dict · 失敗用 fallback · 5 min cache
+  // 跟後端 Cache-Control: max-age=300 對齊
+  const I18N_CACHE_KEY = "chengfu-i18n-cache-v1";
+  const I18N_CACHE_TTL_MS = 5 * 60 * 1000;
+
+  async function loadI18nFromBackend() {
+    // 先試 sessionStorage cache(命中跳網路)
+    try {
+      const raw = sessionStorage.getItem(I18N_CACHE_KEY);
+      if (raw) {
+        const cached = JSON.parse(raw);
+        if (cached.terms && cached.at && (Date.now() - cached.at) < I18N_CACHE_TTL_MS) {
+          TERMS = cached.terms;
+          return;
+        }
+      }
+    } catch {}
+
+    try {
+      const r = await fetch("/api/i18n", { credentials: "include" });
+      if (!r.ok) return;
+      const data = await r.json();
+      if (data.terms && typeof data.terms === "object") {
+        TERMS = data.terms;
+        try {
+          sessionStorage.setItem(I18N_CACHE_KEY, JSON.stringify({
+            terms: data.terms, at: Date.now(), v: data.version,
+          }));
+        } catch {}
+      }
+    } catch (e) {
+      // backend 沒 ready · fallback 還在用 · 不擋 launcher
+    }
+  }
 
   function escapeRegExp(text) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -364,7 +401,13 @@
   }
 
   // ============================== Bootstrap ==============================
-  function init() {
+  async function init() {
+    // v1.14 · 先試從 backend 拉 i18n dict · 失敗就用 fallback TERMS
+    // 不阻擋頁面 · backend 慢時 · 老 hardcode 仍有效
+    await Promise.race([
+      loadI18nFromBackend(),
+      new Promise(r => setTimeout(r, 800)),  // 800ms hard cap · 不擋 UX
+    ]);
     replaceText(document.body);
     addHomeButton();
     detectRole();
