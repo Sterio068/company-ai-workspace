@@ -665,6 +665,10 @@ def require_admin(request: Request,
 from routers import accounting as _accounting_router
 app.include_router(_accounting_router.router)
 
+# v1.12 · i18n endpoint(architect R3 收尾)· 公開 · launcher + librechat-relabel 共用 TERMS
+from routers import i18n as _i18n_router
+app.include_router(_i18n_router.router)
+
 # 向後相容:lifespan + admin_router 用 main.serialize / main.pnl_report 等
 # 重新 export 給其他 router lazy import
 seed_accounts = _accounting_router.seed_accounts
