@@ -257,7 +257,11 @@ function _renderStatusModel() {
   el.type = "button";
   el.className = "menubar-status-item engine-toggle";
   el.title = "控制中心(⌃⌘C)";
-  const cur = localStorage.getItem("chengfu-engine") || "openai";
+  // v1.11 · 改讀 store · 與 app.js / control-center 共用
+  const cur = (window.chengfuStore?.get("engine"))
+    || localStorage.getItem("chengfu-ai-provider")
+    || localStorage.getItem("chengfu-engine")
+    || "openai";
   el.innerHTML = `
     <span class="status-icon">🤖</span>
     <span class="status-label">${cur === "openai" ? "OpenAI" : "Claude"}</span>
@@ -269,12 +273,14 @@ function _renderStatusModel() {
     import("./control-center.js").then(m => m.toggle()).catch(err => {
       // 退回舊行為 · 直接 toggle 引擎
       const next = cur === "openai" ? "anthropic" : "openai";
-      localStorage.setItem("chengfu-engine", next);
+      if (window.chengfuStore) window.chengfuStore.set("engine", next);
+      else localStorage.setItem("chengfu-ai-provider", next);
       _renderMenubar();
     });
   });
-  // 監聽 engine-changed · 重 render 顯示新名字
-  document.addEventListener("engine-changed", () => _renderMenubar(), { once: true });
+  // v1.11 · 訂 store(取代 once: true CustomEvent · 但保留 legacy event 同步觸發 _renderMenubar)
+  // store.set 會自動派 engine-changed event · 故老聽眾仍能跟上
+  document.addEventListener("engine-changed", () => _renderMenubar());
   return el;
 }
 

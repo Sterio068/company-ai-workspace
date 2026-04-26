@@ -52,7 +52,11 @@ function _ensureCC() {
 function _render() {
   const container = _ccEl?.querySelector("#cc-tiles");
   if (!container) return;
-  const curEngine = localStorage.getItem("chengfu-engine") || "openai";
+  // v1.11 · 改讀 central store · 與 app.js / launcher 共用同 key
+  const curEngine = (window.chengfuStore?.get("engine"))
+    || localStorage.getItem("chengfu-ai-provider")
+    || localStorage.getItem("chengfu-engine")  // legacy fallback
+    || "openai";
   const curTheme = localStorage.getItem("chengfu-theme") || "auto";
   const isFs = !!document.fullscreenElement;
 
@@ -140,11 +144,17 @@ function _render() {
 }
 
 function _setEngine(id) {
-  localStorage.setItem("chengfu-engine", id);
+  // v1.11 · 走 central store(取代 chengfu-engine localStorage 重複 key + 手動 dispatchEvent)
+  // store 自動寫 chengfu-ai-provider + 派 engine-changed event(legacy listeners 仍能聽)
+  if (window.chengfuStore) {
+    window.chengfuStore.set("engine", id);
+  } else {
+    // fallback · launcher 還沒 boot store 時(極早呼叫)
+    localStorage.setItem("chengfu-ai-provider", id);
+    document.dispatchEvent(new CustomEvent("engine-changed", { detail: { id } }));
+  }
   _render();
   window.toast?.info?.(`已切到 ${id === "openai" ? "OpenAI" : "Claude"}`);
-  // 觸發 menubar 重渲染 (顯示新 engine name)
-  document.dispatchEvent(new CustomEvent("engine-changed", { detail: { id } }));
 }
 
 function _setTheme(id) {

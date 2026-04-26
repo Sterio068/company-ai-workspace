@@ -42,6 +42,7 @@ import { escapeHtml, formatDate, greetingFor, timeAgo, formatMoney, skeletonCard
 import { refreshAuthWithLock, authFetch, setUserEmail } from "./modules/auth.js";
 // v1.7 · 暴露 authFetch 給 ESM 外的模組(branding.js inline form / 未來 plugin)
 if (typeof window !== "undefined") window.authFetch = authFetch;
+import { store } from "./modules/store.js";  // v1.11 · central state(architect R1 第一階段)
 import { Projects } from "./modules/projects.js";
 import { modal } from "./modules/modal.js";
 import { toast } from "./modules/toast.js";
@@ -253,24 +254,29 @@ export const app = {
     }
   },
 
-  // ---------- AI Provider ----------
+  // ---------- AI Provider (v1.11 · backed by store) ----------
   normalizeAIProvider(provider) {
     return AI_PROVIDERS[provider] ? provider : DEFAULT_AI_PROVIDER;
   },
 
   getAIProvider() {
-    this.aiProvider = this.normalizeAIProvider(this.aiProvider);
-    return this.aiProvider;
+    // Read from store (single source of truth · backed by localStorage)
+    const cur = store.get("engine") || this.aiProvider;
+    const norm = this.normalizeAIProvider(cur);
+    this.aiProvider = norm;  // mirror · 給 .bind callbacks 用
+    return norm;
   },
 
   setAIProvider(provider) {
     const next = this.normalizeAIProvider(provider);
-    if (next === this.aiProvider) {
+    if (next === this.getAIProvider()) {
       this.renderAIProvider();
       return;
     }
     this.aiProvider = next;
-    localStorage.setItem(AI_PROVIDER_KEY, next);
+    // store.set 自動 persist + fire engine-changed event(legacy 相容)
+    // 同時保留 AI_PROVIDER_KEY localStorage 寫入,讓未升級 module 仍能讀到
+    store.set("engine", next);
     this.renderAIProvider();
     const meta = AI_PROVIDERS[next];
     toast.success(`AI 引擎已切換為 ${meta.label} · 新對話生效`);

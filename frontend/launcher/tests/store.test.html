@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>v1.11 store · unit test (browser-run)</title>
+<style>
+  body { font: 14px ui-sans-serif, system-ui; padding: 24px; }
+  .pass { color: #16a34a; }
+  .fail { color: #dc2626; font-weight: bold; }
+  .group { margin: 16px 0; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; }
+  pre { background: #f3f4f6; padding: 8px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>v1.11 store · 瀏覽器內執行</h1>
+<p>在 launcher 同 origin(http://localhost/static/tests/store.test.html)打開即可看結果。</p>
+<div id="results"></div>
+
+<script type="module">
+import { store } from "/static/modules/store.js";
+
+const results = document.getElementById("results");
+let pass = 0, fail = 0;
+
+function test(name, fn) {
+  const div = document.createElement("div");
+  div.className = "group";
+  try {
+    fn();
+    div.innerHTML = `<span class="pass">✅</span> ${name}`;
+    pass++;
+  } catch (e) {
+    div.innerHTML = `<span class="fail">❌</span> ${name}<pre>${e.stack || e.message}</pre>`;
+    fail++;
+  }
+  results.appendChild(div);
+}
+
+function eq(a, b, msg) {
+  if (a !== b) throw new Error(`${msg || ""}: expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);
+}
+
+// 清預設 state
+localStorage.removeItem("chengfu-ai-provider");
+localStorage.removeItem("chengfu-active-project");
+
+test("get default · engine = openai", () => {
+  eq(store.get("engine"), "openai");
+});
+
+test("set engine → persist + retrievable", () => {
+  store.set("engine", "anthropic");
+  eq(store.get("engine"), "anthropic");
+  eq(localStorage.getItem("chengfu-ai-provider"), "anthropic");
+});
+
+test("set 不變值 · listener 不該 fire(no-op)", () => {
+  let count = 0;
+  const off = store.subscribe("engine", () => count++);
+  store.set("engine", "anthropic");  // 已是 anthropic
+  off();
+  eq(count, 0, "no-op 不該 fire");
+});
+
+test("set 變值 · listener fire 一次", () => {
+  let count = 0;
+  let lastVal = null;
+  const off = store.subscribe("engine", v => { count++; lastVal = v; });
+  store.set("engine", "openai");
+  off();
+  eq(count, 1);
+  eq(lastVal, "openai");
+});
+
+test("legacy CustomEvent 仍派(engine-changed)", () => {
+  let received = null;
+  const listener = e => { received = e.detail; };
+  document.addEventListener("engine-changed", listener);
+  store.set("engine", "anthropic");
+  document.removeEventListener("engine-changed", listener);
+  eq(received?.id, "anthropic");
+});
+
+test("invalid value · 拒寫 + warn", () => {
+  store.set("engine", "openai");  // reset
+  store.set("engine", "");  // 空字串應被 validate 擋
+  eq(store.get("engine"), "openai");  // 沒變
+});
+
+test("unknown key · 不寫不讀", () => {
+  // 不會 throw · console.warn
+  store.set("nonexistent", "x");
+  eq(store.get("nonexistent"), null);
+});
+
+test("subscribe unsubscribe", () => {
+  // 先 normalise 到 anthropic 確保下面 set("openai") 是真變動
+  store.set("engine", "anthropic");
+  let count = 0;
+  const off = store.subscribe("engine", () => count++);
+  store.set("engine", "openai");  // 真變
+  off();
+  store.set("engine", "anthropic");  // 不該觸發
+  store.set("engine", "openai");
+  eq(count, 1, "off 後不該繼續 fire");
+});
+
+test("subscribeAll · 任 key 都 fire", () => {
+  let count = 0;
+  const off = store.subscribeAll(() => count++);
+  store.set("engine", "anthropic");
+  store.set("engine", "openai");
+  off();
+  eq(count, 2);
+});
+
+test("snapshot 含所有 key", () => {
+  const snap = store.snapshot();
+  if (!("engine" in snap)) throw new Error("engine missing");
+  if (!("activeWorkspace" in snap)) throw new Error("activeWorkspace missing");
+  if (!("activeProjectId" in snap)) throw new Error("activeProjectId missing");
+});
+
+test("activeWorkspace · null default · no localStorage write", () => {
+  store.set("activeWorkspace", "tender");
+  eq(store.get("activeWorkspace"), "tender");
+  // 沒 legacyKey · 不寫 localStorage
+  eq(localStorage.getItem("chengfu_store_v1__activeWorkspace"), null);
+});
+
+const summary = document.createElement("h2");
+summary.innerHTML = `${pass} passed · <span class="${fail > 0 ? 'fail' : 'pass'}">${fail} failed</span>`;
+results.prepend(summary);
+window.__store_test_summary = { pass, fail };
+</script>
+</body>
+</html>
