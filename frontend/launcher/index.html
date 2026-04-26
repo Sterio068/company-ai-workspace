@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0F2340">
-<title>承富智慧助理 · 今日工作台 v4.3</title>
+<title data-brand-title>智慧助理</title>
 <!-- v1.4 · macOS 設計 token 重置 · 在 launcher.css 之前載入 · :root tokens 被 launcher 引用 -->
 <link rel="stylesheet" href="/static/styles/tokens-macos.css?v=4">
-<link rel="stylesheet" href="/static/launcher.css?v=73">
+<link rel="stylesheet" href="/static/launcher.css?v=74">
 <!-- v1.4 macOS · menubar shell · 內容 Sprint B · 已預留容器 -->
 <link rel="stylesheet" href="/static/styles/menubar.css?v=3">
 <!-- v1.4 macOS · Window MVP · Sprint B Phase 4 -->
@@ -15,7 +15,7 @@
 <!-- v1.4 macOS · Notification Center · Sprint C Phase 5 -->
 <link rel="stylesheet" href="/static/styles/notification-center.css?v=1">
 <!-- v1.5 macOS · Dashboard F++ · 主畫面 IA 重构 -->
-<link rel="stylesheet" href="/static/styles/dashboard-fpp.css?v=2">
+<link rel="stylesheet" href="/static/styles/dashboard-fpp.css?v=3">
 <!-- v1.4 macOS · Control Center · Sprint C Phase 5b -->
 <link rel="stylesheet" href="/static/styles/control-center.css?v=1">
 <!-- v1.4 macOS · Dock · phase 2 · 底部 vibrancy · hover magnification -->
@@ -34,10 +34,10 @@
   <aside class="sidebar" role="navigation" aria-label="主導覽">
     <div class="sidebar-header">
       <div class="brand">
-        <div class="brand-logo">承</div>
+        <div class="brand-logo" data-brand-short>智</div>
         <div>
-          <div class="brand-name">承富智慧助理</div>
-          <div class="brand-sub">10 人協作平台</div>
+          <div class="brand-name" data-brand-app-name>智慧助理</div>
+          <div class="brand-sub" data-brand-tagline>AI 協作平台</div>
         </div>
       </div>
     </div>
@@ -373,11 +373,11 @@
       <div class="main-header">
         <div>
           <h1 class="greeting">📚 範本與技能</h1>
-          <div class="greeting-sub">承富 12 個專屬範本 + 官方文件處理範本 + 行銷公關參考庫,助手會自動引用。</div>
+          <div class="greeting-sub">12 個專屬範本 + 官方文件處理範本 + 行銷公關參考庫,助手會自動引用。</div>
         </div>
       </div>
 
-      <div class="block-title"><h2>承富 12 個常用範本</h2></div>
+      <div class="block-title"><h2>12 個常用範本</h2></div>
       <div class="skills-grid" id="skills-grid"></div>
 
       <div class="block-title" style="margin-top: 40px"><h2>官方文件處理範本</h2></div>
@@ -389,7 +389,7 @@
       <div class="main-header">
         <div>
           <h1 class="greeting">💰 會計</h1>
-          <div class="greeting-sub">承富內建會計模組 · 科目 / 交易 / 發票 / 報價 / 報表 · 讓財務試算助手直接讀寫</div>
+          <div class="greeting-sub">內建會計模組 · 科目 / 交易 / 發票 / 報價 / 報表 · 讓財務試算助手直接讀寫</div>
         </div>
         <div class="header-actions">
           <button class="btn-primary" onclick="accounting.newTransaction()">+ 新交易</button>
@@ -446,7 +446,7 @@
       <div class="main-header">
         <div>
           <h1 class="greeting">📢 新標案通知</h1>
-          <div class="greeting-sub">每日自動從政府電子採購網挑出符合承富關鍵字的新標案</div>
+          <div class="greeting-sub">每日自動從政府電子採購網挑出符合公司關鍵字的新標案</div>
         </div>
         <div class="header-actions">
           <button class="btn-ghost" onclick="tenders.refresh()">🔄 重整</button>
@@ -492,7 +492,7 @@
       <div class="main-header">
         <div>
           <h1 class="greeting">💼 商機追蹤</h1>
-          <div class="greeting-sub">拖拉卡片 · 跟助手協作 · 視覺化承富投標全閉環</div>
+          <div class="greeting-sub">拖拉卡片 · 跟助手協作 · 視覺化投標全閉環</div>
         </div>
         <div class="header-actions">
           <button class="btn-ghost" onclick="crm.importFromTenders()">📥 匯入「有興趣」標案</button>
@@ -537,6 +537,28 @@
           <button class="btn-ghost" onclick="admin.refresh()">🔄 重整</button>
         </div>
       </div>
+
+      <!-- v1.7 · 品牌設定(多公司租戶) -->
+      <section class="block" id="branding-block">
+        <div class="block-title">
+          <h2>🏢 品牌設定</h2>
+          <div class="block-hint">改公司名 / app 名 · 立即生效</div>
+        </div>
+        <form id="branding-form" class="branding-form" onsubmit="event.preventDefault(); window.brand?.update(Object.fromEntries(new FormData(this))).then(()=>window.toast?.success?.('品牌已更新'))">
+          <div class="branding-row">
+            <label>公司全名 <input name="company_name" placeholder="例:承富創意整合行銷" data-brand-input="company_name"></label>
+            <label>短名(logo)<input name="company_short" placeholder="例:承" maxlength="2" data-brand-input="company_short"></label>
+          </div>
+          <div class="branding-row">
+            <label>App 名稱 <input name="app_name" placeholder="例:智慧助理 / 承富智慧助理" data-brand-input="app_name"></label>
+            <label>Tagline <input name="tagline" placeholder="例:10 人協作平台" data-brand-input="tagline"></label>
+          </div>
+          <div class="branding-row">
+            <label>主題色 <input name="accent_color" type="color" data-brand-input="accent_color"></label>
+            <button type="submit" class="btn-primary">儲存</button>
+          </div>
+        </form>
+      </section>
 
       <!-- 3 大區塊 · 成本 -->
       <section class="block">
@@ -722,7 +744,7 @@
         <div class="suggestion" onclick="app.openAgent('06')">
           <div class="sug-icon">📚</div>
           <div class="sug-title">先試:問知識庫</div>
-          <div class="sug-desc">找過往案例 / 範本 / 承富內部規範 · 打一句話就好。</div>
+          <div class="sug-desc">找過往案例 / 範本 / 公司內部規範 · 打一句話就好。</div>
         </div>
       </div>
     </section>
@@ -887,7 +909,7 @@
       <span class="chat-agent-emoji" id="chat-agent-emoji">✨</span>
       <div class="chat-agent-info">
         <div class="chat-agent-name" id="chat-agent-name">主管家</div>
-        <div class="chat-agent-sub" id="chat-agent-sub">高階模型 · 承富全能助理</div>
+        <div class="chat-agent-sub" id="chat-agent-sub">高階模型 · 全能助理</div>
         <div class="chat-project-link" id="chat-project-link" hidden></div>
       </div>
     </div>
@@ -900,7 +922,7 @@
   <div class="chat-messages" id="chat-messages">
     <div class="chat-welcome" id="chat-welcome">
       <div class="chat-welcome-emoji">✨</div>
-      <div class="chat-welcome-title">嗨!我是承富智慧助理</div>
+      <div class="chat-welcome-title">嗨!我是智慧助理</div>
       <div class="chat-welcome-sub">用人話告訴我你要做什麼 · 我會判斷該用哪個專家</div>
       <div class="chat-welcome-suggestions" aria-label="試試這些問題">
         <button type="button" class="chat-suggestion" data-prompt="幫我想 3 個中秋節臉書主視覺方向 · 預算 5 萬 · 3 天要">
@@ -1014,7 +1036,7 @@
 -->
 <div class="caption" id="caption" hidden></div>
 
-<script type="module" src="/static/app.js?v=89"></script>
+<script type="module" src="/static/app.js?v=90"></script>
 <script src="/static/onboarding.js?v=65"></script>
 </body>
 </html>

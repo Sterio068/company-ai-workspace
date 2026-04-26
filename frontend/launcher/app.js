@@ -1,5 +1,5 @@
 /**
- * 承富 Launcher · v4 主程式(ES module · entry)
+ * Launcher · v4 主程式(ES module · entry)
  *
  * 架構:
  *   - modules/config.js     ← 靜態常數 (CORE_AGENTS / SKILLS / STAGES)
@@ -56,6 +56,8 @@ import { menubar as macosMenubar } from "./modules/macos/menubar.js";
 import "./modules/macos/shortcuts.js";
 // v1.5 · Dashboard F++ 主畫面 IA 重構(toolbar + mini-Today + segments + grid + status)
 import { dashboardFpp } from "./modules/macos/dashboard-fpp.js";
+// v1.7 · Multi-tenant Branding(動態品牌名 · 取代 hardcode 「承富」)
+import { brand } from "./modules/branding.js";
 import { shortcuts } from "./modules/shortcuts.js";
 import { health } from "./modules/health.js";
 import { mobile } from "./modules/mobile.js";
@@ -134,6 +136,15 @@ export const app = {
     this.setupGreeting();
     this.setupUser();
     this.applyTheme();
+
+    // v1.7 · 載品牌 + 套到 DOM(取代 hardcode 「承富」)
+    try {
+      await brand.load();
+      this._applyBranding();
+      brand.subscribe(() => this._applyBranding());
+    } catch (e) {
+      console.warn("[brand] load failed", e);
+    }
 
     // 注入 chat / crm 的 store 依賴
     chat.bind({ agents: () => this.agents, user: () => this.user, provider: () => this.aiProvider });
@@ -285,6 +296,21 @@ export const app = {
     if (greet) greet.textContent = `${greetingFor(now.getHours())},${name} 👋`;
     const date = document.getElementById("date-line");
     if (date) date.textContent = formatDate(now);
+  },
+
+  /** v1.7 · 把 brand 資訊套到 DOM(data-brand-* 屬性 + document.title) */
+  _applyBranding() {
+    const s = brand.state;
+    document.title = s.app_name;
+    document.querySelectorAll("[data-brand-app-name]").forEach(el => el.textContent = s.app_name);
+    document.querySelectorAll("[data-brand-tagline]").forEach(el => el.textContent = s.tagline);
+    document.querySelectorAll("[data-brand-short]").forEach(el => el.textContent = brand.companyShort);
+    document.querySelectorAll("[data-brand-title]").forEach(el => el.textContent = s.app_name);
+    // populate admin 設定表單
+    document.querySelectorAll("[data-brand-input]").forEach(el => {
+      const k = el.dataset.brandInput;
+      if (s[k] !== undefined && el.value !== s[k]) el.value = s[k] || "";
+    });
   },
 
   setupUser() {
@@ -1192,7 +1218,7 @@ export const app = {
       playbook: `請用「${workKind.label}」流程協助推進這個工作包,先產出流程步驟、風險、下一個可直接交辦的任務。`,
     };
     const prompt = [
-      "請以承富智慧助理主管家的角色處理以下工作包。",
+      "請以智慧助理主管家的角色處理以下工作包。",
       "不要泛泛建議;請輸出可直接交辦的內容。若資料不足,請列出待確認,不要自行編造。",
       "",
       context,
@@ -1274,7 +1300,7 @@ export const app = {
       ? ["", "我已附上這些檔案:", ...pendingFiles.map(file => `- ${file.name}`)]
       : [];
     const prompt = [
-      "請以承富智慧助理主管家的角色協助我把這件工作往前推。",
+      "請以智慧助理主管家的角色協助我把這件工作往前推。",
       "請先判斷這應該建立或接續哪個工作包,再列出可直接執行的下一步。",
       "如果需要我補資料,請用 3 個以內的問題詢問,不要泛泛建議。",
       "",
@@ -1343,7 +1369,7 @@ export const app = {
 
   startProjectPlanner() {
     const prompt = [
-      "我想建立一個新的承富工作包,但現在資訊還不完整。",
+      "我想建立一個新的工作包,但現在資訊還不完整。",
       "請用主管家的角色先問我 5 個必要問題,幫我快速收斂成可以建立工作包的內容。",
       "請問題要短、好回答,並最後輸出可貼進工作包的欄位:工作包名稱、客戶、期限、預算、描述、下一棒、協作者、交棒目標、下一步、素材需求。",
     ].join("\n");

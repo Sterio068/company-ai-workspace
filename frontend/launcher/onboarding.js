@@ -1,5 +1,5 @@
 /**
- * 承富智慧助理 · 首次引導(v4.3 + vNext 整合)
+ * 智慧助理 · 首次引導(v4.3 + vNext 整合)
  *
  * 主路徑:角色 picker → helpTutorial(任務式 6 步)
  * 對齊老闆 top 5 任務(舊 STEPS 內容已移到 help-tutorial.js)
@@ -48,7 +48,7 @@ async function _showRolePickerThenTutorial() {
   box.style.zIndex = "651";
   box.innerHTML = `
     <div class="tutorial-icon">👋</div>
-    <h2 class="tutorial-title">歡迎來到承富 AI</h2>
+    <h2 class="tutorial-title">歡迎來到智慧助理</h2>
     <p class="tutorial-body" style="text-align:center;color:var(--text-secondary)">
       先告訴我你的角色 · 我會給你最相關的教學
     </p>

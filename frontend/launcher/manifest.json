@@ -1,7 +1,7 @@
 {
-  "name": "承富智慧助理協作平台",
-  "short_name": "承富智慧助理",
-  "description": "承富創意整合行銷 · 10 人智慧協作平台 · 內建 10 位專家助手 + 會計模組 + 標案監測",
+  "name": "智慧助理協作平台",
+  "short_name": "智慧助理",
+  "description": "公司智慧協作平台 · 內建 10 位專家助手 + 會計模組 + 標案監測",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F5F5F7",
@@ -27,7 +27,7 @@
     {
       "name": "主管家",
       "short_name": "主管家",
-      "description": "直接開承富智慧助理主管家對話",
+      "description": "直接開智慧助理主管家對話",
       "url": "/chat?agent=00",
       "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }]
     },
@@ -47,7 +47,7 @@
     {
       "name": "專案",
       "short_name": "專案",
-      "description": "管理承富專案",
+      "description": "管理專案",
       "url": "/#projects"
     },
     {

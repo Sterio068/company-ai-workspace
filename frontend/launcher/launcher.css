@@ -5527,3 +5527,11 @@ button:focus-visible,
   .tutorial-icon { font-size: 40px; }
   .tutorial-title { font-size: 19px; }
 }
+
+/* v1.7 · Multi-tenant branding settings UI */
+.branding-form { display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--bg-content, #fff); border: 0.5px solid var(--border); border-radius: 12px; }
+.branding-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
+.branding-row label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--label-secondary); letter-spacing: 0.04em; }
+.branding-row input[type="text"], .branding-row input:not([type]) { padding: 6px 10px; border: 0.5px solid var(--border); border-radius: 6px; background: var(--bg-base, #fff); font-family: var(--font-system); font-size: 13px; outline: none; }
+.branding-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.12); }
+.branding-row input[type="color"] { width: 80px; height: 32px; padding: 2px; border: 0.5px solid var(--border); border-radius: 6px; }

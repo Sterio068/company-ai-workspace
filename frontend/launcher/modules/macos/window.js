@@ -6,7 +6,7 @@
  * MVP 範圍(本 PR):
  *   - Window 元件(traffic lights · 拖移 · z-index)
  *   - ⌘W 關 active window
- *   - 套 「關於 承富智慧助理」 demo
+ *   - 套 「關於 智慧助理」 demo
  *
  * 後續(v1.5):
  *   - 對話多開(用 Window 包 LibreChat iframe)

@@ -25,6 +25,7 @@
  */
 import { escapeHtml } from "../util.js";
 import { authFetch } from "../auth.js";
+import { brand } from "../branding.js";
 
 // Mock data · 21 對話 · 與設計一致
 const MOCK_ITEMS = [
@@ -185,7 +186,7 @@ function _renderToolbar() {
   return `
     <div class="fpp-toolbar">
       <button class="fpp-logo" data-fpp-logo title="導覽 (⌘0)">
-        <span class="fpp-logo-text">承</span>
+        <span class="fpp-logo-text">${escapeHtml(brand.companyShort)}</span>
         <span class="fpp-logo-arrow">▾</span>
       </button>
       <div class="fpp-nav-arrows">

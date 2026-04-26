@@ -373,7 +373,7 @@ export const help = {
           <div class="help-step-num">1</div>
           <div>
             <h3>選擇工作區(⌘1 ~ ⌘5)</h3>
-            <p>承富智慧助理以工作「情境」組織 · 不是助手清單。從左側選或按 ⌘1-5 切到對應工作區:</p>
+            <p>智慧助理以工作「情境」組織 · 不是助手清單。從左側選或按 ⌘1-5 切到對應工作區:</p>
             <ul class="help-ws-list">
               <li><span style="color:#FF3B30">🎯 ⌘1 投標</span> · 招標須知 / 服務建議書 / 競品</li>
               <li><span style="color:#FF9500">🎪 ⌘2 活動執行</span> · 場景需求單 / 廠商 / 動線</li>
@@ -425,7 +425,7 @@ export const help = {
           <div class="help-step-num">5</div>
           <div>
             <h3>遇到問題?</h3>
-            <p>左下找內部負責窗口聯絡 → 承富內部 IT / 專案管理員</p>
+            <p>左下找內部負責窗口聯絡 → 公司內部 IT / 專案管理員</p>
             <p>或打開服務監控頁(http://localhost:3001) · 看哪個服務沒有亮綠燈。</p>
           </div>
         </div>
@@ -462,7 +462,7 @@ export const help = {
             <h3>媒體名單</h3>
             <p>左側「媒體名單」· 記者資料庫 + 主題推薦 + 表格匯入。寫完新聞稿 → 推薦前 10 名記者。</p>
             <ul>
-              <li>承富記者建檔(初次匯入 100 筆表格)· 管理員才可改</li>
+              <li>記者建檔(初次匯入 100 筆表格)· 管理員才可改</li>
               <li>推薦公式:主題重疊 + 接受率 + 距上次發稿時間</li>
               <li>非管理員看不到手機(PDPA)· 推薦只管理員可用</li>
             </ul>
@@ -477,7 +477,7 @@ export const help = {
             <ul>
               <li>排定時間用本地時區 · 內部自動轉 UTC</li>
               <li>失敗 3 次重試 · 第 3 次寫稽核紀錄給管理員</li>
-              <li>正式 Meta/LinkedIn 接入 · 等承富老闆完成開發者應用程式審核(1-2 週)</li>
+              <li>正式 Meta/LinkedIn 接入 · 等老闆完成開發者應用程式審核(1-2 週)</li>
             </ul>
           </div>
         </div>
@@ -539,7 +539,7 @@ export const help = {
     return `
       <section id="help-workspaces" class="help-section">
         <h2>🎯 5 個工作區 · 按 ⌘1 ~ ⌘5 切</h2>
-        <p>承富智慧助理以「工作情境」組織 · 不是助手清單。每個工作區有自己的封面 / 流程 / 近期對話:</p>
+        <p>智慧助理以「工作情境」組織 · 不是助手清單。每個工作區有自己的封面 / 流程 / 近期對話:</p>
 
         <div class="help-ws-grid">
           ${workspaces.map(ws => `
@@ -646,7 +646,7 @@ export const help = {
     return `
       <section id="help-classification" class="help-section">
         <h2>🔒 資料分級 SOP</h2>
-        <p>承富智慧助理把任何內容送往雲端模型前 · 請先判斷分級:</p>
+        <p>智慧助理把任何內容送往雲端模型前 · 請先判斷分級:</p>
 
         <div class="help-level help-level-01">
           <h3>第一級 · 公開(白色)</h3>
@@ -682,7 +682,7 @@ export const help = {
     return `
       <section id="help-secrets" class="help-section">
         <h2>🔐 服務金鑰管理與申請</h2>
-        <p>承富智慧助理用到的外部服務金鑰 · 管理員可在此檢視狀態:</p>
+        <p>智慧助理用到的外部服務金鑰 · 管理員可在此檢視狀態:</p>
 
         ${this._isAdmin ? `
           <div id="secrets-panel">
@@ -705,12 +705,12 @@ export const help = {
               <li>註冊 → 設定 → 服務金鑰 → 建立金鑰</li>
               <li><b>預存美金 $50 升第二級</b>(D-002 · 10 人尖峰需要)</li>
               <li>格式:<code>sk-ant-...</code></li>
-              <li>裝機時由承富安裝程式收取 · 存進 macOS 鑰匙圈</li>
+              <li>裝機時由安裝程式收取 · 存進 macOS 鑰匙圈</li>
             </ol>
           </div>
 
           <div class="help-secret-item help-secret-featured">
-            <h4>🎨 生圖服務商(承富可選兩家 · 前端可切換)</h4>
+            <h4>🎨 生圖服務商(可選兩家 · 前端可切換)</h4>
             <table class="help-provider-compare">
               <thead><tr><th>服務商</th><th>模型</th><th>價格 / 3 張</th><th>速度</th><th>特色</th></tr></thead>
               <tbody>
@@ -730,7 +730,7 @@ export const help = {
                 </tr>
               </tbody>
             </table>
-            <p>承富預設使用低成本生圖服務(成本低 5 倍)· 管理員可在上方表格切到高品質生圖,需要較高品質時使用。</p>
+            <p>預設使用低成本生圖服務(成本低 5 倍)· 管理員可在上方表格切到高品質生圖,需要較高品質時使用。</p>
           </div>
 
           <div class="help-secret-item">
@@ -886,7 +886,7 @@ function localizeSecretText(value = "") {
     .replace(/認證 cookie 用 · prod 必設 · 跟 LibreChat \.env 同步/g, "登入驗證用 · 正式環境必設 · 需與對話系統環境設定同步")
     .replace(/cron → accounting admin endpoint 用 · prod 必設/g, "排程服務呼叫會計管理介接時使用 · 正式環境必設")
     .replace(/選 'fal'\(Recraft v3 · NT\$ 4 \/ 3 張\)或 'openai'\(gpt-image-2 · NT\$ 20 \/ 3 張\)/g, "可選低成本模式(Recraft v3 · NT$ 4 / 3 張)或高品質模式(約 NT$ 20 / 3 張)")
-    .replace(/承富 Q7 一次/g, "承富設計流程一次")
+    .replace(/設計流程一次/g, "設計流程一次")
     .replace(/預設 fal/g, "預設低成本模式")
     .replace(/Anthropic API Key/g, "備援模型服務金鑰")
     .replace(/OpenAI API Key/g, "主力模型服務金鑰")

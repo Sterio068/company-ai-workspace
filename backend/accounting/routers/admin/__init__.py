@@ -971,3 +971,11 @@ router.include_router(_update.router)
 # v1.6 · AI 建議(主管家 inbox · MVP stub · v1.7 接真 LLM 觸發)
 from . import ai_suggestions as _ai_suggestions
 router.include_router(_ai_suggestions.router)
+
+# v1.7 · Smart Folders(自訂條件查詢 · CRUD + preview)
+from . import smart_folders as _smart_folders
+router.include_router(_smart_folders.router)
+
+# v1.7 · Branding(多公司租戶 · 品牌名 / app 名 / accent)
+from . import branding as _branding
+router.include_router(_branding.router)

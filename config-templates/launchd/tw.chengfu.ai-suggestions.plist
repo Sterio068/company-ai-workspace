@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  v1.7 · AI Suggestions 每 30 分鐘掃描
+  跑 POST /admin/ai-suggestions/scan(per admin user)
+  寫 ai_suggestions_cache collection · 前端 GET 拿 cache 不重算
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>tw.chengfu.ai-suggestions</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>__REPO_ROOT__/scripts/ai-suggestions-scan.sh</string>
+    </array>
+
+    <!-- 每 30 分跑一次 -->
+    <key>StartInterval</key>
+    <integer>1800</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/USERNAME/Library/Logs/chengfu-ai-suggestions.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/USERNAME/Library/Logs/chengfu-ai-suggestions.err.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+    <key>KeepAlive</key>
+    <false/>
+</dict>
+</plist>

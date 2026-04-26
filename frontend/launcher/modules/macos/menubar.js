@@ -13,18 +13,21 @@
  */
 import { springEnter, slideUp } from "./motion.js";
 import { openWindow } from "./window.js";
+import { brand } from "../branding.js";
 
 // ============================================================
-// Menu 結構定義
+// Menu 結構定義 · v1.7 · APP_NAME 改 dynamic from brand
 // ============================================================
-const APP_NAME = "承富智慧助理";
+function _appName() { return brand.appName; }
 
-const MENUS = [
+function _buildMenus() {
+  const APP_NAME = _appName();
+  return [
   {
     label: APP_NAME,
     bold: true,
     items: [
-      { label: "關於 承富智慧助理", action: () => _openAboutWindow(), shortcut: "" },
+      { label: `關於 ${APP_NAME}`, action: () => _openAboutWindow(), shortcut: "" },
       { sep: true },
       { label: "偏好設定...", action: () => window.app?.showView?.("admin"), shortcut: "⌘," },
       { sep: true },
@@ -80,7 +83,7 @@ const MENUS = [
       { sep: true },
       { label: "Mission Control", action: () => _todo("Mission Control · Sprint B Phase 4"), shortcut: "⌘↑" },
       { sep: true },
-      { label: "回到承富主畫面", action: () => window.app?.showView?.("dashboard"), shortcut: "⌘0" },
+      { label: "回到主畫面", action: () => window.app?.showView?.("dashboard"), shortcut: "⌘0" },
     ],
   },
   {
@@ -96,6 +99,7 @@ const MENUS = [
     ],
   },
 ];
+}
 
 // ============================================================
 // Helpers
@@ -131,12 +135,15 @@ function _contactSupport() {
 }
 
 // ============================================================
-// 「關於 承富智慧助理」浮動視窗(Sprint B Phase 4 demo)
+// 「關於 智慧助理」浮動視窗(Sprint B Phase 4 demo)
 // ============================================================
 function _openAboutWindow() {
+  const appName = brand.appName;
+  const short = brand.companyShort;
+  const company = brand.companyName;
   openWindow({
     id: "about",
-    title: "關於 承富智慧助理",
+    title: `關於 ${appName}`,
     width: 480,
     height: 420,
     content: `
@@ -144,15 +151,15 @@ function _openAboutWindow() {
         <div style="display:grid; place-items:center; margin-bottom:12px">
           <div style="
             width:96px; height:96px;
-            background: linear-gradient(135deg, #007AFF, #5856D6);
+            background: linear-gradient(135deg, ${brand.accent}, #5856D6);
             border-radius:22%;
             display:grid; place-items:center;
             font-size:48px; color:white;
             box-shadow: 0 6px 20px rgba(0, 122, 255, 0.3);
-          ">承</div>
+          ">${short}</div>
         </div>
-        <h2 style="margin: 0 0 4px; font-size:20px; font-weight:600; letter-spacing:0.05em">承富智慧助理</h2>
-        <p style="margin: 0 0 16px; color: var(--label-secondary); font-size: 13px; letter-spacing: 0.05em">v1.4.0 · macOS 風重構</p>
+        <h2 style="margin: 0 0 4px; font-size:20px; font-weight:600; letter-spacing:0.05em">${appName}</h2>
+        <p style="margin: 0 0 16px; color: var(--label-secondary); font-size: 13px; letter-spacing: 0.05em">v1.7.0 · ${company || "Multi-tenant"}</p>
         <div style="
           display:inline-block;
           padding:6px 14px;
@@ -165,7 +172,7 @@ function _openAboutWindow() {
         ">本地部署 · 100% 資料留在公司</div>
 
         <div style="text-align:left; padding: 0 20px; margin-top: 12px; line-height: 1.8">
-          <p>承富 10 人協作專屬 · AI 助手系統</p>
+          <p>10 人協作專屬 · AI 助手系統</p>
           <ul style="padding-left: 20px; color: var(--label-secondary); font-size: 13px; margin: 8px 0">
             <li>10 個 AI 助手 · 5 個工作區</li>
             <li>5 分鐘任務式 FTUE 教學</li>
@@ -209,6 +216,7 @@ function _renderMenubar() {
   // Left · App + 5 menu
   const left = document.createElement("div");
   left.className = "menubar-left";
+  const MENUS = _buildMenus();
   MENUS.forEach((menu, idx) => {
     const item = document.createElement("button");
     item.type = "button";
@@ -385,6 +393,7 @@ function _toggleDropdown(idx, btn) {
   }
   _closeDropdown();
 
+  const MENUS = _buildMenus();
   const menu = MENUS[idx];
   if (!menu) return;
 
@@ -448,6 +457,8 @@ export const menubar = {
 
     // 動態 refresh user info(login 後)
     document.addEventListener("user-loaded", () => _renderMenubar());
+    // v1.7 · 品牌變動 re-render
+    brand.subscribe(() => _renderMenubar());
   },
 };
 
