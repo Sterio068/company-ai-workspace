@@ -27,8 +27,8 @@ Schema(smart_folders collection):
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Query, Request
+from pydantic import BaseModel, Field
 
 from .._deps import require_admin_dep
 
@@ -54,7 +54,8 @@ class SmartFolderCreate(BaseModel):
 
 class PreviewRequest(BaseModel):
     conditions: List[Condition]
-    limit: int = 3  # 預覽幾個項目
+    # v1.8 · 加 ge/le bound · 防裸 int 探勘大量 LibreChat messages collection
+    limit: int = Field(default=3, ge=1, le=20)
 
 
 # ============================================================
@@ -229,7 +230,12 @@ def preview_smart_folder(payload: PreviewRequest, _admin: str = require_admin_de
 
 
 @router.get("/admin/smart-folders/{key}/items")
-def get_smart_folder_items(key: str, limit: int = 50, _admin: str = require_admin_dep()):
+def get_smart_folder_items(
+    key: str,
+    # v1.8 · 加 ge/le bound · 防 ?limit=999999 DoS
+    limit: int = Query(default=50, ge=1, le=200),
+    _admin: str = require_admin_dep(),
+):
     """讀某 smart folder · 拿符合條件對話列表"""
     from main import db
     folder = db.smart_folders.find_one({"user_email": _admin.lower(), "key": key})

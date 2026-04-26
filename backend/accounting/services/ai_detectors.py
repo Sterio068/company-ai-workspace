@@ -236,8 +236,14 @@ def detect_all(db, metas: list, suppressed_types: set = None) -> list:
     type_order = {"deadline": 0, "reply": 1, "stale": 2}
     sorted_list = sorted(dedup.values(), key=lambda r: (type_order.get(r["type"], 9), -r["confidence"]))
 
-    # 加 id(stable hash · 給前端 dismiss 用)
-    for i, r in enumerate(sorted_list):
-        r["id"] = abs(hash(r["src_conversation_id"] + r["type"])) % 10**9
+    # 加 id · v1.8 改 sha256 stable hash · Python hash() 是 process-randomized
+    # 跨重啟 dismiss/cache 仍對得上(前面用 hash() · cron 重啟後 id 就變 dismiss 失效)
+    import hashlib
+    for r in sorted_list:
+        h = hashlib.sha256(
+            (r["src_conversation_id"] + ":" + r["type"]).encode("utf-8")
+        ).digest()
+        # 取前 8 bytes 當 int(MongoDB int64 範圍 · 不會溢位)
+        r["id"] = int.from_bytes(h[:8], "big") & ((1 << 53) - 1)  # 留 JS Number 安全範圍
 
     return sorted_list

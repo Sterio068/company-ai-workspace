@@ -127,6 +127,28 @@ async def lifespan(app: FastAPI):
     db.knowledge_file_hashes.create_index(
         [("source_id", 1), ("rel_path", 1)], unique=True, name="src_path_uniq"
     )
+    # v1.8 · 補 v1.7 4 collection 缺的 indexes(perf-optimizer 黃 2 警告)
+    # 否則每次 cache lookup / dismiss / suppress 都是 collection scan
+    try:
+        db.ai_suggestions_cache.create_index([("user_email", 1)], unique=True, name="user_uniq")
+        db.ai_dismissed.create_index(
+            [("user_email", 1), ("until", -1)], name="user_until"
+        )
+        # auto-expire dismiss 過期的 doc(節省空間)
+        db.ai_dismissed.create_index(
+            [("until", 1)], expireAfterSeconds=0, name="dismiss_ttl"
+        )
+        db.ai_suppressions.create_index([("user_email", 1)], unique=True, name="user_uniq")
+        db.user_preferences.create_index([("user_email", 1)], unique=True, name="user_uniq")
+        db.smart_folders.create_index(
+            [("user_email", 1), ("key", 1)], unique=True, name="user_key_uniq"
+        )
+        # branding 單一 doc · 不需 index(用 _id)
+        # LibreChat messages · 加 conversationId index 大幅加速 ai-suggestions scan
+        # 注意:LibreChat 是同一 db · 此 index 加在共用 collection
+        db.messages.create_index([("conversationId", 1), ("createdAt", -1)], name="conv_time")
+    except Exception as e:
+        logger.warning("[index] v1.8 ai-suggestions/smart-folders: %s", e)
     # A5(v1.3)· social OAuth · token + state TTL
     try:
         db.social_oauth_tokens.create_index(

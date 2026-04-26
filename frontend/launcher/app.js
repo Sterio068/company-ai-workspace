@@ -162,8 +162,10 @@ export const app = {
       this.renderWorkDetail();
     });
 
-    await this.loadAgents();
+    // v1.8 perf · loadAgents 不阻擋首頁渲染 · 並進 Promise.all
+    // (findAgentByNum 是 UI helper · 渲染後才用)
     await Promise.all([
+      this.loadAgents(),
       this.loadConversations(),
       this.loadUsage(),
       this.loadROI(),

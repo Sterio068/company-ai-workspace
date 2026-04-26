@@ -6,15 +6,21 @@ v1.7 · AI Suggestions endpoint(真實作)
 Endpoints:
   GET  /admin/ai-suggestions                · 列當前建議(讀 cache or 即時算)
   POST /admin/ai-suggestions/scan           · 強制觸發掃描(忽略 cache)
+  POST /admin/ai-suggestions/scan-all       · 一次掃所有 admin(cron 用)
   POST /admin/ai-suggestions/{id}/dismiss   · 「之後再說」(暫隱 24h)
   POST /admin/ai-suggestions/suppress       · 「不再提示這類」(寫 user prefs)
   GET  /admin/ai-suggestions/suppressed     · 看當前已關類型
+
+v1.8 hardening:
+  - cron 不再對每個 admin 單獨打 endpoint(舊方式 _admin 解析為 "internal:cron"
+    導致掃描永遠空陣列)· 改為 backend 自己列 admin 並逐一 scan
+  - 加 hashlib.sha256 stable id(取代 Python hash())· 跨重啟 dismiss 仍有效
 """
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from .._deps import require_admin_dep
@@ -108,9 +114,10 @@ def _run_scan(db, user_email: str) -> list:
 # Endpoints
 # ============================================================
 @router.get("/admin/ai-suggestions")
-def list_ai_suggestions(_admin: str = require_admin_dep()):
-    """讀 cache · 沒就掃 · 自動過濾 dismissed"""
+def list_ai_suggestions(request: Request, _admin: str = require_admin_dep()):
+    """讀 cache · 沒就掃 · 自動過濾 dismissed · cron 路徑解 X-User-Email"""
     from main import db
+    _admin = _resolve_admin_email(request, _admin)
     cache = _get_cache(db, _admin)
     if cache:
         suggestions = cache["suggestions"]
@@ -130,12 +137,46 @@ def list_ai_suggestions(_admin: str = require_admin_dep()):
     }
 
 
+def _resolve_admin_email(request: Request, _admin: str) -> str:
+    """v1.8 · cron(internal token)路徑下 _admin = "internal:cron" · 解 X-User-Email
+    讓 cron 可以代特定 admin 掃 · 否則 cache 永遠寫到 internal:cron key 結果無效
+    """
+    if _admin == "internal:cron":
+        for_user = (request.headers.get("X-User-Email") or "").strip().lower()
+        if for_user:
+            return for_user
+    return _admin
+
+
 @router.post("/admin/ai-suggestions/scan")
-def force_scan(_admin: str = require_admin_dep()):
-    """強制重掃 · 忽略 cache"""
+def force_scan(request: Request, _admin: str = require_admin_dep()):
+    """強制重掃 · 忽略 cache · cron 路徑會解 X-User-Email 拿真 email"""
     from main import db
-    suggestions = _run_scan(db, _admin)
-    return {"scanned": True, "count": len(suggestions), "suggestions": suggestions}
+    target = _resolve_admin_email(request, _admin)
+    suggestions = _run_scan(db, target)
+    return {"scanned": True, "count": len(suggestions), "user": target,
+            "suggestions": suggestions}
+
+
+@router.post("/admin/ai-suggestions/scan-all")
+def scan_all_admins(_admin: str = require_admin_dep()):
+    """v1.8 · cron 用 · 一次掃所有 admin · backend 自己列 user"""
+    from main import db, _users_col
+    admins = list(_users_col.find(
+        {"role": "ADMIN"}, {"email": 1}
+    ))
+    results = []
+    for u in admins:
+        email = u.get("email", "").strip().lower()
+        if not email:
+            continue
+        try:
+            suggestions = _run_scan(db, email)
+            results.append({"email": email, "count": len(suggestions)})
+        except Exception as e:
+            logger.warning("[ai-scan] %s fail: %s", email, e)
+            results.append({"email": email, "error": str(e)[:80]})
+    return {"scanned_admins": len(results), "results": results}
 
 
 @router.post("/admin/ai-suggestions/{suggestion_id}/dismiss")

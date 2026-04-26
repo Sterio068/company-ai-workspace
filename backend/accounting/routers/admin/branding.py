@@ -54,32 +54,55 @@ class BrandingUpdate(BaseModel):
     locale: Optional[str] = None
 
 
-def get_branding_doc(db) -> dict:
-    """讀 branding · 缺欄位用預設補"""
+# v1.8 · 公開回傳的欄位白名單(防 updated_by admin email 被未登入端讀走)
+PUBLIC_BRANDING_FIELDS = {
+    "company_name", "company_short", "app_name",
+    "tagline", "accent_color", "locale",
+}
+
+
+def get_branding_doc(db, include_admin_metadata: bool = False) -> dict:
+    """讀 branding · 缺欄位用預設補
+
+    Args:
+        include_admin_metadata: True 時才回 updated_at / updated_by(admin only)
+    """
     doc = db.branding.find_one({"_id": "default"}) or {}
     merged = {**DEFAULT_BRANDING, **{k: v for k, v in doc.items() if k != "_id" and v}}
-    # 字串轉 ISO
-    if "updated_at" in doc:
-        merged["updated_at"] = (doc["updated_at"].isoformat()
-                                if hasattr(doc["updated_at"], "isoformat")
-                                else doc["updated_at"])
+    if include_admin_metadata:
+        if "updated_at" in doc:
+            merged["updated_at"] = (doc["updated_at"].isoformat()
+                                    if hasattr(doc["updated_at"], "isoformat")
+                                    else doc["updated_at"])
+        if "updated_by" in doc:
+            merged["updated_by"] = doc["updated_by"]
+    else:
+        # v1.8 · 公開 endpoint 嚴格白名單 · 防洩漏 admin email
+        merged = {k: v for k, v in merged.items() if k in PUBLIC_BRANDING_FIELDS}
     return merged
 
 
 @router.get("/admin/branding")
 def get_branding(_request: Request):
-    """公開 · login 前後皆可讀 · 給 launcher 顯示對的品牌"""
+    """公開 · login 前後皆可讀 · 只回品牌展示欄位(updated_by/at 隱藏)"""
     from main import db
-    return get_branding_doc(db)
+    return get_branding_doc(db, include_admin_metadata=False)
+
+
+@router.get("/admin/branding/full")
+def get_branding_full(_admin: str = require_admin_dep()):
+    """admin 看完整 doc · 含 updated_at / updated_by(audit 用)"""
+    from main import db
+    return get_branding_doc(db, include_admin_metadata=True)
 
 
 @router.put("/admin/branding")
 def update_branding(payload: BrandingUpdate, _admin: str = require_admin_dep()):
-    """admin 改品牌設定"""
+    """admin 改品牌設定 · 回 admin-full doc(含 updated_at)"""
     from main import db
     update = {k: v for k, v in payload.dict().items() if v is not None}
     if not update:
-        return {"updated": False, "branding": get_branding_doc(db)}
+        return {"updated": False, "branding": get_branding_doc(db, include_admin_metadata=True)}
     update["updated_at"] = datetime.now(timezone.utc)
     update["updated_by"] = _admin
     db.branding.update_one(
@@ -87,4 +110,4 @@ def update_branding(payload: BrandingUpdate, _admin: str = require_admin_dep()):
         {"$set": update},
         upsert=True,
     )
-    return {"updated": True, "branding": get_branding_doc(db)}
+    return {"updated": True, "branding": get_branding_doc(db, include_admin_metadata=True)}
