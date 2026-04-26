@@ -390,7 +390,9 @@ function _bindSegments() {
       const k = b.dataset.fppSegment;
       SEGMENTS.forEach(s => s.active = (s.k === k));
       _state.segment = k;
-      _render();
+      // v1.16 perf · segment 切換只 re-render segments + grid + status
+      // 取代整頁 _render()(避免重 bind toolbar/banner/widgets/hints · perf-optimizer 黃 6)
+      _renderSegmentsOnly();
     });
   });
   // v1.6 · 「+ 自訂條件」開 Builder
@@ -500,6 +502,18 @@ function _renderGridOnly() {
 function _renderStatusOnly() {
   const status = _root.querySelector(".fpp-status");
   if (status) status.outerHTML = _renderStatusBar();
+}
+
+// v1.16 perf · segment-only re-render(避免整頁閃 + re-bind 全 toolbar/banner)
+// 切換 Smart Folder 時用 · 只 update segments active class + grid
+function _renderSegmentsOnly() {
+  const segs = _root.querySelector(".fpp-segments");
+  if (segs) {
+    segs.outerHTML = _renderSegments();
+    _bindSegments();  // 重新綁 click handlers · segments DOM 重生
+  }
+  _renderGridOnly();
+  _renderStatusOnly();
 }
 
 // ============================================================
