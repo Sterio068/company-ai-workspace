@@ -643,16 +643,25 @@ function _openBuilder(editingKey = null) {
     _renderBuilderConds();
     _renderBuilderPreview();
   });
-  overlay.querySelector("[data-fpp-builder-save]").addEventListener("click", () => {
+  overlay.querySelector("[data-fpp-builder-save]").addEventListener("click", async () => {
     const name = overlay.querySelector("#fpp-builder-name").value.trim() || "未命名";
-    const folder = {
-      k: editingKey || "custom-" + Date.now(),
-      name,
-      l: name + " " + _builderPreviewCount(),
-      conditions: [..._state.builderConditions],
-      showInSegments: overlay.querySelector("#fpp-builder-show-seg").checked,
-      notify: overlay.querySelector("#fpp-builder-notify").checked,
-    };
+    const key = editingKey || "custom-" + Date.now();
+    const conditions = _state.builderConditions.map(c => ({ f: c.f, op: c.op, v: c.v }));
+    const showInSeg = overlay.querySelector("#fpp-builder-show-seg").checked;
+    const notify = overlay.querySelector("#fpp-builder-notify").checked;
+    // 同步 backend(失敗仍存本機)
+    try {
+      const url = editingKey
+        ? `/api-accounting/admin/smart-folders/${encodeURIComponent(editingKey)}`
+        : `/api-accounting/admin/smart-folders`;
+      await authFetch(url, {
+        method: editingKey ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, name, conditions, show_in_segments: showInSeg, notify }),
+      });
+    } catch (e) { window.toast?.warn?.(`後端同步失敗:${e.message || e}`); }
+    const folder = { k: key, name, l: name + " " + _builderPreviewCount(),
+                     conditions, showInSegments: showInSeg, notify };
     if (editingKey) {
       _state.customFolders = _state.customFolders.map(f => f.k === editingKey ? folder : f);
     } else {
@@ -863,12 +872,28 @@ function _renderInboxList() {
     });
   });
   container.querySelectorAll("[data-fpp-inbox-suppress]").forEach(b => {
-    b.addEventListener("click", e => {
+    b.addEventListener("click", async e => {
       const type = e.currentTarget.dataset.fppInboxSuppress;
-      _suppress(type);
+      _suppress(type);   // localStorage(離線 fallback)
+      try {
+        await authFetch("/api-accounting/admin/ai-suggestions/suppress", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type }),
+        });
+      } catch {}
       _state.aiSuggestions = _state.aiSuggestions.filter(s => s.type !== type);
       window.toast?.info?.(`已關閉「${type === "deadline" ? "截止日" : type === "reply" ? "待回信" : "停滯"}」類提示`);
       _renderInboxList();
+    });
+  });
+  // 「之後再說」也通知 backend dismiss 24h(fire-and-forget)
+  container.querySelectorAll("[data-fpp-inbox-later]").forEach(b => {
+    const id = +b.dataset.fppInboxLater;
+    b.addEventListener("click", () => {
+      authFetch(`/api-accounting/admin/ai-suggestions/${id}/dismiss`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hours: 24 }),
+      }).catch(() => {});
     });
   });
 }
