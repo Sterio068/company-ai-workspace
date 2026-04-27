@@ -28,8 +28,21 @@ import { slideUp } from "./motion.js";
 
 let _ncEl = null;
 let _isOpen = false;
+let _cssLoaded = false;
+
+// v1.20 perf · lazy load NC CSS · 沒打開 NC 的 user 不付 ~6KB CSS 解析成本
+function _ensureCss() {
+  if (_cssLoaded || document.querySelector('link[data-lazy-css="nc"]')) return;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = "/static/styles/notification-center.css?v=2";
+  link.dataset.lazyCss = "nc";
+  document.head.appendChild(link);
+  _cssLoaded = true;
+}
 
 function _ensureNC() {
+  _ensureCss();  // v1.20 · 第一次 open 才注入 CSS
   if (_ncEl) return _ncEl;
   _ncEl = document.createElement("aside");
   _ncEl.className = "notification-center";

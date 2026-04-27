@@ -19,6 +19,18 @@ import { authFetch } from "../auth.js";
 
 let _ccEl = null;
 let _isOpen = false;
+let _cssLoaded = false;
+
+// v1.20 perf · lazy load CC CSS · 沒打開 CC 的 user 不付 ~7KB CSS 解析成本
+function _ensureCss() {
+  if (_cssLoaded || document.querySelector('link[data-lazy-css="cc"]')) return;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = "/static/styles/control-center.css?v=1";
+  link.dataset.lazyCss = "cc";
+  document.head.appendChild(link);
+  _cssLoaded = true;
+}
 
 const ENGINES = [
   { id: "openai", label: "OpenAI", desc: "GPT-4 · 創意 / 廣度", color: "#10a37f" },
@@ -32,6 +44,7 @@ const THEMES = [
 ];
 
 function _ensureCC() {
+  _ensureCss();  // v1.20 · 第一次 open 才注入 CSS
   if (_ccEl) return _ccEl;
   _ccEl = document.createElement("aside");
   _ccEl.className = "control-center";
