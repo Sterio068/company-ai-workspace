@@ -1191,6 +1191,15 @@
   box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
 }
 
+/* v1.43 a11y · F12 修 · WCAG 2.4.7/2.4.11 · Windows 高對比模式不顯示 box-shadow
+   ➜ 加 :focus-visible outline · 鍵盤 Tab 必看到焦點 */
+.fpp-builder-input:focus-visible,
+.fpp-cond-select:focus-visible,
+.fpp-cond-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .fpp-builder-conds {
   display: flex;
   flex-direction: column;
@@ -1220,14 +1229,20 @@
 .fpp-cond-op { width: 60px; }
 
 .fpp-cond-rm {
+  /* v1.43 a11y · F10 · WCAG 2.5.8 · target-size ≥ 24×24
+     原 22×22 → 28×28 · 加 inline-flex 置中 + label-secondary 對比 */
   background: transparent;
   border: 0;
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
-  color: var(--label-tertiary);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--label-secondary);
   cursor: pointer;
   font-size: var(--text-lg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .fpp-cond-rm:hover {

@@ -166,14 +166,14 @@ function _renderAiBanner() {
       <span class="fpp-ai-icon" aria-hidden="true">✨</span>
       <span class="fpp-ai-text">AI 小幫手:${escapeHtml(top.text)} · 要我${escapeHtml(top.cta)}嗎?</span>
       ${_renderConfidenceBar(top.confidence)}
-      <button class="fpp-ai-source" data-fpp-source="${escapeHtml(top.src)}" title="點看來源對話">
+      <button type="button" class="fpp-ai-source" data-fpp-source="${escapeHtml(top.src)}" title="點看來源對話">
         來源:${escapeHtml(top.src)} ↗
       </button>
       <span class="fpp-banner-spacer"></span>
-      ${others > 0 ? `<button class="fpp-ai-more" data-fpp-banner-more>看其他 ${others} 條</button>` : ""}
-      <button class="fpp-ai-cta" data-fpp-banner-cta="${top.id}">${escapeHtml(top.cta)}</button>
-      <button class="fpp-ai-later" data-fpp-banner-later="${top.id}">之後再說</button>
-      <button class="fpp-ai-close" data-fpp-banner-close aria-label="關閉">×</button>
+      ${others > 0 ? `<button type="button" class="fpp-ai-more" data-fpp-banner-more>看其他 ${others} 條</button>` : ""}
+      <button type="button" class="fpp-ai-cta" data-fpp-banner-cta="${top.id}">${escapeHtml(top.cta)}</button>
+      <button type="button" class="fpp-ai-later" data-fpp-banner-later="${top.id}">之後再說</button>
+      <button type="button" class="fpp-ai-close" data-fpp-banner-close aria-label="關閉">×</button>
     </div>
   `;
 }
@@ -195,17 +195,17 @@ function _renderConfidenceBar(value) {
 function _renderToolbar() {
   return `
     <div class="fpp-toolbar">
-      <button class="fpp-logo" data-fpp-logo title="導覽 (⌘0)">
+      <button type="button" class="fpp-logo" data-fpp-logo title="導覽 (⌘0)">
         <span class="fpp-logo-text">${escapeHtml(brand.companyShort)}</span>
         <span class="fpp-logo-arrow">▾</span>
       </button>
       <div class="fpp-nav-arrows">
-        <button class="fpp-arrow" disabled aria-label="上一頁">‹</button>
-        <button class="fpp-arrow" disabled aria-label="下一頁">›</button>
+        <button type="button" class="fpp-arrow" disabled aria-label="上一頁">‹</button>
+        <button type="button" class="fpp-arrow" disabled aria-label="下一頁">›</button>
       </div>
       <div class="fpp-view-switch" role="tablist">
         ${["grid", "list", "column"].map(v => `
-          <button class="fpp-view-btn ${_state.view === v ? "active" : ""}"
+          <button type="button" class="fpp-view-btn ${_state.view === v ? "active" : ""}"
                   data-fpp-view="${v}" role="tab" aria-selected="${_state.view === v}">
             ${v === "grid" ? "圖示" : v === "list" ? "清單" : "分欄"}
           </button>
@@ -218,13 +218,13 @@ function _renderToolbar() {
                aria-label="AI 小幫手對話">
         <kbd class="fpp-composer-hint">↵</kbd>
       </div>
-      <button class="fpp-search" data-fpp-search title="全域搜尋 (⌘K)" aria-label="搜尋">
+      <button type="button" class="fpp-search" data-fpp-search title="全域搜尋 (⌘K)" aria-label="搜尋">
         <svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none">
           <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
         <kbd>⌘F</kbd>
       </button>
-      <button class="fpp-hints-toggle ${_state.showHints ? "active" : ""}"
+      <button type="button" class="fpp-hints-toggle ${_state.showHints ? "active" : ""}"
               data-fpp-hints title="鍵盤提示 (?)">?</button>
     </div>
   `;
@@ -296,7 +296,7 @@ function _renderSegments() {
   return `
     <div class="fpp-segments" role="tablist">
       ${built.map(s => `
-        <button class="fpp-segment ${s.active ? "active" : ""} ${s.smart ? "smart" : ""}"
+        <button type="button" class="fpp-segment ${s.active ? "active" : ""} ${s.smart ? "smart" : ""}"
                 data-fpp-segment="${s.k}" ${s.custom ? `data-fpp-custom="${s.k}"` : ""}
                 role="tab" aria-selected="${s.active}">
           ${escapeHtml(s.l)}
@@ -304,7 +304,7 @@ function _renderSegments() {
         </button>
       `).join("")}
       <!-- v1.6 · 「+ 自訂條件」橘色可點 → 開 Builder -->
-      <button class="fpp-segment fpp-segment-add" data-fpp-builder-open
+      <button type="button" class="fpp-segment fpp-segment-add" data-fpp-builder-open
               title="新增 Smart Folder">+ 自訂條件</button>
       <span class="fpp-segments-hint">橘色 · Smart Folder 條件查詢</span>
     </div>
@@ -315,7 +315,7 @@ function _renderGrid() {
   return `
     <div class="fpp-grid" id="fpp-grid">
       ${_items.map((it, i) => `
-        <button class="fpp-item ${i === _state.selected ? "selected" : ""}"
+        <button type="button" class="fpp-item ${i === _state.selected ? "selected" : ""}"
                 data-fpp-item="${i}" tabindex="${i === _state.selected ? 0 : -1}"
                 aria-label="${escapeHtml(it.name)} · ${escapeHtml(it.date)}">
           <div class="fpp-icon" style="--ws-color:${escapeHtml(it.color)}" aria-hidden="true">
@@ -570,7 +570,7 @@ function _openQuickLook() {
             <div class="fpp-quicklook-meta">${escapeHtml(item.ws)} · ${escapeHtml(item.date)}</div>
           </div>
         </div>
-        <button class="fpp-quicklook-close" aria-label="關閉">space / esc 關閉</button>
+        <button type="button" class="fpp-quicklook-close" aria-label="關閉">space / esc 關閉</button>
       </div>
       <div class="fpp-quicklook-section">
         <div class="fpp-quicklook-label">最近 3 訊</div>
@@ -592,8 +592,8 @@ function _openQuickLook() {
         </div>
       </div>
       <div class="fpp-quicklook-actions">
-        <button class="fpp-btn fpp-btn-primary" data-fpp-ql-open>開啟對話 ↵</button>
-        <button class="fpp-btn" data-fpp-ql-reply>快速回覆</button>
+        <button type="button" class="fpp-btn fpp-btn-primary" data-fpp-ql-open>開啟對話 ↵</button>
+        <button type="button" class="fpp-btn" data-fpp-ql-reply>快速回覆</button>
       </div>
     </div>
   `;
@@ -652,7 +652,7 @@ function _openBuilder(editingKey = null) {
     <div class="fpp-builder">
       <div class="fpp-builder-head">
         <h3 class="fpp-builder-title" id="fpp-builder-title">${editingKey ? "編輯" : "新增"} Smart Folder</h3>
-        <button class="fpp-builder-close" aria-label="關閉">×</button>
+        <button type="button" class="fpp-builder-close" aria-label="關閉">×</button>
       </div>
       <div class="fpp-builder-section">
         <label class="fpp-builder-label">名稱</label>
@@ -662,7 +662,7 @@ function _openBuilder(editingKey = null) {
       <div class="fpp-builder-section">
         <label class="fpp-builder-label">條件 · 全部符合(AND)</label>
         <div id="fpp-builder-conds" class="fpp-builder-conds"></div>
-        <button class="fpp-builder-add-cond" data-fpp-add-cond>+ 加條件</button>
+        <button type="button" class="fpp-builder-add-cond" data-fpp-add-cond>+ 加條件</button>
       </div>
       <div class="fpp-builder-preview" id="fpp-builder-preview"></div>
       <div class="fpp-builder-options">
@@ -676,8 +676,8 @@ function _openBuilder(editingKey = null) {
         </label>
       </div>
       <div class="fpp-builder-actions">
-        <button class="fpp-btn" data-fpp-builder-cancel>取消</button>
-        <button class="fpp-btn fpp-btn-primary" data-fpp-builder-save>儲存</button>
+        <button type="button" class="fpp-btn" data-fpp-builder-cancel>取消</button>
+        <button type="button" class="fpp-btn fpp-btn-primary" data-fpp-builder-save>儲存</button>
       </div>
     </div>
   `;
@@ -765,16 +765,18 @@ function _renderBuilderConds() {
   if (!container) return;
   const FIELDS = ["工作區", "回應狀態", "上次活動", "對話標題", "未讀數", "提及我", "工作包", "AI 小幫手活動"];
   const OPS = ["=", "≠", "包含", ">", "<"];
+  // v1.43 a11y · F10 修 · 條件 row 加 group + 各 control aria-label
+  // SR 念「條件 1 群組 · 欄位 combobox · 比較 combobox · 值 textbox · 移除 button」
   container.innerHTML = _state.builderConditions.map((c, i) => `
-    <div class="fpp-cond-row">
-      <select data-fpp-cond-f="${i}" class="fpp-cond-select">
+    <div class="fpp-cond-row" role="group" aria-label="條件 ${i + 1}">
+      <select data-fpp-cond-f="${i}" class="fpp-cond-select" aria-label="條件 ${i + 1} 欄位">
         ${FIELDS.map(f => `<option ${f === c.f ? "selected" : ""}>${f}</option>`).join("")}
       </select>
-      <select data-fpp-cond-op="${i}" class="fpp-cond-select fpp-cond-op">
+      <select data-fpp-cond-op="${i}" class="fpp-cond-select fpp-cond-op" aria-label="條件 ${i + 1} 比較運算子">
         ${OPS.map(o => `<option ${o === c.op ? "selected" : ""}>${o}</option>`).join("")}
       </select>
-      <input data-fpp-cond-v="${i}" class="fpp-cond-input" value="${escapeHtml(c.v)}">
-      ${c.removable !== false ? `<button class="fpp-cond-rm" data-fpp-cond-rm="${i}" aria-label="移除">×</button>` : ""}
+      <input data-fpp-cond-v="${i}" class="fpp-cond-input" value="${escapeHtml(c.v)}" aria-label="條件 ${i + 1} 值">
+      ${c.removable !== false ? `<button type="button" class="fpp-cond-rm" data-fpp-cond-rm="${i}" aria-label="移除條件 ${i + 1}">×</button>` : ""}
     </div>
   `).join("");
   // bind change
@@ -845,7 +847,7 @@ function _openInbox() {
     <div class="fpp-inbox">
       <div class="fpp-inbox-head">
         <h3 class="fpp-inbox-title" id="fpp-inbox-title">✨ AI 小幫手建議</h3>
-        <button class="fpp-inbox-close" aria-label="關閉">×</button>
+        <button type="button" class="fpp-inbox-close" aria-label="關閉">×</button>
       </div>
       <div class="fpp-inbox-meta">基於對話內容 + 截止日 + 回應狀態 · 每 30 分鐘掃描一次</div>
       <div class="fpp-inbox-list" id="fpp-inbox-list"></div>
@@ -912,16 +914,16 @@ function _renderInboxList() {
           s.type === "deadline" ? "截止日" :
           s.type === "reply" ? "待回信" : "停滯"
         }</span>
-        <button class="fpp-inbox-source" data-fpp-inbox-src="${escapeHtml(s.src)}">↗ 來源:${escapeHtml(s.src)}</button>
+        <button type="button" class="fpp-inbox-source" data-fpp-inbox-src="${escapeHtml(s.src)}">↗ 來源:${escapeHtml(s.src)}</button>
         <span class="fpp-inbox-spacer"></span>
         ${_renderConfidenceBar(s.confidence)}
       </div>
       <div class="fpp-inbox-text">${escapeHtml(s.text)}</div>
       <div class="fpp-inbox-actions">
-        <button class="fpp-btn fpp-btn-primary fpp-btn-sm" data-fpp-inbox-cta="${s.id}">${escapeHtml(s.cta)}</button>
-        <button class="fpp-btn fpp-btn-sm" data-fpp-inbox-later="${s.id}">之後再說</button>
+        <button type="button" class="fpp-btn fpp-btn-primary fpp-btn-sm" data-fpp-inbox-cta="${s.id}">${escapeHtml(s.cta)}</button>
+        <button type="button" class="fpp-btn fpp-btn-sm" data-fpp-inbox-later="${s.id}">之後再說</button>
         <span class="fpp-inbox-spacer"></span>
-        <button class="fpp-inbox-suppress" data-fpp-inbox-suppress="${s.type}">不再提示這類</button>
+        <button type="button" class="fpp-inbox-suppress" data-fpp-inbox-suppress="${s.type}">不再提示這類</button>
       </div>
     </div>
   `).join("");
@@ -995,7 +997,7 @@ function _renderHintsOverlay() {
   h.innerHTML = `
     <div class="fpp-hints-head">
       <span class="fpp-hints-title" id="fpp-hints-title">鍵盤</span>
-      <button class="fpp-hints-close" aria-label="關閉" data-fpp-hints-close>×</button>
+      <button type="button" class="fpp-hints-close" aria-label="關閉" data-fpp-hints-close>×</button>
     </div>
     <div class="fpp-hints-body">
       <div><kbd>j / k</kbd><span>上下移動</span></div>
