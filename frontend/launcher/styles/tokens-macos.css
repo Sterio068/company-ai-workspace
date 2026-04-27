@@ -22,6 +22,21 @@
                  "Roboto Mono", monospace;
 
   /* ============================================================
+     1.1.5 字級 type scale(v1.28 · architect V2 修)
+     ============================================================
+     原 10+ 散落 font-size · 統一到 8 級 · macOS HIG 對齊
+     使用 var(--text-*) 取代 hardcode · 漸進遷移
+  ============================================================ */
+  --text-xs:   10px;  /* widget label · kbd · uppercase eyebrow */
+  --text-sm:   11px;  /* path-label · shortcut */
+  --text-base: 12px;  /* body / button 預設 */
+  --text-md:   13px;  /* menubar item / item title */
+  --text-lg:   14px;  /* subhead */
+  --text-xl:   16px;  /* headline · greeting */
+  --text-2xl:  20px;  /* title · section header */
+  --text-hero: 32px;  /* time-big · display */
+
+  /* ============================================================
      1.2 顏色系統(macOS Sequoia 對齊 · light)
      ============================================================ */
 
