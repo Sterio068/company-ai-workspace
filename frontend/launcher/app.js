@@ -193,7 +193,7 @@ export const app = {
     // Projects 上線狀態提示
     document.querySelectorAll("[data-project-status]").forEach(notice => {
       if (Projects._online) {
-        notice.innerHTML = "✅ 工作包資料已連接 MongoDB · 團隊共享";
+        notice.innerHTML = "✅ 專案資料已連接 MongoDB · 團隊共享";
         notice.style.background = "color-mix(in srgb, var(--green) 8%, transparent)";
         notice.style.color = "var(--green)";
       }
@@ -852,21 +852,21 @@ export const app = {
 
     const cards = [
       nextProject ? {
-        kind: "工作包下一步",
+        kind: "專案下一步",
         title: nextProject.name,
         desc: projectNext,
-        context: "已帶入：工作包 / 交棒卡 / 下一步",
+        context: "已帶入：專案 / 交棒卡 / 下一步",
         outcome: "可產出：任務草稿或交棒卡",
         cta: "打開交棒卡",
         color: this._projectColor(nextProject.name),
         action: () => this.openProjectDrawer(nextProject.id),
       } : {
-        kind: "工作包下一步",
-        title: "建立第一個工作包",
-        desc: "把標案、活動或客戶需求先收進工作包,後續智慧草稿才有脈絡。",
+        kind: "專案下一步",
+        title: "建立第一個專案",
+        desc: "把標案、活動或客戶需求先收進專案,後續智慧草稿才有脈絡。",
         context: "先建立：客戶 / 期限 / 預算 / 需求",
         outcome: "可接續：投標、活動、設計、公關",
-        cta: "建立工作包",
+        cta: "建立專案",
         color: "#007AFF",
         action: () => this.newProject(),
       },
@@ -942,7 +942,7 @@ export const app = {
         </div>
         <div class="ws-desc">${escapeHtml(ws.desc)}</div>
         <div class="ws-flow">${escapeHtml(ws.flow)}</div>
-        <div class="ws-next">先做:${escapeHtml(draft.next || "接續工作包或貼資料")}</div>
+        <div class="ws-next">先做:${escapeHtml(draft.next || "接續專案或貼資料")}</div>
         <div class="ws-deliverable">完成後:${escapeHtml(draft.deliverable || "可交付草稿")}</div>
         <div class="ws-cta">接續這類工作 →</div>
       `;
@@ -978,25 +978,25 @@ export const app = {
       <article class="workspace-hero-card">
         <div>
           <div class="ws-flow">${escapeHtml(ws.flow)}</div>
-          <h2>先接續工作包,再請 AI 產草稿</h2>
-          <p>${escapeHtml(draft.next || "選一個既有工作包,或先建立新的工作包；資料不足時再開草稿詢問。")}</p>
+          <h2>先接續專案,再請 AI 產草稿</h2>
+          <p>${escapeHtml(draft.next || "選一個既有專案,或先建立新的專案；資料不足時再開草稿詢問。")}</p>
         </div>
         <div class="workspace-hero-actions">
-          ${firstRelated ? `<button class="btn-primary" onclick="app.openProjectDrawer('${firstRelatedId}')">接續最近工作包</button>` : ""}
-          <button class="btn-ghost" onclick="app.newProject()">建立工作包</button>
+          ${firstRelated ? `<button class="btn-primary" onclick="app.openProjectDrawer('${firstRelatedId}')">接續最近專案</button>` : ""}
+          <button class="btn-ghost" onclick="app.newProject()">建立專案</button>
           <button class="btn-ghost" onclick="app.startWorkspaceDraft(${ws.id})">開新草稿</button>
         </div>
       </article>
       <div class="workspace-two-col">
         <section class="work-panel-card">
-          <div class="work-section-title">這個工作區的工作包</div>
+          <div class="work-section-title">這個工作區的專案</div>
           ${relatedProjects.length ? relatedProjects.map(p => `
             <button type="button" class="workspace-project-row" onclick="app.openProjectDrawer('${escapeHtml(p.id || p._id)}')">
-              <strong>${escapeHtml(p.name || "未命名工作包")}</strong>
+              <strong>${escapeHtml(p.name || "未命名專案")}</strong>
               <span>${escapeHtml(p.client || "未指定客戶")} · ${escapeHtml(p.handoff?.next_actions?.[0] || p.description || "打開交棒卡補下一步")}</span>
             </button>
           `).join("") : `
-            <div class="chip-empty">尚無相關工作包 · 建立後就能保存素材、下一步與交接內容。</div>
+            <div class="chip-empty">尚無相關專案 · 建立後就能保存素材、下一步與交接內容。</div>
           `}
         </section>
         <section class="work-panel-card">
@@ -1052,9 +1052,9 @@ export const app = {
       root.innerHTML = `
         <div class="empty-state" style="grid-column: 1 / -1">
           <div class="empty-state-icon">📁</div>
-          <div class="empty-state-title">${this.projectFilter === "all" ? "尚無工作包" : "沒有符合條件的工作包"}</div>
+          <div class="empty-state-title">${this.projectFilter === "all" ? "尚無專案" : "沒有符合條件的專案"}</div>
           <div class="empty-state-hint">
-            <a href="#" class="link" data-new-project>建立新工作包</a>${this.projectFilter !== "all" ? " · 或切換篩選條件" : ""}
+            <a href="#" class="link" data-new-project>建立新專案</a>${this.projectFilter !== "all" ? " · 或切換篩選條件" : ""}
           </div>
           <div class="work-empty-actions">
             <button class="btn-primary" data-new-project-button>手動建立</button>
@@ -1092,7 +1092,7 @@ export const app = {
           "work-list-card",
           (this.activeProjectId === (p.id || p._id)) ? "active" : "",
         ].filter(Boolean),
-        attrs: { "data-project-id": p.id || p._id, "aria-label": `選取工作包:${p.name}` },
+        attrs: { "data-project-id": p.id || p._id, "aria-label": `選取專案:${p.name}` },
         style: { "--project-color": color },
         onclick: () => this.selectProject(p.id || p._id),
       });
@@ -1153,10 +1153,10 @@ export const app = {
       root.className = "work-detail-empty";
       root.innerHTML = `
         <div class="empty-state-icon">◎</div>
-        <div class="empty-state-title">選一個工作包,或讓主管家帶你建立</div>
+        <div class="empty-state-title">選一個專案,或讓主管家帶你建立</div>
         <div class="empty-state-hint">右側會顯示下一棒、素材缺口與智慧助理可執行動作。</div>
         <div class="work-empty-actions">
-          <button class="btn-primary" onclick="app.newProject()">建立工作包</button>
+          <button class="btn-primary" onclick="app.newProject()">建立專案</button>
           <button class="btn-ghost" onclick="app.startProjectPlanner()">請主管家帶我建</button>
         </div>`;
       return;
@@ -1192,7 +1192,7 @@ export const app = {
       <div class="work-hero">
         <div>
           <div class="work-kind" style="--kind-color:${kind.color}">${escapeHtml(kind.label)}</div>
-          <h2>${escapeHtml(p.name || "未命名工作包")}</h2>
+          <h2>${escapeHtml(p.name || "未命名專案")}</h2>
           <p>${escapeHtml(p.client || "未指定客戶")} · ${escapeHtml(statusLabel)} · 更新 ${escapeHtml(timeAgo(this._projectUpdatedAt(p)) || "—")}</p>
         </div>
         <div class="readiness-ring" style="--score:${readiness.score}">
@@ -1213,7 +1213,7 @@ export const app = {
         <div class="work-next-copy">
           <span>建議下一步</span>
           <strong>${escapeHtml(leadSuggestion?.title || "先拆可執行任務")}</strong>
-          <p>${escapeHtml(leadSuggestion?.desc || "讓主管家先把工作包拆成今天能做的下一步。")}</p>
+          <p>${escapeHtml(leadSuggestion?.desc || "讓主管家先把專案拆成今天能做的下一步。")}</p>
         </div>
         <button class="btn-primary" onclick="app.runWorkAction('${leadSuggestion?.kind || "next"}')">${escapeHtml(leadSuggestion?.cta || "開始")}</button>
       </div>
@@ -1257,7 +1257,7 @@ export const app = {
       <div class="work-playbook-card">
         <div>
           <div class="work-section-title">推薦 Playbook</div>
-          <p>${escapeHtml(kind.label)} · 會帶入這個工作包的客戶、期限、預算與下一步。</p>
+          <p>${escapeHtml(kind.label)} · 會帶入這個專案的客戶、期限、預算與下一步。</p>
         </div>
         <button class="playbook-pill" style="--ws-color:${kind.color}" onclick="app.runWorkAction('playbook')">帶入 ${escapeHtml(kind.label)} 草稿</button>
       </div>`;
@@ -1274,22 +1274,22 @@ export const app = {
   runWorkAction(kind) {
     const p = Projects.get(this.activeProjectId);
     if (!p) {
-      toast.info("先選一個工作包");
+      toast.info("先選一個專案");
       return;
     }
     const workKind = this._workKind(p);
     const context = this._projectPromptContext(p);
     const prompts = {
-      next: "請把這個工作包拆成今天可執行的 3 個下一步,每步標明負責角色、需要素材、完成定義。",
-      handoff: "請替這個工作包產一張交棒卡,包含目標、限制、素材來源、下一步、需要人工確認的問題。",
-      gaps: "請檢查這個工作包缺哪些資訊,整理成最多 8 個待確認問題,並依急迫性排序。",
-      assets: "請整理這個工作包需要的素材清單,分成已知素材、待補素材、建議檔案命名與資料夾結構。",
+      next: "請把這個專案拆成今天可執行的 3 個下一步,每步標明負責角色、需要素材、完成定義。",
+      handoff: "請替這個專案產一張交棒卡,包含目標、限制、素材來源、下一步、需要人工確認的問題。",
+      gaps: "請檢查這個專案缺哪些資訊,整理成最多 8 個待確認問題,並依急迫性排序。",
+      assets: "請整理這個專案需要的素材清單,分成已知素材、待補素材、建議檔案命名與資料夾結構。",
       deliverable: "請依目前資訊產第一版可交付成果大綱,並明確標出假設與待確認處。",
-      daily: "請把這個工作包整理成今天必做清單,每項控制在 45 分鐘內,並標明負責角色、輸入素材、完成定義與阻塞點。",
-      playbook: `請用「${workKind.label}」流程協助推進這個工作包,先產出流程步驟、風險、下一個可直接交辦的任務。`,
+      daily: "請把這個專案整理成今天必做清單,每項控制在 45 分鐘內,並標明負責角色、輸入素材、完成定義與阻塞點。",
+      playbook: `請用「${workKind.label}」流程協助推進這個專案,先產出流程步驟、風險、下一個可直接交辦的任務。`,
     };
     const prompt = [
-      "請以智慧助理主管家的角色處理以下工作包。",
+      "請以智慧助理主管家的角色處理以下專案。",
       "不要泛泛建議;請輸出可直接交辦的內容。若資料不足,請列出待確認,不要自行編造。",
       "",
       context,
@@ -1372,7 +1372,7 @@ export const app = {
       : [];
     const prompt = [
       "請以智慧助理主管家的角色協助我把這件工作往前推。",
-      "請先判斷這應該建立或接續哪個工作包,再列出可直接執行的下一步。",
+      "請先判斷這應該建立或接續哪個專案,再列出可直接執行的下一步。",
       "如果需要我補資料,請用 3 個以內的問題詢問,不要泛泛建議。",
       "",
       "我的需求:",
@@ -1442,18 +1442,18 @@ export const app = {
 
   startProjectPlanner() {
     const prompt = [
-      "我想建立一個新的工作包,但現在資訊還不完整。",
-      "請用主管家的角色先問我 5 個必要問題,幫我快速收斂成可以建立工作包的內容。",
-      "請問題要短、好回答,並最後輸出可貼進工作包的欄位:工作包名稱、客戶、期限、預算、描述、下一棒、協作者、交棒目標、下一步、素材需求。",
+      "我想建立一個新的專案,但現在資訊還不完整。",
+      "請用主管家的角色先問我 5 個必要問題,幫我快速收斂成可以建立專案的內容。",
+      "請問題要短、好回答,並最後輸出可貼進專案的欄位:專案名稱、客戶、期限、預算、描述、下一棒、協作者、交棒目標、下一步、素材需求。",
     ].join("\n");
     chat.open("00", prompt);
-    toast.info("已打開主管家 · 先回答 5 個問題就能建工作包");
+    toast.info("已打開主管家 · 先回答 5 個問題就能建專案");
   },
 
   // ---------- Projects CRUD ----------
   newProject() {
     this.editingProjectId = null;
-    setText("project-modal-title", "新工作包");
+    setText("project-modal-title", "新專案");
     document.getElementById("project-form")?.reset();
     const delBtn = document.getElementById("project-delete-btn");
     if (delBtn) delBtn.style.display = "none";
@@ -1464,7 +1464,7 @@ export const app = {
     const p = Projects.get(id);
     if (!p) return;
     this.editingProjectId = id;
-    setText("project-modal-title", "編輯工作包");
+    setText("project-modal-title", "編輯專案");
     const form = document.getElementById("project-form");
     if (!form) return;
     form.name.value = p.name || "";
@@ -1518,15 +1518,15 @@ export const app = {
     this.closeProjectModal();
     // v1.39 perf F-2 · 4 個獨立 render call → 1 個 helper(統一去抖點)
     this._renderProjectViews();
-    toast.success("工作包已儲存");
+    toast.success("專案已儲存");
   },
 
   async deleteProject() {
     if (!this.editingProjectId) return;
     const deletingId = this.editingProjectId;
     const ok = await modal.confirm(
-      "確定刪除這個工作包?<br><small style='color:var(--text-secondary)'>對話與檔案不會刪,只刪除工作包資料。</small>",
-      { title: "刪除工作包", icon: "⚠️", primary: "刪除", danger: true }
+      "確定刪除這個專案?<br><small style='color:var(--text-secondary)'>對話與檔案不會刪,只刪除專案資料。</small>",
+      { title: "刪除專案", icon: "⚠️", primary: "刪除", danger: true }
     );
     if (!ok) return;
     // Codex R3.7 · Projects.remove throw on server 500
@@ -1540,7 +1540,7 @@ export const app = {
     if (this.activeProjectId === deletingId) this.activeProjectId = null;
     // v1.39 perf F-2 · 統一 _renderProjectViews · 取代 4 個獨立 render
     this._renderProjectViews();
-    toast.success("工作包已刪除");
+    toast.success("專案已刪除");
   },
 
   openProjectModal() {
@@ -1573,7 +1573,7 @@ export const app = {
     if (drawer) drawer.dataset.mode = "project";
 
     // 填基本資訊
-    const name = p.name || "未命名工作包";
+    const name = p.name || "未命名專案";
     const setEl = (id, v) => {
       const el = document.getElementById(id);
       if (el) el.textContent = v || "—";
@@ -1715,7 +1715,7 @@ export const app = {
   _handoffFromDrawer() {
     const lines = (value) => (value || "").split("\n").map(x => x.trim()).filter(Boolean);
     return {
-      projectName: document.getElementById("drawer-project-name")?.textContent?.trim() || "未命名工作包",
+      projectName: document.getElementById("drawer-project-name")?.textContent?.trim() || "未命名專案",
       client: document.getElementById("dr-client")?.textContent?.trim() || "—",
       nextOwner: document.getElementById("dr-next-owner")?.textContent?.trim() || "—",
       deadline: document.getElementById("dr-deadline")?.textContent?.trim() || "—",
@@ -1730,7 +1730,7 @@ export const app = {
     const list = (items, empty = "未填") => items.length ? items.map(item => `- ${item}`).join("\n") : empty;
     if (format === "email") {
       return [
-        `主旨:${handoff.projectName} · 工作包交棒`,
+        `主旨:${handoff.projectName} · 專案交棒`,
         "",
         "Hi,",
         "",
@@ -1755,7 +1755,7 @@ export const app = {
       ].join("\n");
     }
     return [
-      `【工作包交棒】${handoff.projectName}`,
+      `【專案交棒】${handoff.projectName}`,
       `客戶:${handoff.client}`,
       `截止:${handoff.deadline}`,
       `下一棒:${handoff.nextOwner}`,
@@ -1806,7 +1806,7 @@ export const app = {
     }
 
     const prompt = [
-      "你接到這個工作包的交棒:",
+      "你接到這個專案的交棒:",
       goal ? `\n目標:${goal}` : "",
       constraints ? `\n限制:\n${constraints}` : "",
       assets ? `\n附件來源:\n${assets}` : "",

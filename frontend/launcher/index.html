@@ -7,11 +7,11 @@
 <title data-brand-title>智慧助理</title>
 <!-- v1.4 · macOS 設計 token 重置 · 在 launcher.css 之前載入 · :root tokens 被 launcher 引用 -->
 <link rel="stylesheet" href="/static/styles/tokens-macos.css?v=6">
-<link rel="stylesheet" href="/static/launcher.css?v=78">
+<link rel="stylesheet" href="/static/launcher.css?v=79">
 <!-- v1.4 macOS · menubar shell · critical · always 顯示 -->
 <link rel="stylesheet" href="/static/styles/menubar.css?v=5">
 <!-- v1.5 macOS · Dashboard F++ · 主畫面 IA · critical · 預設首頁 -->
-<link rel="stylesheet" href="/static/styles/dashboard-fpp.css?v=12">
+<link rel="stylesheet" href="/static/styles/dashboard-fpp.css?v=13">
 <!-- v1.4 macOS · Dock · critical · 永遠顯示在底部 -->
 <link rel="stylesheet" href="/static/styles/dock.css?v=5">
 <!--
@@ -54,9 +54,9 @@
         <span class="sidebar-label">今日</span>
         <kbd class="sidebar-shortcut">⌘0</kbd>
       </button>
-      <button type="button" aria-label="工作包" class="sidebar-item nav-item" data-view="projects">
+      <button type="button" aria-label="專案" class="sidebar-item nav-item" data-view="projects">
         <span class="sidebar-icon">◎</span>
-        <span class="sidebar-label">工作包</span>
+        <span class="sidebar-label">專案</span>
         <span class="sidebar-count" id="project-count">0</span>
         <kbd class="sidebar-shortcut">⌘P</kbd>
       </button>
@@ -210,7 +210,7 @@
             <svg class="icon" width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            <span>搜尋助手、工作包、資料…</span>
+            <span>搜尋助手、專案、資料…</span>
             <kbd>⌘K</kbd>
           </button>
         </div>
@@ -220,14 +220,14 @@
         <div class="today-command-card">
           <div class="eyebrow">今日工作台</div>
           <h2 id="today-title">把今天要做的事丟進來</h2>
-          <p>輸入需求、貼文字或加入附件。系統會先整理成可檢查的草稿,再讓你存成工作包、下一步或交接內容。</p>
+          <p>輸入需求、貼文字或加入附件。系統會先整理成可檢查的草稿,再讓你存成專案、下一步或交接內容。</p>
           <form class="today-composer" id="today-composer-form">
             <label class="sr-only" for="today-composer-input">今天要做什麼</label>
             <textarea id="today-composer-input" rows="4" placeholder="例:幫我把今天客戶會議整理成下一步,並附上會議紀錄"></textarea>
             <div class="today-file-ribbon" id="today-file-ribbon" aria-live="polite"></div>
             <div class="today-composer-actions">
               <button type="button" class="btn-ghost" data-today-pick-file>加入附件</button>
-              <button type="button" class="btn-ghost" data-today-new-project>建立工作包</button>
+              <button type="button" class="btn-ghost" data-today-new-project>建立專案</button>
               <button type="button" class="btn-ghost" data-today-show-projects>看所有工作</button>
               <button type="submit" class="btn-primary">交給主管家</button>
             </div>
@@ -240,7 +240,7 @@
         <aside class="today-sidecar" aria-label="今日使用原則">
           <div class="sidecar-step"><b>01</b><span>寫下任務,不用先選模型或助手。</span></div>
           <div class="sidecar-step"><b>02</b><span>有檔案就直接加進來,送出前都能移除。</span></div>
-          <div class="sidecar-step"><b>03</b><span>AI 回覆後,可存成工作包下一步或交接內容。</span></div>
+          <div class="sidecar-step"><b>03</b><span>AI 回覆後,可存成專案下一步或交接內容。</span></div>
         </aside>
       </section>
 
@@ -266,14 +266,14 @@
         </div>
         <aside class="today-main">
           <div class="block-title">
-            <h2>最近工作包</h2>
+            <h2>最近專案</h2>
             <div class="block-hint">
               <a href="#projects" class="link" data-today-show-projects>管理全部 →</a>
             </div>
           </div>
           <div class="projects-preview work-packet-preview" id="projects-preview">
             <div class="chip-empty">
-              還沒有工作包 ·
+              還沒有專案 ·
               <a href="#" onclick="app.newProject();return false;" class="link">建立第一個</a>
             </div>
           </div>
@@ -328,15 +328,15 @@
     <div class="view view-projects" data-view="projects">
       <div class="main-header">
         <div>
-          <h1 class="greeting">◎ 工作包</h1>
+          <h1 class="greeting">◎ 專案</h1>
           <div class="greeting-sub">把標案、活動、設計需求收成可交接的工作單位 · 客戶、預算、截止日、下一棒都在這裡。</div>
         </div>
         <div class="header-actions">
-          <button class="btn-primary" onclick="app.newProject()">+ 新工作包</button>
+          <button class="btn-primary" onclick="app.newProject()">+ 新專案</button>
         </div>
       </div>
 
-      <section class="work-cockpit" aria-label="工作包工作台">
+      <section class="work-cockpit" aria-label="專案工作台">
         <aside class="work-list-panel">
           <div class="work-panel-head">
             <div>
@@ -346,23 +346,23 @@
             <button class="btn-ghost btn-sm" onclick="app.newProject()">新增</button>
           </div>
           <div class="work-search">
-            <input type="search" id="project-search" placeholder="搜尋工作包、客戶、下一棒…" oninput="app.searchProjects(event)">
+            <input type="search" id="project-search" placeholder="搜尋專案、客戶、下一棒…" oninput="app.searchProjects(event)">
           </div>
-          <div class="projects-filter" role="tablist" aria-label="工作包篩選">
+          <div class="projects-filter" role="tablist" aria-label="專案篩選">
             <button class="filter-chip active" data-filter="all">全部</button>
             <button class="filter-chip" data-filter="active">進行中</button>
             <button class="filter-chip" data-filter="closed">已結案</button>
           </div>
           <div class="projects-grid work-list" id="projects-grid"></div>
           <div class="v10-notice" data-project-status>
-            ℹ️ 工作包資料優先存 MongoDB 供團隊共享 · 若後端離線會 fallback 到本機 localStorage(該裝置 only)。
+            ℹ️ 專案資料優先存 MongoDB 供團隊共享 · 若後端離線會 fallback 到本機 localStorage(該裝置 only)。
           </div>
         </aside>
 
         <section class="work-detail-panel" id="work-detail-panel" aria-live="polite">
           <div class="work-detail-empty" id="work-detail">
             <div class="empty-state-icon">◎</div>
-            <div class="empty-state-title">選一個工作包</div>
+            <div class="empty-state-title">選一個專案</div>
             <div class="empty-state-hint">右側會顯示下一棒、素材缺口與智慧助理可執行動作。</div>
           </div>
         </section>
@@ -582,7 +582,7 @@
           </div>
           <div class="stat-card">
             <div class="stat-num" id="admin-projects">—</div>
-            <div class="stat-label">進行中工作包</div>
+            <div class="stat-label">進行中專案</div>
           </div>
         </div>
       </section>
@@ -828,12 +828,12 @@
 <div class="modal-backdrop" id="project-modal-backdrop" onclick="app.closeProjectModal()"></div>
 <div class="modal" id="project-modal">
   <div class="modal-header">
-    <h3 id="project-modal-title">新工作包</h3>
+    <h3 id="project-modal-title">新專案</h3>
     <button class="modal-close" onclick="app.closeProjectModal()">✕</button>
   </div>
   <form class="modal-body" id="project-form" onsubmit="app.saveProject(event)">
     <label>
-      <span>工作包名稱 <em>(必填)</em></span>
+      <span>專案名稱 <em>(必填)</em></span>
       <input type="text" name="name" placeholder="例:2026-04 環保局宣導案" required>
     </label>
     <label>
@@ -881,7 +881,7 @@
 <!-- ============== ⌘K PALETTE ============== -->
 <div class="palette-backdrop" id="palette-backdrop" onclick="app.closePalette()"></div>
 <div class="palette" id="palette">
-  <input type="text" class="palette-input" id="palette-input" placeholder="搜尋助手 / 工作包 / 資料 / 範本" autocomplete="off">
+  <input type="text" class="palette-input" id="palette-input" placeholder="搜尋助手 / 專案 / 資料 / 範本" autocomplete="off">
   <div class="palette-results" id="palette-results"></div>
   <div class="palette-footer">
     <span><kbd>↑↓</kbd> 移動</span>
@@ -1038,7 +1038,7 @@
 <div class="caption" id="caption" hidden></div>
 
 <!-- BUILD_INJECT_BUNDLE_START -->
-<script type="module" src="/static/dist/app.SSPWY3ZB.js"></script>
+<script type="module" src="/static/dist/app.ABJELA36.js"></script>
 <script type="module" src="/static/dist/onboarding.C4PKK745.js"></script>
 <!-- BUILD_INJECT_BUNDLE_END -->
 </body>

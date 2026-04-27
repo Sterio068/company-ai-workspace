@@ -23,7 +23,7 @@ function _appName() { return brand.appName; }
 
 function _buildMenus() {
   // v1.46 calm mode · 6 menu → 3 menu(App / 顯示 / 說明)
-  // 移除「檔案」(同功能在 App「新對話」/「偏好設定」+ 顯示「工作包/知識庫」)
+  // 移除「檔案」(同功能在 App「新對話」/「偏好設定」+ 顯示「專案/知識庫」)
   // 移除「編輯」(瀏覽器原生 Cmd+X/C/V/Z/A 已支援 · 重複)
   // 移除「視窗」(macOS 純 todo · 沒接 window manager · 純佔位)
   const APP_NAME = _appName();
@@ -35,7 +35,7 @@ function _buildMenus() {
       { label: `關於 ${APP_NAME}`, action: () => _openAboutWindow(), shortcut: "" },
       { sep: true },
       { label: "新對話", action: () => window.app?.openAgent?.("00"), shortcut: "⌘N" },
-      { label: "新工作包", action: () => window.app?.showView?.("projects"), shortcut: "⌘⇧N" },
+      { label: "新專案", action: () => window.app?.showView?.("projects"), shortcut: "⌘⇧N" },
       { sep: true },
       { label: "偏好設定...", action: () => window.app?.showView?.("admin"), shortcut: "⌘," },
       { sep: true },
@@ -46,7 +46,7 @@ function _buildMenus() {
     label: "顯示",
     items: [
       { label: "今日", action: () => window.app?.showView?.("dashboard"), shortcut: "⌘0" },
-      { label: "工作包", action: () => window.app?.showView?.("projects"), shortcut: "⌘P" },
+      { label: "專案", action: () => window.app?.showView?.("projects"), shortcut: "⌘P" },
       { label: "知識庫", action: () => window.app?.showView?.("knowledge"), shortcut: "⌘K" },
       { sep: true },
       { label: "投標", action: () => window.app?.openWorkspace?.(1), shortcut: "⌘1" },

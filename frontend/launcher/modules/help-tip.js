@@ -16,13 +16,13 @@ import { escapeHtml } from "./util.js";
 const TIPS = {
   dashboard: {
     title: "今日工作台",
-    body: "首頁是你「今天要做什麼」的入口。把任何工作丟進輸入框 · 系統會幫你拆步驟、找來源、產出草稿。下方的工作包是你接續的事。",
+    body: "首頁是你「今天要做什麼」的入口。把任何工作丟進輸入框 · 系統會幫你拆步驟、找來源、產出草稿。下方的專案是你接續的事。",
     cta: "看 5 分鐘快速開始",
     cta_action: () => location.hash = "#help",
   },
   projects: {
-    title: "工作包 · 你的案子容器",
-    body: "每個案子用一個工作包裝。客戶、預算、期限、AI 對話、附件、下一棒、交棒卡都在裡面。不用每次跟 AI 從頭講背景。",
+    title: "專案 · 你的案子容器",
+    body: "每個案子用一個專案裝。客戶、預算、期限、AI 對話、附件、下一棒、交棒卡都在裡面。不用每次跟 AI 從頭講背景。",
     cta: "了解交棒卡 4 格",
     cta_action: () => location.hash = "#help-doc-handoff-card",
   },
@@ -58,7 +58,7 @@ const TIPS = {
   },
   meeting: {
     title: "會議速記",
-    body: "上傳音檔(m4a/mp3/wav) · 1-3 分鐘 · 系統會幫你整理逐字稿 + 決策 + 待辦。一鍵推到工作包。",
+    body: "上傳音檔(m4a/mp3/wav) · 1-3 分鐘 · 系統會幫你整理逐字稿 + 決策 + 待辦。一鍵推到專案。",
     cta: "看會議速記 SOP",
     cta_action: () => location.hash = "#help-doc-quickstart-v1.3",
   },
@@ -76,7 +76,7 @@ const TIPS = {
   },
   site: {
     title: "場勘 · 活動現場神器",
-    body: "iPhone 拍 1-5 張現場照 + GPS + 30 秒語音 · AI 自動結構化「場地 / 入口 / 風險 / 廠商需求」 · 一鍵推工作包。",
+    body: "iPhone 拍 1-5 張現場照 + GPS + 30 秒語音 · AI 自動結構化「場地 / 入口 / 風險 / 廠商需求」 · 一鍵推專案。",
     cta: "看 iPhone 設定",
     cta_action: () => location.hash = "#help-doc-mobile-ios",
   },

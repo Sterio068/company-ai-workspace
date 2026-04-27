@@ -795,7 +795,7 @@ function _closeBuilder() {
 function _renderBuilderConds() {
   const container = document.getElementById("fpp-builder-conds");
   if (!container) return;
-  const FIELDS = ["工作區", "回應狀態", "上次活動", "對話標題", "未讀數", "提及我", "工作包", "AI 小幫手活動"];
+  const FIELDS = ["工作區", "回應狀態", "上次活動", "對話標題", "未讀數", "提及我", "專案", "AI 小幫手活動"];
   const OPS = ["=", "≠", "包含", ">", "<"];
   // v1.43 a11y · F10 修 · 條件 row 加 group + 各 control aria-label
   // SR 念「條件 1 群組 · 欄位 combobox · 比較 combobox · 值 textbox · 移除 button」

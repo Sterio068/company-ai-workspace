@@ -1625,3 +1625,11 @@
   letter-spacing: 0.02em;
 }
 .fpp-item-more:hover { opacity: 1; }
+
+/* ============================================================
+   v1.46 USER 反饋修 · 切走 dashboard view 不該還顯示 F++ 區塊
+   ============================================================
+   Bug:.view-dashboard-fpp 設 display:flex · cascade 勝過 .view 的 display:none
+   切到 projects/knowledge/admin 時 · F++ 區塊還可見(menubar 區塊重疊)
+   修:強制 inactive 時 hide */
+.view:not(.active).view-dashboard-fpp { display: none !important; }

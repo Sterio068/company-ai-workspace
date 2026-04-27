@@ -2675,7 +2675,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   box-shadow: -20px 0 60px rgba(0,0,0,0.12);
   display: flex;
   flex-direction: column;
-  z-index: 130; /* 高於手機導覽,低於工作包 drawer / modal。 */
+  z-index: 130; /* 高於手機導覽,低於專案 drawer / modal。 */
   transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .chat-pane.open { right: 0; }
