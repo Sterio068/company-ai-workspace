@@ -7,7 +7,7 @@
  *   brand.appName            // "智慧助理" 或 "智慧助理"(default)
  *   brand.companyShort       // "承"(logo 用 1-2 字)
  *   brand.tagline            // "10 人協作平台"
- *   brand.accent             // "#007AFF"
+ *   brand.accent             // "#3F86C9"
  *   brand.subscribe(cb)      // 訂閱變動(設定改 → re-render UI)
  */
 
@@ -18,7 +18,7 @@ const DEFAULT = {
   company_short: "",
   app_name: "智慧助理",
   tagline: "AI 協作平台",
-  accent_color: "#007AFF",
+  accent_color: "#3F86C9",
   locale: "zh-TW",
 };
 
@@ -97,7 +97,7 @@ export const brand = {
   get companyShort() { return _state.company_short || _state.app_name?.charAt(0) || "智"; },
   get appName() { return _state.app_name || "智慧助理"; },
   get tagline() { return _state.tagline || "AI 協作平台"; },
-  get accent() { return _state.accent_color || "#007AFF"; },
+  get accent() { return _state.accent_color || "#3F86C9"; },
   get locale() { return _state.locale || "zh-TW"; },
   get state() { return { ..._state }; },
 };

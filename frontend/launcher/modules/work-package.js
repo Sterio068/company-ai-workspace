@@ -10,7 +10,7 @@ export function projectUpdatedTs(project) {
 }
 
 export function projectColor(name = "") {
-  const colors = ["#FF3B30", "#FF9500", "#34C759", "#007AFF", "#AF52DE", "#FF2D55"];
+  const colors = ["#D14B43", "#D8851E", "#5AB174", "#3F86C9", "#8C5CB1", "#D14B6F"];
   let hash = 0;
   for (let i = 0; i < name.length; i += 1) {
     hash = (hash * 31 + name.charCodeAt(i)) % colors.length;
@@ -95,11 +95,11 @@ export function workReadiness(project) {
 
 export function workKind(project) {
   const text = [project?.name, project?.client, project?.description].filter(Boolean).join(" ");
-  if (/標案|投標|招標|採購|委託|政府/.test(text)) return { label: "投標型", ws: 1, color: "#FF3B30" };
-  if (/活動|記者會|說明會|場地|舞台|動線|展覽/.test(text)) return { label: "活動型", ws: 2, color: "#FF9500" };
-  if (/設計|視覺|KV|主視覺|素材|海報|banner/i.test(text)) return { label: "設計型", ws: 3, color: "#AF52DE" };
-  if (/新聞|媒體|社群|貼文|公關|email/i.test(text)) return { label: "公關型", ws: 4, color: "#34C759" };
-  return { label: "營運型", ws: 5, color: "#007AFF" };
+  if (/標案|投標|招標|採購|委託|政府/.test(text)) return { label: "投標型", ws: 1, color: "#D14B43" };
+  if (/活動|記者會|說明會|場地|舞台|動線|展覽/.test(text)) return { label: "活動型", ws: 2, color: "#D8851E" };
+  if (/設計|視覺|KV|主視覺|素材|海報|banner/i.test(text)) return { label: "設計型", ws: 3, color: "#8C5CB1" };
+  if (/新聞|媒體|社群|貼文|公關|email/i.test(text)) return { label: "公關型", ws: 4, color: "#5AB174" };
+  return { label: "營運型", ws: 5, color: "#3F86C9" };
 }
 
 export function workActionSuggestions(project, readiness, kind, deadline) {

@@ -102,10 +102,10 @@ const GLYPHS = {
 
   // 設計 #03 · 顏料盤(創意)
   "03": `<path fill="white" d="M50 12 C 28 12 12 30 12 50 C 12 65 22 75 35 75 C 38 75 40 73 40 70 C 40 68 38 66 38 63 C 38 60 40 58 43 58 L 55 58 C 73 58 88 50 88 38 C 88 22 70 12 50 12 Z"/>
-         <circle cx="32" cy="38" r="5" fill="${"#FF3B30"}"/>
-         <circle cx="48" cy="28" r="5" fill="${"#FF9500"}"/>
+         <circle cx="32" cy="38" r="5" fill="${"#D14B43"}"/>
+         <circle cx="48" cy="28" r="5" fill="${"#D8851E"}"/>
          <circle cx="65" cy="32" r="5" fill="${"#FFD60A"}"/>
-         <circle cx="72" cy="48" r="5" fill="${"#34C759"}"/>`,
+         <circle cx="72" cy="48" r="5" fill="${"#5AB174"}"/>`,
 
   // 公關 #04 · 喊話喇叭(對外發聲)
   "04": `<path fill="white" d="M15 38 L15 62 L 35 62 L 65 80 L 65 20 L 35 38 Z"/>
@@ -147,8 +147,8 @@ const GLYPHS = {
           <circle cx="65" cy="55" r="4" fill="white"/>`,  // 活動 · 日曆
 
   "ws3": `<path fill="white" d="M50 12 C 28 12 12 30 12 50 C 12 65 22 75 35 75 C 38 75 40 73 40 70 C 40 68 38 66 38 63 C 38 60 40 58 43 58 L 55 58 C 73 58 88 50 88 38 C 88 22 70 12 50 12 Z"/>
-          <circle cx="32" cy="38" r="5" fill="${"#FF3B30"}"/>
-          <circle cx="48" cy="28" r="5" fill="${"#FF9500"}"/>
+          <circle cx="32" cy="38" r="5" fill="${"#D14B43"}"/>
+          <circle cx="48" cy="28" r="5" fill="${"#D8851E"}"/>
           <circle cx="65" cy="32" r="5" fill="${"#FFD60A"}"/>`,  // 設計 · 顏料盤
 
   "ws4": `<path fill="white" d="M15 38 L15 62 L 35 62 L 65 80 L 65 20 L 35 38 Z"/>
@@ -168,7 +168,7 @@ export function getWorkspaceIconSVG(wsId, color) {
 
 /** 取得指定 agent id 的完整 SVG icon string · 套 squircle + gradient + glyph
  *  @param {string} agentId · "00" ~ "09"
- *  @param {string} color · CSS color · 例 #FF3B30
+ *  @param {string} color · CSS color · 例 #D14B43
  */
 export function getDockIconSVG(agentId, color) {
   const glyph = GLYPHS[agentId] || GLYPHS.default;

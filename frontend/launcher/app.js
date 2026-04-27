@@ -688,7 +688,7 @@ export const app = {
           </div>`;
         return;
       }
-      const dotColors = ["#FF3B30", "#FF9500", "#AF52DE", "#34C759", "#007AFF"];
+      const dotColors = ["#D14B43", "#D8851E", "#8C5CB1", "#5AB174", "#3F86C9"];
       const nodes = convos.slice(0, 5).map((c, i) => {
         const agent = this.agents.find(a => a.id === (c.agent_id || c.agentId)) || {};
         const label = (agent.name || "").replace(/^\W+\s*[\w\W]*·\s*/, "").slice(0, 8) || "對話";
@@ -883,7 +883,7 @@ export const app = {
         context: "先建立：客戶 / 期限 / 預算 / 需求",
         outcome: "可接續：投標、活動、設計、公關",
         cta: "建立專案",
-        color: "#007AFF",
+        color: "#3F86C9",
         action: () => this.newProject(),
       },
       {
@@ -893,7 +893,7 @@ export const app = {
         context: "已帶入：投標 SOP / 建議書格式",
         outcome: "可產出：主管家流程草稿",
         cta: "產生投標流程",
-        color: "#FF3B30",
+        color: "#D14B43",
         action: () => {
           this.showView("workflows");
           _view("workflows").then(m => m.load().then(() => m.prepare("tender-full", {
@@ -908,7 +908,7 @@ export const app = {
         context: "已帶入：活動企劃流程 / 場勘交棒",
         outcome: "可產出：活動需求單與現場風險",
         cta: "開活動草稿",
-        color: "#FF9500",
+        color: "#D8851E",
         action: () => this.openWorkspace(2),
       },
     ];

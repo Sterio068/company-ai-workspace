@@ -267,7 +267,7 @@ function _confetti() {
     const piece = document.createElement("span");
     piece.style.left = (Math.random() * 100) + "%";
     piece.style.animationDelay = (Math.random() * 0.5) + "s";
-    piece.style.background = ["#FF3B30", "#FF9500", "#34C759", "#007AFF", "#AF52DE"][i % 5];
+    piece.style.background = ["#D14B43", "#D8851E", "#5AB174", "#3F86C9", "#8C5CB1"][i % 5];
     overlay.appendChild(piece);
   }
   document.body.appendChild(overlay);

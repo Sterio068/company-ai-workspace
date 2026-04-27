@@ -50,7 +50,7 @@ export const admin = {
       }
       stats.sort((a, b) => b.score - a.score);
       root.innerHTML = stats.map(s => {
-        const color = s.score >= 80 ? "#34C759" : s.score >= 60 ? "#FF9500" : "#FF3B30";
+        const color = s.score >= 80 ? "#5AB174" : s.score >= 60 ? "#D8851E" : "#D14B43";
         return `
           <div class="recent-item">
             <div class="recent-title">${escapeHtml(s.agent)}</div>

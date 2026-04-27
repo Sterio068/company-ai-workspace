@@ -30,11 +30,11 @@ const DEFAULT_SEED = {
   version: 1,
   items: [
     { type: "agent", id: "00", pinned: true, label: "主管家", icon: "🤖", color: "#5856D6" },
-    { type: "agent", id: "01", pinned: true, label: "投標顧問", icon: "🎯", color: "#FF3B30" },
-    { type: "agent", id: "02", pinned: true, label: "活動策劃", icon: "🎪", color: "#FF9500" },
-    { type: "agent", id: "03", pinned: true, label: "設計夥伴", icon: "🎨", color: "#AF52DE" },
-    { type: "agent", id: "04", pinned: true, label: "公關文案", icon: "📣", color: "#34C759" },
-    { type: "agent", id: "06", pinned: true, label: "財務報價", icon: "📊", color: "#007AFF" },
+    { type: "agent", id: "01", pinned: true, label: "投標顧問", icon: "🎯", color: "#D14B43" },
+    { type: "agent", id: "02", pinned: true, label: "活動策劃", icon: "🎪", color: "#D8851E" },
+    { type: "agent", id: "03", pinned: true, label: "設計夥伴", icon: "🎨", color: "#8C5CB1" },
+    { type: "agent", id: "04", pinned: true, label: "公關文案", icon: "📣", color: "#5AB174" },
+    { type: "agent", id: "06", pinned: true, label: "財務報價", icon: "📊", color: "#3F86C9" },
     { type: "agent", id: "09", pinned: true, label: "知識查手", icon: "📚", color: "#5AC8FA" },
   ],
 };

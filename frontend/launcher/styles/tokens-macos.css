@@ -41,7 +41,7 @@
      ============================================================ */
 
   /* 主色 · macOS system blue */
-  --accent:          #007AFF;
+  --accent:          #3F86C9;
   --accent-hover:    #2693FF;
   --accent-pressed:  #0051D5;
 
@@ -68,12 +68,12 @@
   --border-strong:  rgba(0, 0, 0, 0.18);
 
   /* Semantic colors · macOS system */
-  --color-success: #34C759;
-  --color-warning: #FF9500;
-  --color-danger:  #FF3B30;
+  --color-success: #5AB174;
+  --color-warning: #D8851E;
+  --color-danger:  #D14B43;
   --color-info:    #5AC8FA;
-  --color-purple:  #AF52DE;
-  --color-pink:    #FF2D55;
+  --color-purple:  #8C5CB1;
+  --color-pink:    #D14B6F;
 
   /* ============================================================
      1.3 Spacing · 8px grid

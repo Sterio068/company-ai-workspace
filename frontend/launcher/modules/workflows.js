@@ -326,9 +326,9 @@ function _iconFor(id) {
 }
 
 function _colorFor(id) {
-  return id === "tender-full" ? "#FF3B30" :
-         id === "event-planning" ? "#FF9500" :
-         id === "news-release" ? "#34C759" : "#AF52DE";
+  return id === "tender-full" ? "#D14B43" :
+         id === "event-planning" ? "#D8851E" :
+         id === "news-release" ? "#5AB174" : "#8C5CB1";
 }
 
 function _deliverableFor(id) {

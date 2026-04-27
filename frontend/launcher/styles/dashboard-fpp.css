@@ -34,6 +34,65 @@
   border-bottom: 0.5px solid var(--separator);
 }
 
+/* v1.65 U8 · 空狀態 · 沒事不硬塞 grid 14 個 · 顯 calm CTA */
+.fpp-grid-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+  color: var(--label-secondary);
+}
+.fpp-empty-icon {
+  font-size: 56px;
+  opacity: 0.6;
+  margin-bottom: 14px;
+}
+.fpp-empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--label-primary);
+  margin-bottom: 6px;
+}
+.fpp-empty-hint {
+  font-size: 13px;
+  color: var(--label-tertiary);
+  margin-bottom: 20px;
+}
+.fpp-empty-actions {
+  display: flex;
+  gap: 10px;
+}
+.fpp-empty-cta, .fpp-empty-cta-ghost {
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.fpp-empty-cta {
+  background: var(--accent);
+  color: white;
+  border: 0;
+}
+.fpp-empty-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.fpp-empty-cta-ghost {
+  background: transparent;
+  color: var(--label-primary);
+  border: 0.5px solid var(--border);
+}
+.fpp-empty-cta-ghost:hover { background: var(--bg-elevated); }
+
+/* v1.65 U2 · 對話框佔主軸 · 撐開中段 · 右邊次要群組固定窄 */
+.fpp-composer-primary { flex: 1 1 auto; }
+.fpp-toolbar-secondary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1, 6px);
+  flex-shrink: 0;
+}
+
 .fpp-logo {
   display: flex;
   align-items: center;
@@ -101,16 +160,21 @@
 }
 
 .fpp-view-btn {
-  padding: 4px 10px;
-  font-size: var(--text-sm);
+  /* v1.65 U2 · 改 icon-only · 縮小 padding · 跟 search/hints 同高 */
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 13px;
   font-weight: 500;
-  letter-spacing: 0.04em;
   font-family: var(--font-system);
   background: transparent;
   border: 0;
   color: var(--label-secondary);
   cursor: pointer;
   transition: all var(--dur-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .fpp-view-btn + .fpp-view-btn {
@@ -219,13 +283,13 @@
 /* ============================================================
    2. Mini-Today
    ============================================================ */
+/* v1.65 U1 · 移除分隔虛線 · padding-bottom 用空白做視覺分節 · 不再硬畫線 */
 .fpp-today {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 14px 18px;
+  padding: 16px 18px 8px;
   background: var(--bg-content);
-  border-bottom: 0.5px dashed var(--separator);
 }
 
 .fpp-today-time {
@@ -482,37 +546,34 @@
 }
 
 .fpp-icon {
-  /* v1.45 calm mode · 預設淺色 pastel · hover/selected 才上飽和色
-     原 30% white mix → 70% · 21 個 icon 並排不再強烈 */
+  /* v1.65 U4 · monochrome + 邊框風 · 取代彩色糖果
+     非選中狀態:中性灰底 · 邊框細 · 文字淡 → 14 個 icon 不再色彩轟炸
+     選中 / hover:才上 ws 色 · 視線聚焦 */
   --ws-color: var(--accent);
   position: relative;
   width: 56px;
   height: 56px;
   border-radius: 14px;
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--ws-color) 12%, white) 0%,
-    color-mix(in oklab, var(--ws-color) 30%, white) 100%
-  );
+  background: var(--bg-elevated, #F5F5F7);
+  border: 0.5px solid var(--border, rgba(0,0,0,0.08));
   display: grid;
   place-items: center;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 1px 2px rgba(0, 0, 0, 0.06);
-  transition: background var(--dur-fast);
+  box-shadow: none;
+  transition: background var(--dur-fast), border-color var(--dur-fast), box-shadow var(--dur-fast);
 }
 
-/* v1.45 · selected / hover 上飽和色(原視覺) */
+/* v1.65 · selected / hover 才上 workspace 色 */
 .fpp-item.selected .fpp-icon,
 .fpp-item:hover .fpp-icon {
   background: linear-gradient(
     135deg,
-    color-mix(in oklab, var(--ws-color) 30%, white) 0%,
-    var(--ws-color) 100%
+    color-mix(in oklab, var(--ws-color) 25%, white) 0%,
+    color-mix(in oklab, var(--ws-color) 80%, white) 100%
   );
+  border-color: color-mix(in oklab, var(--ws-color) 50%, transparent);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 2px 6px rgba(0, 0, 0, 0.12);
+    0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 @supports not (background: color-mix(in oklab, red, blue)) {
@@ -526,10 +587,17 @@
 }
 
 .fpp-icon-kind {
-  color: white;
+  /* v1.65 U4 · 非選中時灰字 · 選中/hover 才白字 */
+  color: var(--label-secondary, #6E6E73);
   font-size: var(--text-sm);
   font-weight: 700;
   letter-spacing: 0.05em;
+  text-shadow: none;
+  transition: color var(--dur-fast);
+}
+.fpp-item.selected .fpp-icon-kind,
+.fpp-item:hover .fpp-icon-kind {
+  color: white;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
 }
 
@@ -598,7 +666,46 @@
 /* ============================================================
    6. Status bar(在 dock 上方)
    ============================================================ */
-.fpp-status {
+/* v1.65 U5 · status 改 floating chip · 沒選中 empty 不佔空間
+   有選中 → 右下浮 chip · 不橫貫不割裂主區 */
+.fpp-status-empty {
+  display: none;
+}
+.fpp-status.fpp-status-chip {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-content);
+  border: 0.5px solid var(--border);
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.10);
+  font-size: var(--text-sm);
+  letter-spacing: 0.04em;
+  color: var(--label-secondary);
+  font-feature-settings: "tnum" 1;
+  z-index: 50;
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.fpp-status-badge {
+  background: var(--accent);
+  color: white;
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* legacy · 仍用其他地方 */
+.fpp-status:not(.fpp-status-chip):not(.fpp-status-empty) {
   display: flex;
   align-items: center;
   gap: 8px;

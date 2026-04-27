@@ -36,27 +36,27 @@ let _quicklookTrapRelease = null;
 
 // Mock data · 21 對話 · 與設計一致
 const MOCK_ITEMS = [
-  { id: 1, name: "中秋禮盒",   date: "今天",  kind: "PDF", presence: "typing",  unread: 3, ws: "投標", color: "#FF3B30" },
-  { id: 2, name: "RFP v3",     date: "昨天",  kind: "DOC", presence: "idle",    unread: 0, ws: "投標", color: "#FF3B30" },
-  { id: 3, name: "客戶回信",   date: "3 天前", kind: "📧",  presence: "idle",    unread: 1, ws: "公關", color: "#34C759" },
-  { id: 4, name: "設計初稿",   date: "上週",  kind: "IMG", presence: "running", unread: 0, ws: "設計", color: "#AF52DE" },
-  { id: 5, name: "現場照",     date: "5/12",  kind: "IMG", presence: "idle",    unread: 0, ws: "活動", color: "#FF9500" },
-  { id: 6, name: "預算表",     date: "5/10",  kind: "DOC", presence: "idle",    unread: 0, ws: "營運", color: "#007AFF" },
-  { id: 7, name: "公關稿",     date: "5/08",  kind: "DOC", presence: "idle",    unread: 0, ws: "公關", color: "#34C759" },
-  { id: 8, name: "工地巡查",   date: "5/05",  kind: "IMG", presence: "typing",  unread: 2, ws: "活動", color: "#FF9500" },
-  { id: 9, name: "財報 Q1",    date: "4/28",  kind: "DOC", presence: "idle",    unread: 0, ws: "營運", color: "#007AFF" },
-  { id: 10, name: "會議紀錄",  date: "4/22",  kind: "MTG", presence: "idle",    unread: 0, ws: "公關", color: "#34C759" },
-  { id: 11, name: "LOGO",      date: "4/15",  kind: "IMG", presence: "idle",    unread: 0, ws: "設計", color: "#AF52DE" },
-  { id: 12, name: "下週進度",  date: "4/10",  kind: "💬",  presence: "idle",    unread: 0, ws: "營運", color: "#007AFF" },
-  { id: 13, name: "客戶 A",    date: "4/08",  kind: "💬",  presence: "idle",    unread: 0, ws: "公關", color: "#34C759" },
-  { id: 14, name: "成本表",    date: "4/03",  kind: "DOC", presence: "idle",    unread: 0, ws: "營運", color: "#007AFF" },
-  { id: 15, name: "問卷",      date: "3/28",  kind: "DOC", presence: "idle",    unread: 0, ws: "公關", color: "#34C759" },
-  { id: 16, name: "合約",      date: "3/22",  kind: "PDF", presence: "idle",    unread: 0, ws: "營運", color: "#007AFF" },
-  { id: 17, name: "人事",      date: "3/18",  kind: "DOC", presence: "idle",    unread: 0, ws: "營運", color: "#007AFF" },
-  { id: 18, name: "差旅",      date: "3/14",  kind: "DOC", presence: "idle",    unread: 0, ws: "營運", color: "#007AFF" },
-  { id: 19, name: "報表",      date: "3/10",  kind: "DOC", presence: "idle",    unread: 0, ws: "營運", color: "#007AFF" },
-  { id: 20, name: "備忘",      date: "3/05",  kind: "💬",  presence: "idle",    unread: 0, ws: "營運", color: "#007AFF" },
-  { id: 21, name: "補件",      date: "3/02",  kind: "PDF", presence: "idle",    unread: 0, ws: "投標", color: "#FF3B30" },
+  { id: 1, name: "中秋禮盒",   date: "今天",  kind: "PDF", presence: "typing",  unread: 3, ws: "投標", color: "#D14B43" },
+  { id: 2, name: "RFP v3",     date: "昨天",  kind: "DOC", presence: "idle",    unread: 0, ws: "投標", color: "#D14B43" },
+  { id: 3, name: "客戶回信",   date: "3 天前", kind: "📧",  presence: "idle",    unread: 1, ws: "公關", color: "#5AB174" },
+  { id: 4, name: "設計初稿",   date: "上週",  kind: "IMG", presence: "running", unread: 0, ws: "設計", color: "#8C5CB1" },
+  { id: 5, name: "現場照",     date: "5/12",  kind: "IMG", presence: "idle",    unread: 0, ws: "活動", color: "#D8851E" },
+  { id: 6, name: "預算表",     date: "5/10",  kind: "DOC", presence: "idle",    unread: 0, ws: "營運", color: "#3F86C9" },
+  { id: 7, name: "公關稿",     date: "5/08",  kind: "DOC", presence: "idle",    unread: 0, ws: "公關", color: "#5AB174" },
+  { id: 8, name: "工地巡查",   date: "5/05",  kind: "IMG", presence: "typing",  unread: 2, ws: "活動", color: "#D8851E" },
+  { id: 9, name: "財報 Q1",    date: "4/28",  kind: "DOC", presence: "idle",    unread: 0, ws: "營運", color: "#3F86C9" },
+  { id: 10, name: "會議紀錄",  date: "4/22",  kind: "MTG", presence: "idle",    unread: 0, ws: "公關", color: "#5AB174" },
+  { id: 11, name: "LOGO",      date: "4/15",  kind: "IMG", presence: "idle",    unread: 0, ws: "設計", color: "#8C5CB1" },
+  { id: 12, name: "下週進度",  date: "4/10",  kind: "💬",  presence: "idle",    unread: 0, ws: "營運", color: "#3F86C9" },
+  { id: 13, name: "客戶 A",    date: "4/08",  kind: "💬",  presence: "idle",    unread: 0, ws: "公關", color: "#5AB174" },
+  { id: 14, name: "成本表",    date: "4/03",  kind: "DOC", presence: "idle",    unread: 0, ws: "營運", color: "#3F86C9" },
+  { id: 15, name: "問卷",      date: "3/28",  kind: "DOC", presence: "idle",    unread: 0, ws: "公關", color: "#5AB174" },
+  { id: 16, name: "合約",      date: "3/22",  kind: "PDF", presence: "idle",    unread: 0, ws: "營運", color: "#3F86C9" },
+  { id: 17, name: "人事",      date: "3/18",  kind: "DOC", presence: "idle",    unread: 0, ws: "營運", color: "#3F86C9" },
+  { id: 18, name: "差旅",      date: "3/14",  kind: "DOC", presence: "idle",    unread: 0, ws: "營運", color: "#3F86C9" },
+  { id: 19, name: "報表",      date: "3/10",  kind: "DOC", presence: "idle",    unread: 0, ws: "營運", color: "#3F86C9" },
+  { id: 20, name: "備忘",      date: "3/05",  kind: "💬",  presence: "idle",    unread: 0, ws: "營運", color: "#3F86C9" },
+  { id: 21, name: "補件",      date: "3/02",  kind: "PDF", presence: "idle",    unread: 0, ws: "投標", color: "#D14B43" },
 ];
 
 const SEGMENTS = [
@@ -200,36 +200,40 @@ function _renderConfidenceBar(value) {
 }
 
 function _renderToolbar() {
+  // v1.65 U2 · toolbar 從 11 元素簡化為 3 群組
+  // 左:logo (1) · 中:對話框佔主軸 (1) · 右:view-switch + search + hints 收進 secondary group (3)
   return `
     <div class="fpp-toolbar">
-      <button type="button" class="fpp-logo" data-fpp-logo title="導覽 (⌘0)">
+      <button type="button" class="fpp-logo" data-fpp-logo title="導覽 (⌘0)" aria-label="導覽">
         <span class="fpp-logo-text">${escapeHtml(brand.companyShort)}</span>
         <span class="fpp-logo-arrow">▾</span>
       </button>
-      <div class="fpp-view-switch" role="tablist" aria-label="顯示模式">
-        ${["grid", "list", "column"].map(v => `
-          <button type="button" class="fpp-view-btn ${_state.view === v ? "active" : ""}"
-                  data-fpp-view="${v}" role="tab" aria-selected="${_state.view === v}"
-                  aria-controls="fpp-main">
-            ${v === "grid" ? "圖示" : v === "list" ? "清單" : "分欄"}
-          </button>
-        `).join("")}
-      </div>
-      <div class="fpp-composer">
+      <div class="fpp-composer fpp-composer-primary">
         <span class="fpp-composer-dot" aria-hidden="true"></span>
         <input type="text" class="fpp-composer-input"
-               placeholder="交給AI 小幫手…(輸入後 ↵ 送出)"
+               placeholder="交給 AI 小幫手…按 ↵ 送出"
                aria-label="AI 小幫手對話">
         <kbd class="fpp-composer-hint">↵</kbd>
       </div>
-      <button type="button" class="fpp-search" data-fpp-search title="全域搜尋 (⌘K)" aria-label="搜尋">
-        <svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none">
-          <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <kbd>⌘F</kbd>
-      </button>
-      <button type="button" class="fpp-hints-toggle ${_state.showHints ? "active" : ""}"
-              data-fpp-hints title="鍵盤提示 (?)">?</button>
+      <div class="fpp-toolbar-secondary">
+        <div class="fpp-view-switch" role="tablist" aria-label="顯示模式">
+          ${["grid", "list", "column"].map(v => `
+            <button type="button" class="fpp-view-btn ${_state.view === v ? "active" : ""}"
+                    data-fpp-view="${v}" role="tab" aria-selected="${_state.view === v}"
+                    aria-controls="fpp-main"
+                    title="${v === "grid" ? "圖示" : v === "list" ? "清單" : "分欄"}">
+              ${v === "grid" ? "▦" : v === "list" ? "☰" : "⫶"}
+            </button>
+          `).join("")}
+        </div>
+        <button type="button" class="fpp-search" data-fpp-search title="全域搜尋 (⌘K)" aria-label="搜尋">
+          <svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none">
+            <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </button>
+        <button type="button" class="fpp-hints-toggle ${_state.showHints ? "active" : ""}"
+                data-fpp-hints title="鍵盤提示 (?)" aria-label="鍵盤提示">?</button>
+      </div>
     </div>
   `;
 }
@@ -256,7 +260,7 @@ function _renderMiniToday() {
       </div>
       <div class="fpp-today-greeting">
         <div class="fpp-greeting-text">${greeting} ${escapeHtml(userName)}</div>
-        <div class="fpp-greeting-sub">${sCnt > 0 ? `AI 小幫手有 ${sCnt} 件建議` : "今天沒有待處理建議 · 開始工作吧"}</div>
+        ${sCnt > 0 ? `<div class="fpp-greeting-sub">AI 小幫手有 ${sCnt} 件建議</div>` : ""}
       </div>
       ${sCnt > 0 ? `
         <div class="fpp-widget fpp-widget-accent fpp-widget-solo" data-fpp-widget="inbox">
@@ -282,11 +286,10 @@ function _renderPathBar() {
 }
 
 function _renderSegments() {
-  // v1.46 calm · 預設只顯 4 個關鍵 chip(全部/今天/待我審/3天沒動)+ 「更多 ▾」
+  // v1.65 U3 · 進一步簡化 · 只剩 2 個關鍵 chip(全部 / 今天)+ 「更多 ▾」
+  // 「待我審 / 3 天沒動」這類僅在有量時才該凸顯 · 平時收起更冷靜
   // 點「更多 ▾」展開所有 segments + custom + 「+ 自訂條件」
-  // 原本一字排開 9-12 個 chip 視覺壓力大
-  // v1.49 · active 從 _state.segment derive · 不再 mutate SEGMENTS const
-  const PRIMARY_KEYS = new Set(["all", "today", "review", "stale"]);
+  const PRIMARY_KEYS = new Set(["all", "today"]);
   const customFolders = _state.customFolders.map(c => ({
     k: c.k, l: c.l, smart: true, custom: true,
   }));
@@ -329,11 +332,24 @@ function _renderSegments() {
 
 function _renderGrid() {
   // v1.46 calm · 預設只顯 12 個 · 「全部 · 顯示其餘 N 個」展開
-  // 21 個 icon 並排太擁擠 · 12 = 4 列 × 3 行(更舒服)
+  // v1.65 U8 · 空狀態優化 · 沒事不硬塞 · 改顯 CTA(不再 14 彩塊轟炸)
   const expanded = _state.gridExpanded === true;
   const PRIMARY_LIMIT = 12;
   const visible = expanded ? _items : _items.slice(0, PRIMARY_LIMIT);
   const hidden = _items.length - visible.length;
+  if (!_items.length) {
+    return `
+      <div class="fpp-grid-empty">
+        <div class="fpp-empty-icon" aria-hidden="true">☁️</div>
+        <div class="fpp-empty-title">今天沒事 · 真好</div>
+        <div class="fpp-empty-hint">試試對話框問 AI 小幫手 · 或看看「專案」</div>
+        <div class="fpp-empty-actions">
+          <button type="button" class="fpp-empty-cta" data-fpp-empty="chat">與主管家對話</button>
+          <button type="button" class="fpp-empty-cta-ghost" data-fpp-empty="projects">看專案</button>
+        </div>
+      </div>
+    `;
+  }
   return `
     <div class="fpp-grid" id="fpp-grid">
       ${visible.map((it, i) => `
@@ -363,16 +379,15 @@ function _renderGrid() {
 }
 
 function _renderStatusBar() {
-  // v1.45 calm mode · 移除 keyboard hint 字(在 Hints overlay 內 · 不重複)
-  // 移除 dollar 用量 + 容器健康(這 2 個 admin 才需 · 收進中控頁)
-  // 留:選中 · 待回應(行動意義)
+  // v1.65 U5 · status 改 floating chip · 縮到右下小角 · 不再橫貫
+  // 沒選中時不顯 · 不浪費垂直空間
   const item = _items[_state.selected];
+  if (!item) return `<div class="fpp-status fpp-status-empty"></div>`;
   return `
-    <div class="fpp-status">
+    <div class="fpp-status fpp-status-chip">
       <span class="fpp-status-dot" aria-hidden="true"></span>
-      <span>選中: <b>${escapeHtml(item?.name || "—")}</b></span>
-      <span class="fpp-status-spacer"></span>
-      <span class="fpp-status-accent">● 2 待回應</span>
+      <span>${escapeHtml(item.name)}</span>
+      ${item.unread ? `<span class="fpp-status-badge">${item.unread}</span>` : ""}
     </div>
   `;
 }
@@ -425,6 +440,14 @@ function _bindGrid() {
     });
     btn.addEventListener("dblclick", () => {
       _openItem(_items[idx]);
+    });
+  });
+  // v1.65 U8 · 空狀態 CTA
+  _root.querySelectorAll("[data-fpp-empty]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const action = btn.dataset.fppEmpty;
+      if (action === "chat") window.chat?.open?.("00", "");
+      else if (action === "projects") window.app?.showView?.("projects");
     });
   });
 }

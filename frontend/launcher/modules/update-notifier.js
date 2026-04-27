@@ -49,7 +49,7 @@ export const updateNotifier = {
     badge.style.cssText = `
       display:none; position:absolute; right:8px; top:8px;
       width:8px; height:8px; border-radius:50%;
-      background:#FF3B30; border:2px solid var(--bg-base, #fff);
+      background:#D14B43; border:2px solid var(--bg-base, #fff);
       cursor:pointer; padding:0; z-index:10;
       box-shadow:0 0 0 0 rgba(255,59,48,0.4);
       animation: pulse-update 2s infinite;
@@ -193,7 +193,7 @@ export const updateNotifier = {
 
         <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:20px" id="update-modal-actions">
           <button id="update-dismiss" type="button" style="padding:10px 16px; border:1px solid var(--border,#ddd); background:transparent; border-radius:8px; cursor:pointer; color:var(--text-secondary,#666)">下次再說</button>
-          <button id="update-run" type="button" style="padding:10px 18px; border:none; background:#007AFF; color:white; border-radius:8px; cursor:pointer; font-weight:600">立即更新</button>
+          <button id="update-run" type="button" style="padding:10px 18px; border:none; background:#3F86C9; color:white; border-radius:8px; cursor:pointer; font-weight:600">立即更新</button>
         </div>
       ` : `
         <div style="margin:20px 0; padding:20px; text-align:center; background:var(--bg-base,#f7f7f7); border-radius:10px">
@@ -202,7 +202,7 @@ export const updateNotifier = {
         </div>
         <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:20px">
           <button id="update-recheck" type="button" style="padding:10px 16px; border:1px solid var(--border,#ddd); background:transparent; border-radius:8px; cursor:pointer">立即檢查</button>
-          <button id="update-close" type="button" style="padding:10px 18px; border:none; background:#007AFF; color:white; border-radius:8px; cursor:pointer">關閉</button>
+          <button id="update-close" type="button" style="padding:10px 18px; border:none; background:#3F86C9; color:white; border-radius:8px; cursor:pointer">關閉</button>
         </div>
       `}
     `;

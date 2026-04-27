@@ -375,11 +375,11 @@ export const help = {
             <h3>選擇工作區(⌘1 ~ ⌘5)</h3>
             <p>智慧助理以工作「情境」組織 · 不是助手清單。從左側選或按 ⌘1-5 切到對應工作區:</p>
             <ul class="help-ws-list">
-              <li><span style="color:#FF3B30">🎯 ⌘1 投標</span> · 招標須知 / 服務建議書 / 競品</li>
-              <li><span style="color:#FF9500">🎪 ⌘2 活動執行</span> · 場景需求單 / 廠商 / 動線</li>
-              <li><span style="color:#AF52DE">🎨 ⌘3 設計協作</span> · 主視覺 / Fal 生圖(3 張)</li>
-              <li><span style="color:#34C759">📣 ⌘4 公關溝通</span> · 新聞稿 / 社群 / 電子郵件</li>
-              <li><span style="color:#007AFF">📊 ⌘5 營運後勤</span> · 結案報告 / 報價 / 知識查</li>
+              <li><span style="color:#D14B43">🎯 ⌘1 投標</span> · 招標須知 / 服務建議書 / 競品</li>
+              <li><span style="color:#D8851E">🎪 ⌘2 活動執行</span> · 場景需求單 / 廠商 / 動線</li>
+              <li><span style="color:#8C5CB1">🎨 ⌘3 設計協作</span> · 主視覺 / Fal 生圖(3 張)</li>
+              <li><span style="color:#5AB174">📣 ⌘4 公關溝通</span> · 新聞稿 / 社群 / 電子郵件</li>
+              <li><span style="color:#3F86C9">📊 ⌘5 營運後勤</span> · 結案報告 / 報價 / 知識查</li>
             </ul>
           </div>
         </div>
@@ -505,31 +505,31 @@ export const help = {
   _renderWorkspaces() {
     const workspaces = [
       {
-        num: 1, color: "#FF3B30", icon: "🎯", name: "投標",
+        num: 1, color: "#D14B43", icon: "🎯", name: "投標",
         desc: "看到招標須知 → 送件前最後一哩",
         agents: ["承接評估", "招標須知解析", "服務建議書初稿", "競品視覺研究", "簡報視覺架構"],
         slash: "/bid",
       },
       {
-        num: 2, color: "#FF9500", icon: "🎪", name: "活動執行",
+        num: 2, color: "#D8851E", icon: "🎪", name: "活動執行",
         desc: "企劃到現場到驗收 全流程",
         agents: ["立體場景需求單", "舞台技術", "動線與交通", "現場流程", "廠商比價", "委外合約"],
         slash: "/event",
       },
       {
-        num: 3, color: "#AF52DE", icon: "🎨", name: "設計協作",
+        num: 3, color: "#8C5CB1", icon: "🎨", name: "設計協作",
         desc: "PM ↔ 設計師無痛溝通",
         agents: ["主視覺概念", "需求單結構化", "Fal.ai 生圖(3 張)", "多渠道適配", "活動視覺系統"],
         slash: "/design",
       },
       {
-        num: 4, color: "#34C759", icon: "📣", name: "公關溝通",
+        num: 4, color: "#5AB174", icon: "📣", name: "公關溝通",
         desc: "對外發聲全流程",
         agents: ["新聞稿", "社群貼文", "月度企劃", "電子郵件草稿", "會議速記"],
         slash: "/pr",
       },
       {
-        num: 5, color: "#007AFF", icon: "📊", name: "營運後勤",
+        num: 5, color: "#3F86C9", icon: "📊", name: "營運後勤",
         desc: "內部管理中樞",
         agents: ["結案報告", "專案報價", "里程碑追蹤", "客戶紀錄", "保密協議 / 合約", "稅務", "新人引導", "知識查詢"],
         slash: "/ops",

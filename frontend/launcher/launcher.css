@@ -8,13 +8,15 @@
   --accent: #0F2340;
   --accent-hover: #1A3358;
 
-  /* macOS semantic colors */
-  --green: #34C759;
-  --orange: #FF9500;
-  --red: #FF3B30;
-  --blue: #007AFF;
-  --purple: #AF52DE;
-  --pink: #FF2D55;
+  /* macOS semantic colors · v1.65 U6 · 降 30% 飽和度 · 視覺更冷靜
+     原 macOS system colors → 拉灰 30% · 仍可辨識但不刺眼
+     若要回原 macOS 鮮豔 · 換 --green:#5AB174 等 */
+  --green: #5AB174;     /* 原 #5AB174 */
+  --orange: #D8851E;    /* 原 #D8851E */
+  --red: #D14B43;       /* 原 #D14B43 */
+  --blue: #3F86C9;      /* 原 #3F86C9 */
+  --purple: #8C5CB1;    /* 原 #8C5CB1 */
+  --pink: #D14B6F;      /* 原 #D14B6F */
 
   /* Surface - light (default) */
   --bg-base: #F5F5F7;
@@ -48,6 +50,19 @@
   --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang TC", "Noto Sans TC", sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", Menlo, monospace;
+
+  /* v1.65 U7 · 行距與留白 token · 全站一致呼吸 */
+  --leading-tight: 1.35;
+  --leading-normal: 1.55;
+  --leading-loose: 1.7;
+  --tracking-cjk: 0.04em;
+}
+
+/* v1.65 U7 · 全站基礎行距 · 中文呼吸 */
+html { line-height: var(--leading-normal); }
+.brand-name, .sidebar-label, h1, h2, h3 {
+  letter-spacing: var(--tracking-cjk);
+  font-feature-settings: "kern" 1, "palt" 1;
 }
 
 [data-theme="dark"] {
@@ -1082,11 +1097,11 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 }
 .workspace-card:focus { outline: 2px solid var(--ws-color); outline-offset: 2px; }
 
-.ws-1 { --ws-color: #FF3B30; }
-.ws-2 { --ws-color: #FF9500; }
-.ws-3 { --ws-color: #AF52DE; }
-.ws-4 { --ws-color: #34C759; }
-.ws-5 { --ws-color: #007AFF; }
+.ws-1 { --ws-color: #D14B43; }
+.ws-2 { --ws-color: #D8851E; }
+.ws-3 { --ws-color: #8C5CB1; }
+.ws-4 { --ws-color: #5AB174; }
+.ws-5 { --ws-color: #3F86C9; }
 
 .ws-head { display: flex; align-items: center; gap: var(--s-3); }
 .ws-icon {
@@ -2483,12 +2498,12 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   gap: 8px;
 }
 .kanban-col[data-stage="lead"]       { border-top: 3px solid #8E8E93; }
-.kanban-col[data-stage="qualifying"] { border-top: 3px solid #FF9500; }
-.kanban-col[data-stage="proposing"]  { border-top: 3px solid #FF3B30; }
-.kanban-col[data-stage="submitted"]  { border-top: 3px solid #AF52DE; }
-.kanban-col[data-stage="won"]        { border-top: 3px solid #34C759; }
-.kanban-col[data-stage="lost"]       { border-top: 3px solid #FF2D55; opacity: 0.7; }
-.kanban-col[data-stage="executing"]  { border-top: 3px solid #007AFF; }
+.kanban-col[data-stage="qualifying"] { border-top: 3px solid #D8851E; }
+.kanban-col[data-stage="proposing"]  { border-top: 3px solid #D14B43; }
+.kanban-col[data-stage="submitted"]  { border-top: 3px solid #8C5CB1; }
+.kanban-col[data-stage="won"]        { border-top: 3px solid #5AB174; }
+.kanban-col[data-stage="lost"]       { border-top: 3px solid #D14B6F; opacity: 0.7; }
+.kanban-col[data-stage="executing"]  { border-top: 3px solid #3F86C9; }
 .kanban-col[data-stage="closed"]     { border-top: 3px solid #30D158; opacity: 0.8; }
 
 .kanban-col.drag-over {
@@ -5089,12 +5104,12 @@ button:focus-visible,
   font-size: var(--text-lg);
 }
 .banner-warning {
-  border-color: var(--orange, #FF9500);
-  background: color-mix(in srgb, var(--orange, #FF9500) 8%, transparent);
+  border-color: var(--orange, #D8851E);
+  background: color-mix(in srgb, var(--orange, #D8851E) 8%, transparent);
 }
 .banner-error {
-  border-color: var(--red, #FF3B30);
-  background: color-mix(in srgb, var(--red, #FF3B30) 8%, transparent);
+  border-color: var(--red, #D14B43);
+  background: color-mix(in srgb, var(--red, #D14B43) 8%, transparent);
 }
 
 

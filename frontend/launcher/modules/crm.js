@@ -11,12 +11,12 @@ import { authFetch } from "./auth.js";
 const BASE = "/api-accounting/crm";
 const STAGES = [
   { key: "lead",       label: "🆕 新機會",   color: "#8E8E93" },
-  { key: "qualifying", label: "🔍 評估中",   color: "#FF9500" },
-  { key: "proposing",  label: "📝 提案撰寫", color: "#FF3B30" },
-  { key: "submitted",  label: "📤 已送件",   color: "#AF52DE" },
-  { key: "won",        label: "🏆 得標",     color: "#34C759" },
-  { key: "lost",       label: "❌ 未得標",   color: "#FF2D55" },
-  { key: "executing",  label: "⚙️ 執行中",   color: "#007AFF" },
+  { key: "qualifying", label: "🔍 評估中",   color: "#D8851E" },
+  { key: "proposing",  label: "📝 提案撰寫", color: "#D14B43" },
+  { key: "submitted",  label: "📤 已送件",   color: "#8C5CB1" },
+  { key: "won",        label: "🏆 得標",     color: "#5AB174" },
+  { key: "lost",       label: "❌ 未得標",   color: "#D14B6F" },
+  { key: "executing",  label: "⚙️ 執行中",   color: "#3F86C9" },
   { key: "closed",     label: "✅ 結案",     color: "#30D158" },
 ];
 
