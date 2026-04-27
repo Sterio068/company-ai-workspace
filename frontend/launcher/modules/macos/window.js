@@ -204,7 +204,20 @@ class MacWindow {
 // ============================================================
 // Public API
 // ============================================================
+let _cssLoaded = false;
+function _ensureCss() {
+  // v1.20 perf · lazy load window CSS · 沒 openWindow 的 user 不付 ~4KB CSS
+  if (_cssLoaded || document.querySelector('link[data-lazy-css="window"]')) return;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = "/static/styles/window.css?v=2";
+  link.dataset.lazyCss = "window";
+  document.head.appendChild(link);
+  _cssLoaded = true;
+}
+
 export function openWindow(opts) {
+  _ensureCss();  // v1.20 · 第一次 open 才注入 CSS
   // 同 id 已開 · 直接 focus
   if (_windows.has(opts.id)) {
     const w = _windows.get(opts.id);
