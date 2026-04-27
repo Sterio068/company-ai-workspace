@@ -431,89 +431,13 @@ if not _admin_allowlist:
     )
 
 
-def _verify_librechat_cookie(request: Request) -> Optional[str]:
-    """Codex R6#1 + R7#1 · 修正 R5#1 + R6#1 錯誤前提
-
-    R5#1 假設 LibreChat 發 `token` cookie · 但 v0.8.4 原始碼:
-    - login/refresh 回 JSON {token, user} · access 只在 response body
-    - cookie 只設 refreshToken + token_provider
-    所以 R5#1 cookie 路徑「永遠 None」= 等於沒做認證強化
-
-    R6#1 改驗 refreshToken · 但只 read `payload.email`
-    R7#1 抓:LibreChat refresh payload 實際是 {id, sessionId} · 不是 {email}
-    驗證來源:packages/data-schemas/src/methods/session.ts
-    所以 R6#1 仍 silent fail · prod cookie 路徑等於沒接
-
-    R7#1 修正:
-    1. JWT 解出 payload.id(Mongo ObjectId hex string)
-    2. 用 _users_col.find_one({"_id": ObjectId(id)}) 反查 email
-    3. 失敗 → None · 走 X-User-Email legacy(若 ALLOW_LEGACY_AUTH_HEADERS)
-    4. 為效能 · LRU cache 60 秒(refresh token 7d 期效 · email 變動極少)
-    """
-    try:
-        import jwt as _jwt
-        # R6#1 · LibreChat 實際發 refreshToken · 不發 token cookie
-        refresh_token = request.cookies.get("refreshToken")
-        if not refresh_token:
-            return None
-        sec = os.getenv("JWT_REFRESH_SECRET", "")
-        if not sec or sec.startswith("<GENERATE"):
-            return None
-        try:
-            payload = _jwt.decode(refresh_token, sec, algorithms=["HS256"])
-        except _jwt.ExpiredSignatureError:
-            logger.debug("[auth] refreshToken expired · user should re-login")
-            return None
-        except _jwt.InvalidTokenError as e:
-            logger.debug("[auth] refreshToken invalid · %s", e)
-            return None
-        # R7#1 · payload 標準是 {id, sessionId} · email 是 LibreChat 後來加的非標欄位
-        # 先試 payload.email(若 LibreChat 升級加上)· 失敗才走 ID lookup(主路徑)
-        email_in_payload = (payload.get("email") or "").strip().lower()
-        if email_in_payload:
-            return email_in_payload
-        user_id = payload.get("id") or payload.get("sub") or payload.get("userId")
-        if not user_id:
-            logger.debug("[auth] refreshToken payload 無 id 欄位 · keys=%s", list(payload.keys()))
-            return None
-        return _lookup_user_email_cached(str(user_id))
-    except Exception as e:
-        logger.debug("[auth] cookie verify outer fail: %s", e)
-        return None
-
-
-# R7#1 + R8#1 · 真 LRU cache for user email lookup · 60s TTL(refresh token 7d · email 不常變)
-# R8#1 · OrderedDict + popitem(last=False) 真 LRU 語意 · 不再「滿 200 直接清空」
-_USER_EMAIL_CACHE: "OrderedDict[str, tuple[str, float]]" = OrderedDict()
-_USER_EMAIL_CACHE_TTL = 60.0
-_USER_EMAIL_CACHE_MAX = 200
-
-
-def _lookup_user_email_cached(user_id: str) -> Optional[str]:
-    """從 _users_col 反查 email · 60s LRU cache · OrderedDict 真 LRU 不集體 miss"""
-    import time
-    now = time.time()
-    cached = _USER_EMAIL_CACHE.get(user_id)
-    if cached and now - cached[1] < _USER_EMAIL_CACHE_TTL:
-        # R8#1 · 真 LRU · 命中時 move_to_end 標記為最近使用
-        _USER_EMAIL_CACHE.move_to_end(user_id)
-        return cached[0] or None
-    try:
-        # ObjectId 可能 invalid(舊 token)· try-except 包好
-        try:
-            oid = ObjectId(user_id)
-        except Exception:
-            return None
-        u = _users_col.find_one({"_id": oid}, {"email": 1})
-        email = (u.get("email") or "").strip().lower() if u else ""
-        # R8#1 · 真 LRU evict · pop 最舊 · 不再 clear 整片
-        while len(_USER_EMAIL_CACHE) >= _USER_EMAIL_CACHE_MAX:
-            _USER_EMAIL_CACHE.popitem(last=False)
-        _USER_EMAIL_CACHE[user_id] = (email, now)
-        return email or None
-    except Exception as e:
-        logger.debug("[auth] users lookup id=%s · %s", user_id, e)
-        return None
+# v1.30 · architect R2 round 4 · _verify_librechat_cookie + _lookup_user_email_cached
+# 抽到 auth_deps.make_cookie_verifier(factory + DI · 注入 users_col / logger)
+# 行為 100% 一致(JWT decode → payload.email or id → users_col 反查 + 60s LRU)
+from auth_deps import make_cookie_verifier
+_verify_librechat_cookie, _lookup_user_email_cached = make_cookie_verifier(
+    _users_col, logger=logger,
+)
 
 
 # v1.29 · R2 round 3 · 真 binding · 此時 _verify_librechat_cookie 已定義
