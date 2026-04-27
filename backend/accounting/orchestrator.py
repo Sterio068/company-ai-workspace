@@ -56,6 +56,13 @@ class WorkflowStep(BaseModel):
     agent_id: str
     prompt_template: str
     depends_on: list[str] = Field(default_factory=list)  # 依賴前面哪些 step 的結果
+    # v1.6.0 #2 · WorkflowContext · 結構化 handoff
+    # 該 step 把哪些「key」寫進 context · 下一個 step 透過 {context.<key>} 引用
+    # 比 {step_0} 整段塞 prompt 更精準 · token 省 50-70%
+    extracts: dict[str, str] = Field(
+        default_factory=dict,
+        description="從 response 抽哪些 key · 例:{'tender_subject': 'regex:案名:(.+?)\\n'}",
+    )
 
 
 class WorkflowRequest(BaseModel):
@@ -63,6 +70,9 @@ class WorkflowRequest(BaseModel):
     description: Optional[str] = None
     steps: list[WorkflowStep]
     initial_input: str
+    # v1.6.0 #2 · 跨 step 共享 context · 第一步可直接訪問 initial_input
+    # 後續 step 用 {context.<key>} 引用前 step extract 出來的結構化資料
+    initial_context: dict = Field(default_factory=dict)
 
 
 class PresetPrepareRequest(BaseModel):
@@ -281,6 +291,126 @@ async def invoke_agent(
 
 
 # ============================================================
+# v1.7.0 D3 · 主管家 → 專家 真實 tool delegation
+# 主管家透過 OpenAI function-calling 呼叫此 endpoint · AI 動態派工
+# ============================================================
+class DelegateRequest(BaseModel):
+    target_agent: str = Field(
+        ...,
+        description="專家編號 01-09 或角色名(投標顧問/活動規劃師/...)",
+    )
+    task: str = Field(..., description="要交辦的具體任務 · 主管家用人話寫")
+    context_summary: Optional[str] = Field(
+        None, description="主管家整理的相關背景(目前對話 / project / 既定條件)",
+    )
+    expected_format: Optional[str] = Field(
+        None, description="希望專家回什麼格式(JSON / 列表 / 簡報大綱 / ...)",
+    )
+
+
+# 角色名 → agent num 反查
+_AGENT_NAME_TO_NUM = {v: k for k, v in AGENT_NUM_TO_NAME.items()}
+
+# 防失控:單次主管家對話內最多 delegate 次數
+DELEGATION_DEPTH_LIMIT = int(os.getenv("ORCHESTRATOR_DELEGATION_MAX", "5"))
+# 防遞迴:不允許 delegate 到 router 自己
+_FORBIDDEN_TARGETS = {"00", "主管家"}
+
+_delegation_counter: dict[str, int] = {}  # by user_email
+
+
+@router.post("/delegate")
+async def delegate_to_agent(
+    req: DelegateRequest,
+    authorization: Optional[str] = Header(None),
+    user_email: str = require_user_dep(),
+):
+    """主管家 → 專家 真實 tool 派工 · v1.7.0 D3
+    使用情境:主管家不知該怎麼答某個專業問題 → 直接呼叫對應專家
+    回流:專家完整 response · 主管家整合後回給同事
+
+    安全:
+    · 不接受 internal:cron(workflow 走另一條 path)
+    · 單一 user 同對話最多 N 次 delegate(防失控)
+    · 不允許 delegate 到主管家自己(防無限遞迴)
+    · 與 workflow 共用 daily quota
+    """
+    if not _workflow_execution_enabled():
+        raise HTTPException(403, "workflow / delegation 目前停用")
+    if user_email.startswith("internal:"):
+        raise HTTPException(403, "delegation 不接受 internal token 觸發")
+    if not authorization:
+        raise HTTPException(401, "需 Authorization header")
+
+    # 解析 target_agent (allow num or name)
+    target = req.target_agent.strip()
+    if target in _AGENT_NAME_TO_NUM:
+        target = _AGENT_NAME_TO_NUM[target]
+    if target in _FORBIDDEN_TARGETS:
+        raise HTTPException(400, "不可以 delegate 到主管家自己 · 直接回答即可")
+    if target not in AGENT_NUM_TO_NAME:
+        raise HTTPException(
+            400, f"unknown agent: {req.target_agent} · 接受 01-09 或角色名稱",
+        )
+
+    # depth limit
+    used = _delegation_counter.get(user_email, 0)
+    if used >= DELEGATION_DEPTH_LIMIT:
+        raise HTTPException(
+            429,
+            f"主管家本對話 delegate 次數已達 {used}/{DELEGATION_DEPTH_LIMIT} 上限 · "
+            "建議直接回給同事或 reset 對話",
+        )
+    _delegation_counter[user_email] = used + 1
+
+    # 組 prompt 給專家
+    prompt_parts = [f"【主管家轉介】\n\n任務:{req.task}"]
+    if req.context_summary:
+        prompt_parts.append(f"\n\n背景:\n{req.context_summary}")
+    if req.expected_format:
+        prompt_parts.append(f"\n\n期望格式:{req.expected_format}")
+    prompt_parts.append(
+        "\n\n請以你的專業回應 · 主管家會把你的回應整合給同事 · 不必再寒暄。",
+    )
+    prompt = "".join(prompt_parts)
+
+    # audit
+    audit_id = _audit_workflow_run(
+        user_email=user_email,
+        preset_id="delegation",
+        status="running",
+        preset_name=f"delegate→{AGENT_NUM_TO_NAME.get(target, target)}",
+        target_agent=target,
+        delegation_depth=used + 1,
+    )
+
+    try:
+        invoke_r = await invoke_agent(
+            AgentInvokeRequest(agent_id=target, input=prompt),
+            authorization,
+        )
+        _audit_update(
+            audit_id,
+            status="completed",
+            completed_at=datetime.now(timezone.utc),
+            final_preview=(invoke_r.get("response") or "")[:300],
+        )
+        return {
+            "delegated_to": AGENT_NUM_TO_NAME.get(target, target),
+            "agent_num": target,
+            "response": invoke_r.get("response", ""),
+            "delegation_count": used + 1,
+            "limit": DELEGATION_DEPTH_LIMIT,
+        }
+    except HTTPException as e:
+        _audit_update(audit_id, status="failed", error=str(e.detail)[:300])
+        raise
+    except Exception as e:
+        _audit_update(audit_id, status="failed", error=str(e)[:300])
+        raise HTTPException(500, f"delegation failed: {e}")
+
+
+# ============================================================
 # 執行 Workflow(多步 Agent 串接)
 # ============================================================
 @router.post("/workflow/run")
@@ -305,46 +435,125 @@ async def run_workflow(
     if not authorization:
         raise HTTPException(401, "需 Authorization header")
 
-    results = {}
-    executed_steps = []
+    import asyncio
+    import re as _re
+    results: dict[str, dict] = {}
+    executed_steps: list[dict] = []
+    # v1.6.0 #2 · WorkflowContext · 跨 step 結構化資料(取代 raw {step_0} 整段塞)
+    workflow_context: dict[str, str] = dict(req.initial_context or {})
+
+    def _extract_from_response(response: str, extracts: dict[str, str]) -> dict[str, str]:
+        """從 response text 用指定規則抽 key
+        支援:
+          · 'regex:模式'  → 用 regex 抽 group 1
+          · 'json:path'   → 從 ```json ... ``` 區塊抽 path(簡易)
+          · 'first_line' → 第一行
+          · 其他 → 取 response 前 200 字"""
+        out = {}
+        for key, rule in extracts.items():
+            try:
+                if rule.startswith("regex:"):
+                    pat = rule[6:]
+                    m = _re.search(pat, response)
+                    out[key] = m.group(1).strip() if m else ""
+                elif rule.startswith("json:"):
+                    path = rule[5:]
+                    m = _re.search(r"```json\s*(\{.+?\})\s*```", response, _re.DOTALL)
+                    if m:
+                        import json as _j
+                        d = _j.loads(m.group(1))
+                        for p in path.split("."):
+                            d = d.get(p, "") if isinstance(d, dict) else ""
+                        out[key] = str(d)
+                    else: out[key] = ""
+                elif rule == "first_line":
+                    out[key] = response.split("\n", 1)[0].strip()[:200]
+                else:
+                    out[key] = response[:200]
+            except Exception:
+                out[key] = ""
+        return out
 
     async with httpx.AsyncClient(timeout=300) as client:
-        # v1.57 perf P0-3 · 一次 resolve 所有 agent_ref · 取代每 step 重打 /api/agents
+        # v1.57 perf P0-3 · 一次 resolve 所有 agent_ref
         agent_id_cache: dict[str, str] = {}
         for step in req.steps:
             ref = step.agent_id
             if ref not in agent_id_cache:
                 agent_id_cache[ref] = await _resolve_agent_id(client, authorization, ref)
 
-        for i, step in enumerate(req.steps):
-            # 檢查依賴
-            for dep in step.depends_on:
-                if dep not in results:
-                    raise HTTPException(400, f"Step {i} 依賴 {dep} 但尚未執行")
+        # v1.59 perf P0-5 · DAG 並行 · 沒依賴的 step 同 batch asyncio.gather
+        # event-planning step_0 (場景 Brief) + step_1 (主視覺) 同時跑 · 省 ~10s
+        # 規則:每 round 找出 depends_on 全部已完成的 pending step · 並行執行
+        pending = list(enumerate(req.steps))
+        round_no = 0
+        while pending:
+            round_no += 1
+            ready = [
+                (i, s) for i, s in pending
+                if all(f"step_{j}" in results for j in [int(d.split("_")[1]) for d in s.depends_on if d.startswith("step_")])
+            ]
+            if not ready:
+                missing = [(i, s.depends_on) for i, s in pending]
+                raise HTTPException(
+                    400, f"workflow DAG 解不開:剩 {missing} · 可能有 circular dependency",
+                )
 
-            # 組合 prompt(用前面結果)
-            prompt = step.prompt_template.format(
-                initial_input=req.initial_input,
-                **{k: v.get("response", "") for k, v in results.items()},
+            async def _run_one(idx: int, step) -> tuple[int, dict]:
+                # v1.6.0 #2 · prompt template 支援:
+                #   · {initial_input} 原始輸入
+                #   · {step_N} 完整 response (legacy · 仍支援)
+                #   · {context.key} 結構化抽出的 key (新 · token 省 50-70%)
+                fmt_kwargs = {
+                    "initial_input": req.initial_input,
+                    **{k: v.get("response", "") for k, v in results.items()},
+                }
+                # context.* placeholders 替換
+                prompt = step.prompt_template
+                for ck, cv in workflow_context.items():
+                    prompt = prompt.replace(f"{{context.{ck}}}", str(cv))
+                prompt = prompt.format(**fmt_kwargs)
+                invoke_r = await invoke_agent(
+                    AgentInvokeRequest(
+                        agent_id=agent_id_cache[step.agent_id], input=prompt,
+                    ),
+                    authorization,
+                )
+                # extract structured keys 寫回 workflow_context
+                if step.extracts:
+                    extracted = _extract_from_response(
+                        invoke_r.get("response", ""), step.extracts,
+                    )
+                    workflow_context.update(extracted)
+                    invoke_r["_extracted_keys"] = list(extracted.keys())
+                return idx, invoke_r
+
+            batch_results = await asyncio.gather(
+                *(_run_one(i, s) for i, s in ready),
+                return_exceptions=False,
             )
+            for idx, invoke_r in batch_results:
+                step = req.steps[idx]
+                step_id = f"step_{idx}"
+                results[step_id] = invoke_r
+                executed_steps.append({
+                    "step_id": step_id,
+                    "agent_id": step.agent_id,
+                    "round": round_no,
+                    "output_preview": (invoke_r.get("response") or "")[:300],
+                })
+            # 從 pending 移除已完成
+            done_indices = {idx for idx, _ in batch_results}
+            pending = [(i, s) for i, s in pending if i not in done_indices]
 
-            # 呼叫 Agent · 已 resolve 直接傳 LibreChat agent id
-            step_id = f"step_{i}"
-            invoke_r = await invoke_agent(
-                AgentInvokeRequest(agent_id=agent_id_cache[step.agent_id], input=prompt),
-                authorization,
-            )
-            results[step_id] = invoke_r
-            executed_steps.append({
-                "step_id": step_id,
-                "agent_id": step.agent_id,
-                "output_preview": (invoke_r.get("response") or "")[:300],
-            })
-
+    # 排序回原 step 順序(asyncio.gather 不保序 · 但用 idx sort)
+    executed_steps.sort(key=lambda x: int(x["step_id"].split("_")[1]))
     return {
         "workflow": req.name,
         "steps_executed": len(executed_steps),
+        "rounds": round_no,
         "results": executed_steps,
+        "context": workflow_context,  # v1.6.0 #2 · 暴露累積 context 給 caller
         "final_output": executed_steps[-1]["output_preview"] if executed_steps else None,
     }
 

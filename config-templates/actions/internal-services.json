@@ -1,0 +1,469 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "公司內部服務(會計 / Vision OCR / Agent 派工)",
+    "description": "v1.7.0 · 合併 3 個內部服務 spec · LibreChat 限制同 domain 只能掛一個 action · 必須合併",
+    "version": "1.7.0"
+  },
+  "servers": [
+    {
+      "url": "http://accounting:8000"
+    }
+  ],
+  "security": [
+    {
+      "internalToken": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "internalToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Internal-Token"
+      }
+    }
+  },
+  "paths": {
+    "/accounts": {
+      "get": {
+        "operationId": "listAccounts",
+        "summary": "列出會計科目",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asset",
+                "liability",
+                "equity",
+                "income",
+                "expense"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/transactions": {
+      "post": {
+        "operationId": "createTransaction",
+        "summary": "記一筆交易(雙式簿記)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "date",
+                  "memo",
+                  "debit_account",
+                  "credit_account",
+                  "amount"
+                ],
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "memo": {
+                    "type": "string",
+                    "description": "摘要說明"
+                  },
+                  "debit_account": {
+                    "type": "string",
+                    "description": "借方科目編號(費用/資產增加)"
+                  },
+                  "credit_account": {
+                    "type": "string",
+                    "description": "貸方科目編號(收入/負債增加)"
+                  },
+                  "amount": {
+                    "type": "number",
+                    "description": "金額(未稅)"
+                  },
+                  "project_id": {
+                    "type": "string",
+                    "description": "綁定專案 id"
+                  },
+                  "vendor": {
+                    "type": "string"
+                  },
+                  "customer": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "operationId": "listTransactions",
+        "summary": "查詢交易",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/invoices": {
+      "post": {
+        "operationId": "createInvoice",
+        "summary": "開立發票",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "date",
+                  "customer",
+                  "items"
+                ],
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "customer": {
+                    "type": "string"
+                  },
+                  "customer_tax_id": {
+                    "type": "string",
+                    "description": "統編"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "description": {
+                          "type": "string"
+                        },
+                        "quantity": {
+                          "type": "number"
+                        },
+                        "unit_price": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  },
+                  "tax_included": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "project_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK · 回傳 invoice_no"
+          }
+        }
+      }
+    },
+    "/quotes": {
+      "post": {
+        "operationId": "createQuote",
+        "summary": "建立報價單",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "date",
+                  "customer",
+                  "items",
+                  "valid_until"
+                ],
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "customer": {
+                    "type": "string"
+                  },
+                  "items": {
+                    "type": "array"
+                  },
+                  "valid_until": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "project_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK · 回傳 quote_no"
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/finance": {
+      "get": {
+        "operationId": "getProjectFinance",
+        "summary": "查詢某專案的財務狀況(收入/支出/毛利)",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/reports/pnl": {
+      "get": {
+        "operationId": "pnlReport",
+        "summary": "損益表",
+        "parameters": [
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/reports/aging": {
+      "get": {
+        "operationId": "agingReport",
+        "summary": "應收帳款帳齡分析",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/vision/extract-tender-summary": {
+      "post": {
+        "operationId": "extractTenderSummary",
+        "summary": "招標文件 → 9 欄結構化(案號 / 標的 / 預算 / 截止 / 評分 / ...)",
+        "description": "投標顧問必用。看到招標公告或須知首頁,抽出 9 個關鍵欄位。回傳 JSON 含 case_number, subject, budget_twd, deadline, submission_method, qualification, scoring_summary, execution_period, contact, notes。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "image_url"
+                ],
+                "properties": {
+                  "image_url": {
+                    "type": "string",
+                    "description": "圖片 URL(公開可達)或 data:image/...;base64 內嵌"
+                  },
+                  "hint": {
+                    "type": "string",
+                    "description": "可選 · 額外提示(例:第 3 頁 / 中文版 / 只看左半)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK · 9 欄結構化 JSON"
+          }
+        }
+      }
+    },
+    "/vision/extract-table": {
+      "post": {
+        "operationId": "extractTable",
+        "summary": "通用表格 → headers + rows · 報價 / 評分 / 時程通用",
+        "description": "看到任何表格時用。回傳 { title, headers: string[], rows: string[][], notes }。合併儲存格自動拆,看不清楚的字標 '?'。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "image_url"
+                ],
+                "properties": {
+                  "image_url": {
+                    "type": "string"
+                  },
+                  "hint": {
+                    "type": "string",
+                    "description": "可選 · 例:這是廠商報價表 / 這是評分表"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK · table JSON"
+          }
+        }
+      }
+    },
+    "/vision/extract-scoring-criteria": {
+      "post": {
+        "operationId": "extractScoringCriteria",
+        "summary": "招標評分標準 → 各項目 + weight + 子項",
+        "description": "投標顧問估勝率前必用。回傳 { total_score, criteria: [{ name, weight, sub_criteria: [] }], passing_score, notes }。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "image_url"
+                ],
+                "properties": {
+                  "image_url": {
+                    "type": "string"
+                  },
+                  "hint": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK · scoring criteria JSON"
+          }
+        }
+      }
+    },
+    "/orchestrator/delegate": {
+      "post": {
+        "operationId": "delegateToAgent",
+        "summary": "把任務交給 9 個專家中的一位 · 主管家專用",
+        "description": "把當前對話中需要專業協助的部分,動態派給:\n  · 01 投標顧問(招標 / 建議書 / Go-NoGo)\n  · 02 活動規劃師(場地 / 動線 / 廠商)\n  · 03 設計夥伴(主視覺 / 生圖 / 設計需求單)\n  · 04 公關寫手(新聞稿 / 社群 / Email)\n  · 05 會議速記(錄音 / 逐字稿)\n  · 06 知識庫查詢(過往案例 / 慣例)\n  · 07 財務試算(毛利 / 報價 / 預算)\n  · 08 合約法務(合約 / NDA / 稅務)\n  · 09 結案營運(結案報告 / CRM)\n\n專家回應後 · 你(主管家)整合給同事 · 不要原文丟給同事 · 加你自己的 framing。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "target_agent",
+                  "task"
+                ],
+                "properties": {
+                  "target_agent": {
+                    "type": "string",
+                    "description": "專家編號 01-09 或中文角色名(如 投標顧問 / 設計夥伴)",
+                    "example": "01"
+                  },
+                  "task": {
+                    "type": "string",
+                    "description": "要交辦的具體任務 · 用人話寫 · 例:「分析這個招標案的 Go/No-Go」"
+                  },
+                  "context_summary": {
+                    "type": "string",
+                    "description": "可選 · 你整理的相關背景 · 給專家更好理解情境"
+                  },
+                  "expected_format": {
+                    "type": "string",
+                    "description": "可選 · 期望專家回什麼格式 · 例:「JSON 結構 / 5 章大綱 / 條列式」"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK · 專家完整 response"
+          }
+        }
+      }
+    }
+  }
+}

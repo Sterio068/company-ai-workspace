@@ -460,6 +460,7 @@ export const chat = {
     }
 
     this.isStreaming = true;
+    this._toolCallSeen = new Set();  // v1.59 #4 · 每次新 send reset · 不跨訊息 leak chip
     const sendBtn = this._$("chat-send-btn");
     if (sendBtn) sendBtn.disabled = true;
 
@@ -529,6 +530,9 @@ export const chat = {
     let accumulated = "";
     const processPayload = (data) => {
       if (!data || typeof data !== "object") return;
+      // v1.59 #4 · 偵測 tool call 並 inline 顯示「⚙ 主管家正在呼叫 PCC...」
+      // LibreChat / OpenAI Agent SSE 在 tool 呼叫時送 tool_call / function_call event
+      this._maybeShowToolCall(data, assistantBodyEl);
       const extracted = this._messageText(data);
       if (!extracted) return;
       if (data.delta || data.choices?.[0]?.delta) accumulated += extracted;
@@ -781,6 +785,54 @@ export const chat = {
     }
     const len = (bodyEl.textContent || "").length;
     live.textContent = `助理已回覆 · 共 ${len} 字`;
+  },
+
+  // v1.59 #4 · tool call 可見性 · SSE 偵測到 tool_call/function_call 時 inline 顯示
+  // 例:「⚙ 主管家正在呼叫 PCC 查標案... 」· 同事看得到 AI 在做事 · 不再黑盒
+  _toolCallSeen: new Set(),  // 同 call id 不重複加 chip
+  _maybeShowToolCall(data, bodyEl) {
+    if (!bodyEl) return;
+    // LibreChat / OpenAI 多種事件型態 · 收斂在這
+    const candidates = [
+      data?.tool_call,
+      data?.function_call,
+      data?.delta?.tool_calls?.[0],
+      data?.choices?.[0]?.delta?.tool_calls?.[0],
+      data?.message?.tool_call,
+    ].filter(Boolean);
+    for (const tc of candidates) {
+      const fn = tc.function?.name || tc.name || tc.tool_name;
+      if (!fn) continue;
+      const callId = tc.id || tc.call_id || `${fn}-${Date.now()}`;
+      if (this._toolCallSeen.has(callId)) continue;
+      this._toolCallSeen.add(callId);
+      const chip = document.createElement("div");
+      chip.className = "chat-tool-call-chip";
+      chip.setAttribute("role", "status");
+      chip.style.cssText = "display:inline-flex;align-items:center;gap:6px;padding:6px 10px;margin:6px 0;border-radius:999px;background:color-mix(in srgb, var(--accent) 12%, transparent);border:1px solid color-mix(in srgb, var(--accent) 28%, transparent);font-size:13px;color:var(--text-primary)";
+      chip.innerHTML = `<span aria-hidden="true">⚙</span><span>正在呼叫 <strong>${this._friendlyToolName(fn)}</strong>...</span>`;
+      bodyEl.appendChild(chip);
+      this._scrollMessages();
+    }
+  },
+
+  _friendlyToolName(fn) {
+    const map = {
+      searchByTitle: "PCC 標案查詢",
+      listByUnit: "PCC 機關列表",
+      listByDate: "PCC 近期標案",
+      getTenderDetail: "PCC 標案詳情",
+      generateImage: "OpenAI 生圖",
+      editImage: "OpenAI 改圖",
+      extractTenderSummary: "招標 9 欄抽取",
+      extractTable: "表格抽取",
+      extractScoringCriteria: "評分標準抽取",
+      listAccounts: "會計科目查詢",
+      createTransaction: "記一筆交易",
+      listTransactions: "交易列表",
+      delegateToAgent: "轉交專家",
+    };
+    return map[fn] || fn;
   },
 
   // v1.50 · RAF 節流 scroll · 串流時每 frame 只 scroll 一次 · 取代 token-rate forced layout

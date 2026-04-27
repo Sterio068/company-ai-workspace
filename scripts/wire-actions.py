@@ -51,10 +51,14 @@ _BROWSER_UA = (
 # fal-ai-image-gen 為備案 · 預設不啟用 · 若業主特別要 Recraft v3 才掛
 ACTION_AGENT_MAP = [
     ("pcc-tender.json",          ["✨ 主管家", "🎯 投標"]),
-    ("accounting-internal.json", ["✨ 主管家", "💰 財務"]),
+    # v1.7.0 · 合併內部 spec(LibreChat 限制同 domain 只能一個 action)
+    # accounting-internal + vision-ocr + delegate-to-agent → internal-services
+    ("internal-services.json",   ["✨ 主管家", "💰 財務", "🎯 投標", "🎪 活動"]),
     ("openai-image-gen.json",    ["✨ 主管家", "🎨 設計"]),
-    ("vision-ocr.json",          ["✨ 主管家", "🎯 投標", "🎪 活動"]),  # v1.55
-    # ("fal-ai-image-gen.json",  ["✨ 主管家", "🎨 設計"]),  # 備案
+    # 舊個別 spec 已合 · 留檔不再 wire
+    # ("accounting-internal.json",  ["..."])
+    # ("vision-ocr.json",           ["..."])
+    # ("delegate-to-agent.json",    ["..."])
 ]
 
 
@@ -174,16 +178,16 @@ def get_api_key_for(spec_filename: str) -> str | None:
     if "openai-image" in spec_filename:
         # 用既有 OPENAI_API_KEY · 不用業主再開新帳戶
         return os.environ.get("OPENAI_API_KEY")
-    if "accounting" in spec_filename or "vision" in spec_filename:
+    if any(k in spec_filename for k in ("accounting", "vision", "delegate", "internal-services")):
         # 內部服務 · 都走 ECC_INTERNAL_TOKEN
         return os.environ.get("ECC_INTERNAL_TOKEN")
     return None
 
 
 def needs_api_key_strict(spec: dict, spec_filename: str) -> bool:
-    """spec 沒宣告 security 但內部 accounting 服務要 X-Internal-Token"""
+    """spec 沒宣告 security 但內部服務要 X-Internal-Token"""
     if spec.get("security"): return True
-    if "accounting" in spec_filename or "vision" in spec_filename: return True
+    if any(k in spec_filename for k in ("accounting", "vision", "delegate", "internal-services")): return True
     return False
 
 
@@ -207,7 +211,7 @@ def wire_action(
             envname = (
                 "FAL_KEY" if "fal-ai" in spec_path.name
                 else "OPENAI_API_KEY" if "openai-image" in spec_path.name
-                else "ECC_INTERNAL_TOKEN" if ("accounting" in spec_path.name or "vision" in spec_path.name)
+                else "ECC_INTERNAL_TOKEN" if any(k in spec_path.name for k in ("accounting","vision","delegate","internal-services"))
                 else "API_KEY"
             )
             return ("skip", f"需要 api_key 但 ${envname} 沒設 · 跳過 {spec_path.name}")
