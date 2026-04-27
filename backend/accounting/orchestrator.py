@@ -660,6 +660,90 @@ PRESET_WORKFLOWS = {
             {"agent_id": "04", "prompt_template": "寫媒體邀請 Email · 附上稿件內容:{step_0}", "depends_on": ["step_0"]},
         ],
     },
+    # v1.67 B1 · 結案完整閉環
+    "closing-full": {
+        "name": "結案完整閉環",
+        "description": "從專案執行資料 → 結案 KPI 報表 + 客戶 NPS 問卷 + 內部復盤 + CRM 紀錄",
+        "steps": [
+            # step_0:結案 KPI 報表 · 由 #09 結案營運 用 skill 15
+            {
+                "agent_id": "09",
+                "prompt_template": "依 skill 15 結案 KPI 報表標準產出 4 章報表:\n\n專案執行資料:\n{initial_input}",
+                "depends_on": [],
+            },
+            # step_1:客戶 NPS 問卷 · 由 #04 公關寫手 (並行 step_0)
+            {
+                "agent_id": "04",
+                "prompt_template": "為下列專案寫客戶 NPS 問卷(5-7 題 · 含 NPS 0-10 分 + 開放題)·寄客戶用:\n\n專案資料:\n{initial_input}",
+                "depends_on": [],
+            },
+            # step_2:內部復盤(依賴 step_0 結案報表)
+            {
+                "agent_id": "09",
+                "prompt_template": "依 skill 12 結案報告結構之第 4 章「現場學習」做內部復盤:\n\n結案報表:\n{step_0}\n\n至少列 3 個下次該改的事 · 1 個值得保留的做對的事。",
+                "depends_on": ["step_0"],
+            },
+            # step_3:CRM 紀錄(依賴 step_0+2)
+            {
+                "agent_id": "09",
+                "prompt_template": "依 skill 11 客戶 CRM 紀錄模板寫 4 類紀錄(關係 / 偏好 / 痛點 / 預期下次):\n\n結案報表:\n{step_0}\n內部復盤:\n{step_2}",
+                "depends_on": ["step_0", "step_2"],
+            },
+        ],
+    },
+    # v1.67 B2 · 月底營運閉環
+    "monthly-ops": {
+        "name": "月底營運閉環",
+        "description": "月損益 + 標案漏斗 + 員工活躍 + 寄老闆月報(自動)",
+        "steps": [
+            {
+                "agent_id": "07",
+                "prompt_template": "用 listTransactions / pnlReport 工具拉本月損益表 · 對比上月:\n\n{initial_input}",
+                "depends_on": [],
+            },
+            {
+                "agent_id": "09",
+                "prompt_template": "用工具查本月標案漏斗:\n  - 看標案監測新增幾個\n  - CRM 由評估 → 提案 → 送件 → 結案 各階段數量\n  - 計算 Go-rate / 得標率\n\n月份:{initial_input}",
+                "depends_on": [],
+            },
+            {
+                "agent_id": "09",
+                "prompt_template": "整合月報內容 · 寫給老闆看 · 含三大段:\n  1. 本月損益(從 step_0)\n  2. 標案漏斗(從 step_1)\n  3. 三件值得注意的事(insights)\n\n用 skill 06 公文體 Email 格式 · 主旨「YYYY-MM 月度營運報表」",
+                "depends_on": ["step_0", "step_1"],
+            },
+        ],
+    },
+    # v1.67 B3 · 客戶提案閉環
+    "client-proposal": {
+        "name": "客戶提案完整閉環",
+        "description": "客戶 brief → 創意 3 方向 → 報價 → 提案 PPT 大綱",
+        "steps": [
+            # step_0:結構化客戶 brief(主管家拆解)
+            {
+                "agent_id": "00",
+                "prompt_template": "請結構化整理以下客戶 brief · 含:目標 / 受眾 / 預算 / 時程 / 成功指標 / 競品 / 限制條件:\n\n{initial_input}",
+                "depends_on": [],
+            },
+            # step_1:創意 3 方向(依賴 step_0)
+            {
+                "agent_id": "03",
+                "prompt_template": "依 skill 13 客戶提案破冰 SOP 段 3 案例對照法 · 為下列 brief 提 3 個差異化創意方向:\n\nBrief:\n{step_0}\n\n每個方向含:概念一句話 + 視覺風格 + 媒體渠道組合 + 預期效果",
+                "depends_on": ["step_0"],
+            },
+            # step_2:報價(依賴 step_0+1)· 用 #07 算
+            {
+                "agent_id": "07",
+                "prompt_template": "依 skill 09 預算分配比例 + skill 10 毛利試算 為以下提案估報價(3 檔:精簡 / 標準 / 完整):\n\nBrief:\n{step_0}\n\n創意方向:\n{step_1}\n\n備註:依公司目標毛利率 18-22% 反推報價 · 含未稅 / 含稅 / 付款條件",
+                "depends_on": ["step_0", "step_1"],
+            },
+            # step_3:提案 PPT 大綱(依賴 step_0+1+2)· 用 skill 03
+            {
+                "agent_id": "01",
+                "prompt_template": "依 skill 03 建議書 5 章模板產出客戶提案 PPT 大綱(20-30 頁分配):\n\nBrief:\n{step_0}\n創意:\n{step_1}\n報價:\n{step_2}\n\n結構:封面 / 需求理解 / 策略框架 / 執行方案 / 團隊與經驗 / 預算 / 時程 / 附錄",
+                "depends_on": ["step_0", "step_1", "step_2"],
+            },
+        ],
+    },
 }
 
 
@@ -923,6 +1007,10 @@ def _expected_output_for_step(preset_id: str, index: int) -> str:
         "tender-full": ["招標 9 欄摘要", "Go/No-Go 評估", "毛利與預算風險", "建議書大綱"],
         "event-planning": ["場景與動線 Brief", "主視覺方向", "預算分配建議"],
         "news-release": ["新聞稿草稿", "媒體邀請 Email"],
+        # v1.67 B1-B3 · 新閉環
+        "closing-full": ["結案 KPI 報表 4 章", "客戶 NPS 問卷", "內部復盤", "客戶 CRM 4 類紀錄"],
+        "monthly-ops": ["本月損益(對比上月)", "標案漏斗 + 得標率", "老闆月度報表 Email"],
+        "client-proposal": ["結構化客戶 Brief", "創意 3 方向", "報價 3 檔", "提案 PPT 大綱 8 章"],
     }
     return outputs.get(preset_id, [])[index] if index < len(outputs.get(preset_id, [])) else "步驟產出"
 

@@ -320,19 +320,29 @@ function _agentNameFromId(id) {
 }
 
 function _iconFor(id) {
-  return id === "tender-full" ? "🎯" :
-         id === "event-planning" ? "🎪" :
-         id === "news-release" ? "📣" : "⚡";
+  const map = {
+    "tender-full": "🎯", "event-planning": "🎪", "news-release": "📣",
+    "closing-full": "📊", "monthly-ops": "💰", "client-proposal": "🤝",
+  };
+  return map[id] || "⚡";
 }
 
 function _colorFor(id) {
-  return id === "tender-full" ? "#D14B43" :
-         id === "event-planning" ? "#D8851E" :
-         id === "news-release" ? "#5AB174" : "#8C5CB1";
+  const map = {
+    "tender-full": "#D14B43", "event-planning": "#D8851E", "news-release": "#5AB174",
+    "closing-full": "#3F86C9", "monthly-ops": "#5E5CE6", "client-proposal": "#8C5CB1",
+  };
+  return map[id] || "#8C5CB1";
 }
 
 function _deliverableFor(id) {
-  return id === "tender-full" ? "承接評估、建議書大綱、報價風險" :
-         id === "event-planning" ? "場景需求單、主視覺方向、預算分配" :
-         id === "news-release" ? "新聞稿、媒體邀請電子郵件" : "多步驟交付草稿";
+  const map = {
+    "tender-full": "承接評估、建議書大綱、報價風險",
+    "event-planning": "場景需求單、主視覺方向、預算分配",
+    "news-release": "新聞稿、媒體邀請電子郵件",
+    "closing-full": "KPI 報表、NPS 問卷、內部復盤、CRM 紀錄",
+    "monthly-ops": "本月損益、標案漏斗、老闆月報",
+    "client-proposal": "結構化 Brief、3 創意方向、3 檔報價、提案 PPT",
+  };
+  return map[id] || "多步驟交付草稿";
 }
