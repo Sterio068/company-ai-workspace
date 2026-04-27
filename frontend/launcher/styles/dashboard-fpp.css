@@ -1542,3 +1542,27 @@
   font-size: 9px;
   opacity: 0.6;
 }
+
+/* ============================================================
+   v1.37 a11y · F4 修 · WCAG 1.4.3(4.5:1)· 小字 < 14px 改 label-secondary
+   ============================================================
+   Audit:label-tertiary(rgba 0.25 ≈ 3:1)用在 < 14px 文字違反 normal-text
+   4.5:1 規範。將 15 個小字 selector 改 label-secondary(0.5 ≈ 7+:1)
+   font-size 不變 · 只升 color 對比 */
+.fpp-composer-hint,
+.fpp-widget-label,
+.fpp-path-label,
+.fpp-item-date,
+.fpp-status-keys,
+.fpp-quicklook-meta,
+.fpp-quicklook-close,
+.fpp-quicklook-label,
+.fpp-hints-title,
+.fpp-builder-label,
+.fpp-preview-items,
+.fpp-inbox-meta,
+.fpp-inbox-suppress,
+.fpp-inbox-empty-sub,
+.fpp-inbox-footer {
+  color: var(--label-secondary);
+}
