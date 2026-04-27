@@ -26,6 +26,11 @@
 import { escapeHtml } from "../util.js";
 import { authFetch } from "../auth.js";
 import { brand } from "../branding.js";
+import { trap as trapFocus } from "./modal-trap.js";
+
+// v1.32 a11y · A4 修 · trap focus release handles
+let _builderTrapRelease = null;
+let _inboxTrapRelease = null;
 
 // Mock data · 21 對話 · 與設計一致
 const MOCK_ITEMS = [
@@ -709,9 +714,12 @@ function _openBuilder(editingKey = null) {
     // v1.19 perf · 只 segment 列加新 chip · 不需重 render 整頁
     _renderSegmentsOnly();
   });
-  // ESC
+  // ESC + v1.32 a11y · A4 修 · trap focus + initial focus 到名稱欄位
   setTimeout(() => {
     document.addEventListener("keydown", _onBuilderEsc);
+    _builderTrapRelease = trapFocus(overlay, {
+      initialFocusSelector: "#fpp-builder-name",
+    });
   }, 0);
 }
 
@@ -725,6 +733,11 @@ function _onBuilderEsc(e) {
 function _closeBuilder() {
   _state.builderOpen = false;
   document.removeEventListener("keydown", _onBuilderEsc);
+  // v1.32 · 釋放 trap focus · 恢復原 focus 到開 modal 前的 element
+  if (_builderTrapRelease) {
+    _builderTrapRelease();
+    _builderTrapRelease = null;
+  }
   const overlay = document.getElementById("fpp-builder");
   if (overlay) {
     overlay.classList.remove("open");
@@ -835,6 +848,8 @@ function _openInbox() {
   overlay.querySelector(".fpp-inbox-close").addEventListener("click", _closeInbox);
   setTimeout(() => {
     document.addEventListener("keydown", _onInboxEsc);
+    // v1.32 a11y · A4 修 · trap focus(initial 自動找第一個 focusable · 通常是 close button)
+    _inboxTrapRelease = trapFocus(overlay);
   }, 0);
 }
 
@@ -848,6 +863,11 @@ function _onInboxEsc(e) {
 function _closeInbox() {
   _state.inboxOpen = false;
   document.removeEventListener("keydown", _onInboxEsc);
+  // v1.32 · 釋放 inbox trap focus · 恢復原 focus
+  if (_inboxTrapRelease) {
+    _inboxTrapRelease();
+    _inboxTrapRelease = null;
+  }
   const overlay = document.getElementById("fpp-inbox");
   if (overlay) {
     overlay.classList.remove("open");
