@@ -253,24 +253,50 @@ def crm_stats():
 
 @router.post("/crm/import-from-tenders")
 def import_leads_from_tenders():
-    """把標記為 'interested' 的 tender_alerts 轉成 CRM leads"""
+    """把標記為 'interested' 的 tender_alerts 轉成 CRM leads
+
+    v1.38 perf F-3 修 · N+1 → 1+1+1=3 query
+      原本 N 個 interested · 每個都 find_one(tender_key) check 重複 · 共 N+1 query
+      改:一次 $in 撈所有已有 tender_key · 用 set 過濾 · insert_many 批次塞
+      估省:N=50 時 51 query → 3 query · ~25ms 本地 / 顯著批量
+    """
     from main import db
     interested = list(db.tender_alerts.find({"status": "interested"}))
-    imported = 0
+    if not interested:
+        return {"imported": 0, "total_interested": 0}
+
+    # 一次撈所有已 import 的 tender_key
+    keys = [t.get("tender_key") for t in interested if t.get("tender_key")]
+    existing_keys = {
+        d["tender_key"]
+        for d in db.crm_leads.find(
+            {"tender_key": {"$in": keys}},
+            {"tender_key": 1, "_id": 0},
+        )
+    }
+
+    # 構造待 insert 的 doc · 過濾已存在
+    now = datetime.now(timezone.utc)
+    new_docs = []
     for t in interested:
-        if db.crm_leads.find_one({"tender_key": t.get("tender_key")}):
+        tk = t.get("tender_key")
+        if not tk or tk in existing_keys:
             continue
-        db.crm_leads.insert_one({
+        new_docs.append({
             "title": t.get("title"),
             "client": t.get("unit_name"),
             "stage": "lead",
             "source": "tender_alert",
-            "tender_key": t.get("tender_key"),
+            "tender_key": tk,
             "description": f"來源:政府電子採購網 · 關鍵字「{t.get('keyword')}」",
             "probability": 0.5,
             "notes": [],
-            "created_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc),
+            "created_at": now,
+            "updated_at": now,
         })
-        imported += 1
-    return {"imported": imported, "total_interested": len(interested)}
+
+    # 批次 insert_many · 1 round-trip 取代 N
+    if new_docs:
+        db.crm_leads.insert_many(new_docs, ordered=False)
+
+    return {"imported": len(new_docs), "total_interested": len(interested)}

@@ -161,7 +161,7 @@ function _renderAiBanner() {
   ).length;
   return `
     <div class="fpp-ai-banner" data-fpp-banner>
-      <span class="fpp-ai-icon">✨</span>
+      <span class="fpp-ai-icon" aria-hidden="true">✨</span>
       <span class="fpp-ai-text">AI 小幫手:${escapeHtml(top.text)} · 要我${escapeHtml(top.cta)}嗎?</span>
       ${_renderConfidenceBar(top.confidence)}
       <button class="fpp-ai-source" data-fpp-source="${escapeHtml(top.src)}" title="點看來源對話">
@@ -177,14 +177,17 @@ function _renderAiBanner() {
 }
 
 function _renderConfidenceBar(value) {
+  // v1.38 a11y · F5 修 · 信心度條本身是裝飾(% 文字才是 SR 內容)
+  // 加 role="img" + aria-label 讓 SR 念整體含意 · 段條 aria-hidden 略過
   const filled = value > 0.85 ? 3 : value > 0.7 ? 2 : 1;
   const segs = [0, 1, 2].map(i => {
     const cls = i < filled
       ? (filled === 3 ? "high" : filled === 2 ? "mid" : "low")
       : "empty";
-    return `<span class="fpp-conf-seg ${cls}"></span>`;
+    return `<span class="fpp-conf-seg ${cls}" aria-hidden="true"></span>`;
   }).join("");
-  return `<span class="fpp-conf">${segs}<span class="fpp-conf-pct">${Math.round(value * 100)}%</span></span>`;
+  const pct = Math.round(value * 100);
+  return `<span class="fpp-conf" role="img" aria-label="AI 信心度 ${pct}%">${segs}<span class="fpp-conf-pct">${pct}%</span></span>`;
 }
 
 function _renderToolbar() {
@@ -313,7 +316,7 @@ function _renderGrid() {
         <button class="fpp-item ${i === _state.selected ? "selected" : ""}"
                 data-fpp-item="${i}" tabindex="${i === _state.selected ? 0 : -1}"
                 aria-label="${escapeHtml(it.name)} · ${it.date}">
-          <div class="fpp-icon" style="--ws-color:${it.color}">
+          <div class="fpp-icon" style="--ws-color:${it.color}" aria-hidden="true">
             <span class="fpp-icon-kind">${it.kind}</span>
             ${it.presence === "typing" ? `<span class="fpp-icon-presence typing" title="對方輸入中">✏</span>` : ""}
             ${it.presence === "running" ? `<span class="fpp-icon-presence running" title="AI 小幫手進行中">⟳</span>` : ""}
