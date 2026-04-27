@@ -165,23 +165,47 @@ body[data-active-view="dashboard"] .sidebar {
   overflow: hidden;
   white-space: nowrap;
 }
-body[data-active-view="dashboard"] .sidebar:hover {
+/* v1.22 a11y · A1 修:加 :focus-within 讓鍵盤 Tab 進去也展開(原本只 :hover) */
+body[data-active-view="dashboard"] .sidebar:hover,
+body[data-active-view="dashboard"] .sidebar:focus-within {
   --dashboard-sidebar-w: 260px;
 }
-body[data-active-view="dashboard"] .app:has(.sidebar:hover) {
+body[data-active-view="dashboard"] .app:has(.sidebar:hover),
+body[data-active-view="dashboard"] .app:has(.sidebar:focus-within) {
   grid-template-columns: 260px 1fr;
 }
-/* 收起時 brand-name / brand-sub / sidebar-item label 整批藏起 · 只留 logo + icon */
-body[data-active-view="dashboard"] .sidebar:not(:hover) .brand-name,
-body[data-active-view="dashboard"] .sidebar:not(:hover) .brand-sub,
-body[data-active-view="dashboard"] .sidebar:not(:hover) .sidebar-section-title,
-body[data-active-view="dashboard"] .sidebar:not(:hover) .sidebar-item-label,
-body[data-active-view="dashboard"] .sidebar:not(:hover) .badge,
-body[data-active-view="dashboard"] .sidebar:not(:hover) .search-input,
-body[data-active-view="dashboard"] .sidebar:not(:hover) .ai-provider-toggle {
+/* 收起時藏起 · 但保留 sidebar-shortcut + brand-name(USER 反饋:U1 · 不要全裸 icon) */
+body[data-active-view="dashboard"] .sidebar:not(:hover):not(:focus-within) .brand-sub,
+body[data-active-view="dashboard"] .sidebar:not(:hover):not(:focus-within) .sidebar-section-label,
+body[data-active-view="dashboard"] .sidebar:not(:hover):not(:focus-within) .sidebar-shortcut,
+body[data-active-view="dashboard"] .sidebar:not(:hover):not(:focus-within) .sidebar-count,
+body[data-active-view="dashboard"] .sidebar:not(:hover):not(:focus-within) .search-input,
+body[data-active-view="dashboard"] .sidebar:not(:hover):not(:focus-within) .ai-provider-toggle {
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms;
+}
+/* v1.22 a11y/UX · 收起時 brand-name + sidebar-label 縮小但保留(讓 AI 小白看得到名字) */
+body[data-active-view="dashboard"] .sidebar:not(:hover):not(:focus-within) .brand-name {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body[data-active-view="dashboard"] .sidebar:not(:hover):not(:focus-within) .sidebar-label {
+  font-size: 9px;
+  letter-spacing: 0.01em;
+  display: block;
+  margin-top: 2px;
+  text-align: center;
+  color: var(--label-tertiary);
+}
+body[data-active-view="dashboard"] .sidebar:not(:hover):not(:focus-within) .sidebar-item {
+  flex-direction: column;
+  padding: 6px 4px;
+  align-items: center;
+  gap: 0;
 }
 
 @media (max-width: 1200px) {

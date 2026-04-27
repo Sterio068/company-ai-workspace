@@ -230,6 +230,15 @@ export const app = {
     if (!document.body.dataset.activeView) {
       document.body.dataset.activeView = this.currentView || "dashboard";
     }
+    // v1.22 a11y · 初始 sidebar 收合狀態(showView 在 hash 路由時才 fire,首頁進來無 hash → 自己設)
+    const _sb = document.querySelector(".sidebar");
+    if (_sb) {
+      const _collapsed = (this.currentView || "dashboard") === "dashboard";
+      _sb.setAttribute("aria-expanded", _collapsed ? "false" : "true");
+      _sb.setAttribute("aria-label", _collapsed
+        ? "主導覽(已收合 · 滑入或聚焦展開)"
+        : "主導覽");
+    }
 
     // 首次訪問 onboarding
     if (!localStorage.getItem("chengfu-tour-done") && window.tour) {
@@ -525,6 +534,15 @@ export const app = {
     activateLauncherView(view);
     // v1.4 macOS · body[data-active-view] · 給 dock CSS 在 chat view 隱藏(Issue 6)
     document.body.dataset.activeView = view;
+    // v1.22 a11y · sidebar 收合狀態 announce 給 screen reader(WCAG 4.1.2)
+    const sidebar = document.querySelector(".sidebar");
+    if (sidebar) {
+      const collapsed = view === "dashboard";
+      sidebar.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      sidebar.setAttribute("aria-label", collapsed
+        ? "主導覽(已收合 · 滑入或聚焦展開)"
+        : "主導覽");
+    }
     if (view !== "workspace") {
       document.querySelectorAll(".sidebar-item.ws-nav").forEach(el => el.classList.remove("active"));
     }
@@ -557,14 +575,16 @@ export const app = {
     if (view === "site") siteSurvey.init();
     // v1.3 · User Management
     if (view === "users" && isAdmin) userMgmt.init();
-    [0, 250, 1000].forEach(delay => {
-      setTimeout(() => {
-        localizeVisibleText(document.querySelector(`.view[data-view="${view}"]`));
-        localizeVisibleText(document.querySelector(".usage-aside"));
-        localizeVisibleText(document.querySelector(".command-palette"));
-        localizeVisibleText(document.querySelector(".chat-panel"));
-      }, delay);
-    });
+    // v1.24 perf · 從 3 次 setTimeout × 4 querySelector × 106 regex/node
+    // 改成單次 1000ms debounce(view 切換時 view 內容已 stable)
+    // 避免 ~80ms × 3 = 240ms 主線程阻塞
+    if (this._localizeTimer) clearTimeout(this._localizeTimer);
+    this._localizeTimer = setTimeout(() => {
+      localizeVisibleText(document.querySelector(`.view[data-view="${view}"]`));
+      localizeVisibleText(document.querySelector(".usage-aside"));
+      localizeVisibleText(document.querySelector(".command-palette"));
+      localizeVisibleText(document.querySelector(".chat-panel"));
+    }, 250);
   },
 
   // vNext C · 在當前 active view header 注入 ❓ 按鈕
