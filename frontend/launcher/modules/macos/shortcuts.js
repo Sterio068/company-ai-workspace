@@ -28,16 +28,9 @@
  *   - 若 modal / dropdown 開著 · 部分 disable
  */
 
+// v1.49 · ⌘0 / ⌘P / ⌘1-5 / ⌘L 已由 keyboard.js 處理 · 移除重複避免 double-fire
+// 此處只放 keyboard.js 沒有的:⌘N / ⇧⌘N / ⌃⌘F / ⌘/ / ⌘, / ⇧⌘Q
 const SHORTCUTS = [
-  // 視圖
-  { key: "0",     mod: "meta",                   action: () => window.app?.showView?.("dashboard") },
-  { key: "p",     mod: "meta",                   action: () => window.app?.showView?.("projects") },
-  // 工作區 ⌘1-5 · 既有 keyboard.js 已 handle · 此處覆蓋確保
-  { key: "1",     mod: "meta", noInput: true,    action: () => window.app?.openWorkspace?.(1) },
-  { key: "2",     mod: "meta", noInput: true,    action: () => window.app?.openWorkspace?.(2) },
-  { key: "3",     mod: "meta", noInput: true,    action: () => window.app?.openWorkspace?.(3) },
-  { key: "4",     mod: "meta", noInput: true,    action: () => window.app?.openWorkspace?.(4) },
-  { key: "5",     mod: "meta", noInput: true,    action: () => window.app?.openWorkspace?.(5) },
   // 新建
   { key: "n",     mod: "meta",                   action: () => window.app?.openAgent?.("00") },
   { key: "n",     mod: "meta+shift",             action: () => window.app?.showView?.("projects") },

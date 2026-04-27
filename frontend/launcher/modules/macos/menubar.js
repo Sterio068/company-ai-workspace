@@ -251,8 +251,7 @@ function _renderStatusModel() {
     });
   });
   // v1.11 · 訂 store(取代 once: true CustomEvent · 但保留 legacy event 同步觸發 _renderMenubar)
-  // store.set 會自動派 engine-changed event · 故老聽眾仍能跟上
-  document.addEventListener("engine-changed", () => _renderMenubar());
+  // v1.49 · 移到 init() 一次性註冊 · 否則每次 _renderMenubar 都疊一個
   return el;
 }
 
@@ -322,12 +321,18 @@ function _renderStatusUser() {
   return el;
 }
 
+// v1.49 · 模組層 timer · 每次 _renderMenubar 先 clear · 否則 30s tick 累積成 N 個
+let _timeTimer = null;
 function _renderStatusTime() {
   const el = document.createElement("div");
   el.className = "menubar-status-item readonly time";
   el.id = "menubar-status-time";
   _updateTime(el);
-  setInterval(() => _updateTime(el), 30 * 1000);  // 每 30 秒 refresh
+  if (_timeTimer) clearInterval(_timeTimer);
+  _timeTimer = setInterval(() => {
+    const live = document.getElementById("menubar-status-time");
+    if (live) _updateTime(live);
+  }, 30 * 1000);
   return el;
 }
 
@@ -429,13 +434,19 @@ function _toggleDropdown(idx, btn) {
 // ============================================================
 // Public API
 // ============================================================
+// v1.49 · idempotent guard · 防 init 多次呼叫累積 listener
+let _initialized = false;
 export const menubar = {
   init() {
     if (!_ensureMenubar()) return;
     _renderMenubar();
+    if (_initialized) return;
+    _initialized = true;
 
     // 動態 refresh user info(login 後)
     document.addEventListener("user-loaded", () => _renderMenubar());
+    // v1.49 · engine 變動 re-render(原在 _renderStatusEngine 每次疊)
+    document.addEventListener("engine-changed", () => _renderMenubar());
     // v1.7 · 品牌變動 re-render
     brand.subscribe(() => _renderMenubar());
   },

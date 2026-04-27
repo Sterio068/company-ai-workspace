@@ -60,14 +60,15 @@ const MOCK_ITEMS = [
 ];
 
 const SEGMENTS = [
-  { k: "all",     l: "全部 24",       active: true,  smart: false },
-  { k: "today",   l: "◐ 今天回過 5",   active: false, smart: true },
-  { k: "mention", l: "@我 3",          active: false, smart: true },
-  { k: "review",  l: "待我審 2",       active: false, smart: true },
-  { k: "stale",   l: "3 天沒動 7",     active: false, smart: true },
-  { k: "ws-1",    l: "投標 6",         active: false, smart: false },
-  { k: "ws-2",    l: "活動 8",         active: false, smart: false },
-  { k: "ws-3",    l: "設計 4",         active: false, smart: false },
+  // v1.49 · 移除 active 欄位 · _state.segment 為 single source of truth
+  { k: "all",     l: "全部 24",       smart: false },
+  { k: "today",   l: "◐ 今天回過 5",  smart: true },
+  { k: "mention", l: "@我 3",         smart: true },
+  { k: "review",  l: "待我審 2",      smart: true },
+  { k: "stale",   l: "3 天沒動 7",    smart: true },
+  { k: "ws-1",    l: "投標 6",        smart: false },
+  { k: "ws-2",    l: "活動 8",        smart: false },
+  { k: "ws-3",    l: "設計 4",        smart: false },
 ];
 
 // v1.6 · AI 建議(初版 mock · 後端 ready 後改 fetch)
@@ -283,9 +284,10 @@ function _renderSegments() {
   // v1.46 calm · 預設只顯 4 個關鍵 chip(全部/今天/待我審/3天沒動)+ 「更多 ▾」
   // 點「更多 ▾」展開所有 segments + custom + 「+ 自訂條件」
   // 原本一字排開 9-12 個 chip 視覺壓力大
+  // v1.49 · active 從 _state.segment derive · 不再 mutate SEGMENTS const
   const PRIMARY_KEYS = new Set(["all", "today", "review", "stale"]);
   const customFolders = _state.customFolders.map(c => ({
-    k: c.k, l: c.l, active: false, smart: true, custom: true,
+    k: c.k, l: c.l, smart: true, custom: true,
   }));
   const all = [
     ...SEGMENTS.slice(0, 5),
@@ -295,19 +297,21 @@ function _renderSegments() {
   const expanded = _state.segmentsExpanded === true;
   const visible = expanded
     ? all
-    : all.filter(s => PRIMARY_KEYS.has(s.k) || s.active);
+    : all.filter(s => PRIMARY_KEYS.has(s.k) || s.k === _state.segment);
   const hiddenCount = all.length - visible.length;
 
   return `
     <div class="fpp-segments" role="tablist">
-      ${visible.map(s => `
-        <button type="button" class="fpp-segment ${s.active ? "active" : ""} ${s.smart ? "smart" : ""}"
+      ${visible.map(s => {
+        const active = s.k === _state.segment;
+        return `
+        <button type="button" class="fpp-segment ${active ? "active" : ""} ${s.smart ? "smart" : ""}"
                 data-fpp-segment="${s.k}" ${s.custom ? `data-fpp-custom="${s.k}"` : ""}
-                role="tab" aria-selected="${s.active}">
+                role="tab" aria-selected="${active}">
           ${escapeHtml(s.l)}
           ${s.custom ? `<span class="fpp-seg-edit" data-fpp-seg-edit="${s.k}" title="編輯">⋯</span>` : ""}
         </button>
-      `).join("")}
+      `;}).join("")}
       ${!expanded && hiddenCount > 0 ? `
         <button type="button" class="fpp-segment fpp-segment-more" data-fpp-segments-more
                 aria-label="顯示其他 ${hiddenCount} 個分類">
@@ -430,7 +434,7 @@ function _bindSegments() {
       // 內部 edit 按鈕點擊不觸發 segment 切換
       if (e.target.closest("[data-fpp-seg-edit]")) return;
       const k = b.dataset.fppSegment;
-      SEGMENTS.forEach(s => s.active = (s.k === k));
+      // v1.49 · 不再 mutate SEGMENTS · 純粹 derive from _state.segment
       _state.segment = k;
       // v1.16 perf · segment 切換只 re-render segments + grid + status
       // 取代整頁 _render()(避免重 bind toolbar/banner/widgets/hints · perf-optimizer 黃 6)
