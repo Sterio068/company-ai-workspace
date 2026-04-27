@@ -417,18 +417,10 @@ app.add_middleware(RequestIDMiddleware)
 
 # ============================================================
 # Helpers
+# v1.25 · architect R2 round 2 · serialize 抽到 auth_deps.py(見上方 import)
+# 此處 re-export 維持 backward compat · `from main import serialize` 仍可用
 # ============================================================
-def serialize(doc):
-    """ObjectId → str."""
-    if not doc:
-        return doc
-    if isinstance(doc, list):
-        return [serialize(d) for d in doc]
-    if isinstance(doc, dict):
-        return {k: (str(v) if isinstance(v, ObjectId) else
-                    serialize(v) if isinstance(v, (dict, list)) else v)
-                for k, v in doc.items()}
-    return doc
+from auth_deps import serialize  # noqa: E402,F401
 
 
 # ============================================================

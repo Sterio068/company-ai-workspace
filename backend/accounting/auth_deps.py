@@ -1,23 +1,29 @@
 """
-v1.18 · Auth helper · architect R2 第一階段
+v1.18+v1.25 · Auth/serialization helper · architect R2 第一+二階段
 =================================================
-從 main.py(830 行)抽出 5 個純 env-based auth helper · 無 db / fastapi 依賴
+從 main.py 抽出純 helper · 無 db / fastapi 依賴
+
+v1.18 抽出 5 個 env-based helper:
+  _is_prod / _jwt_refresh_configured / _legacy_auth_headers_enabled
+  _env_mode_configured / _secrets_equal
+
+v1.25 加抽 1 個 BSON serialize helper:
+  serialize(doc) · ObjectId → str(JSON-safe)
 
 抽出原則:
-- 完全純函式 · 只 read os.environ + hmac
-- 無 main.py 任何 module-level 依賴
+- 完全純函式 · 只用 stdlib + bson
+- 無 main.py / fastapi / db 依賴
 - 不引入 cycle(main.py 改 import auth_deps · auth_deps 不 import main)
 
-之後階段(v1.19+):
-- Round 2:抽 serialize() · _user_or_ip() · 也純函式
-- Round 3:抽 _verify_librechat_cookie / current_user_email · 需 db handle 注入
-- Round 4:require_admin · _admin_allowlist 進來
-
-本 round 的目標:小步快跑 · 0 風險 · 確保各 router 不破
-策略:main.py 改 `from auth_deps import _is_prod, ...` · 行為 100% 相同
+下階段(v1.26+):
+- Round 3:抽 _user_or_ip(slowapi key_func · 需 fastapi.Request)
+- Round 4:抽 _verify_librechat_cookie / current_user_email(需 db 注入)
+- Round 5:抽 require_admin / _admin_allowlist
 """
 import hmac
 import os
+
+from bson import ObjectId
 
 
 def _is_prod() -> bool:
@@ -67,3 +73,29 @@ def _secrets_equal(a: str, b: str) -> bool:
         return hmac.compare_digest(a, b)
     except Exception:
         return False
+
+
+# ============================================================
+# v1.25 · BSON serialize · 從 main.py 抽出(architect R2 round 2)
+# ============================================================
+def serialize(doc):
+    """ObjectId → str · dict/list 遞迴 · JSON-safe
+
+    從 main.py 平移過來 · 100% 相同行為:
+    - None / 空 → 原樣回
+    - list → 各元素遞迴
+    - dict → 值若是 ObjectId 轉 str / 若是 dict|list 遞迴 / 其他原樣
+    - 其他 type → 原樣
+
+    注意:這版不處理 datetime(routers/_deps._serialize 才有)·
+    保持 main.py 原行為(不影響任何 router 已仰賴的格式)
+    """
+    if not doc:
+        return doc
+    if isinstance(doc, list):
+        return [serialize(d) for d in doc]
+    if isinstance(doc, dict):
+        return {k: (str(v) if isinstance(v, ObjectId) else
+                    serialize(v) if isinstance(v, (dict, list)) else v)
+                for k, v in doc.items()}
+    return doc
