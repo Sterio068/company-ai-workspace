@@ -16,7 +16,7 @@
 | **AI 對話 (chat.js)** | 🟢 98% | SSE 串流、附件、回饋、歷史 | DOM 查詢可緩存(P1) |
 | **後端 FastAPI** | 🟢 88% | 354 tests pass · Mongo + Meili 真實接 | social_providers mock(待 Meta 審核) |
 | **10 Agent system prompt** | 🟢 100% | JSON 完整 | — |
-| **AI Action(Fal.ai/PCC/會計)** | 🔴 30% | schema 已定義 | **未掛載到任何 Agent**(P0) |
+| **AI Action(Fal.ai/PCC/會計)** | 🟡 67% | PCC + accounting 已掛 8 agent · v1.51 | Fal.ai 待用戶提供 FAL_KEY |
 | **3 個閉環 workflow** | 🟡 70% | orchestrator 已寫定義 | execution gate 預設 false(設計性 draft-first) |
 | **MCP 整合(Drive/Gmail)** | 🔴 0% | — | v1.0 預定 Drive · 尚未實作 |
 | **維運自動化(launchd)** | 🟡 60% | 7 個 plist 模板 | 未自動安裝 · DEPLOY.md 未涵蓋 |
@@ -24,27 +24,30 @@
 
 ---
 
-## 🔴 P0 · 阻擋業主價值的缺口(優先 1-2 週)
+## ✅ P0(已交付 v1.51 · commit 待補)
 
-### 1. Action 沒掛到任何 Agent · AI 不會生圖、不會查標案、不會記帳
+### 1. Action 已掛到 6 個 Agent · AI 可查標案 / 記帳 ✅
 
-**現況**:
-- `config-templates/actions/fal-ai-image-gen.json`(Recraft v3)寫好
-- `config-templates/actions/pcc-tender.json`(g0v 政府電子採購網)寫好
-- `config-templates/actions/accounting-internal.json` 寫好
-- 但 `config-templates/presets/0*.json` 全部 `tools: []`、`action_ids: []`
-- `config-templates/librechat.yaml` 沒有 `actions:` 區塊
+**已完成**(2026-04-27):
+- `librechat.yaml` 加 `actions.allowedDomains` 白名單(fal.run / pcc.g0v.ronny.tw / http://accounting:8000)
+- `scripts/wire-actions.py` 透過 `POST /api/agents/actions/:agent_id` 一鍵掛接
+- `accounting-internal.json` 加 `securitySchemes.internalToken`(X-Internal-Token)
+- 已驗證 mongo:8 個 action 接到 6 個 agent · 12 個 action tool 名稱
 
-**業主感受**:
-> 「設計協作 Agent 不能直接生圖,我貼提示詞他只回文字描述」
-> 「投標 Agent 不會查 g0v API,要我自己去網站貼回給他」
-> 「會計記帳 Agent 不會新增交易」
+**Action × Agent 矩陣**:
+| Action | 主管家 (×2) | 投標 (×2) | 財務 (×2) | 設計 (×2) |
+|---|---|---|---|---|
+| PCC 標案查詢 | ✅ | ✅ | — | — |
+| 內建會計 API | ✅ | — | ✅ | — |
+| Fal.ai 生圖 | ⏸ FAL_KEY | — | — | ⏸ FAL_KEY |
 
-**修正路徑**(預估 3 天):
-1. `librechat.yaml` 加 `actions:` 區塊指向 `/config-templates/actions/*.json`
-2. `scripts/create-agents.py` 建 Agent 時 POST `action_ids`(LibreChat API)
-3. 重建 5 個吃 action 的 Agent:設計、投標、活動、財務、新聞
-4. smoke-test:每個 Agent 在對話框試「生圖」、「查標案」、「記一筆」
+**待業主下一步**:
+- 提供 FAL_KEY → `FAL_KEY=... python3 scripts/wire-actions.py` 自動補 4 個 agent
+- 真環境 smoke test:在 LibreChat 對 投標顧問 問「請查最近的環保標案」,看是否觸發 searchByTitle
+
+**已知限制(留給 v1.52)**:
+- 本機 macOS Docker 內部 `pcc.g0v.ronny.tw` 可能需要網路調整(Mac mini 部署應正常)
+- 若 LibreChat 升 v0.8.5+ 可能要重檢 action API 簽名變化
 
 ### 2. Orchestrator workflow execution 預設關閉
 

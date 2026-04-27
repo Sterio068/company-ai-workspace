@@ -8,6 +8,19 @@
   "servers": [
     { "url": "http://accounting:8000" }
   ],
+  "security": [
+    { "internalToken": [] }
+  ],
+  "components": {
+    "securitySchemes": {
+      "internalToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Internal-Token",
+        "description": "ECC_INTERNAL_TOKEN(後端 cron / 內部服務共用 · 同 admin allowlist)"
+      }
+    }
+  },
   "paths": {
     "/accounts": {
       "get": {

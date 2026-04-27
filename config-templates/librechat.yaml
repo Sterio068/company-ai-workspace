@@ -124,6 +124,21 @@ endpoints:
 #         agent_id: "agent_xxxxx"  # 從 create-agents.py 輸出取得
 #     # ... 其他 9 個
 
+# ==================== Actions(外部 API · v1.51 啟用)====================
+# Agents 透過 OpenAPI spec 呼叫的外部工具。
+# allowedDomains 是 LibreChat 安全白名單 · 沒列上去就會被 isActionDomainAllowed 擋
+# 對應 config-templates/actions/*.json 的 servers[].url 域名
+#
+# 實際掛載到哪個 Agent 由 scripts/wire-actions.py 透過 LibreChat API
+# POST /api/agents/actions/:agent_id 完成 · librechat.yaml 只開白名單
+actions:
+  allowedDomains:
+    - "fal.run"                       # Fal.ai 生圖(設計夥伴)· 需 .env FAL_KEY
+    - "pcc.g0v.ronny.tw"              # 政府電子採購網 g0v API(投標顧問)· 無需 key
+    - "http://accounting:8000"        # 內建會計 API(財務試算)· container 內網
+                                       # 必帶 http:// scheme · LibreChat 預設強制 https
+                                       # 內部 HTTP 服務必須顯式覆蓋
+
 # ==================== 速率限制(per user / per IP)====================
 rateLimits:
   fileUploads:
