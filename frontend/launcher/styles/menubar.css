@@ -7,7 +7,10 @@
    layered z-index: --z-menubar(600 · 比 dock 500 高)
    ============================================================ */
 
-/* USER 反饋 2026-04-26 · 改藍底白字(承富品牌) */
+/* v1.22 V1 修 · 改回 macOS 原生 vibrancy(a11y-architect 反饋:藍底白字違反 macOS 規範)
+   - 半透明 vibrancy 桌布色,跟 dropdown 視覺連續
+   - 文字用 var(--label-primary) 自動跟隨 light/dark
+   - chevron / status item 對比度從 ~3.2:1 提升到 7:1+ */
 .macos-menubar {
   position: fixed;
   top: 0;
@@ -15,30 +18,34 @@
   right: 0;
   height: var(--menubar-h, 28px);
   z-index: var(--z-menubar, 600);
-  /* 藍底 · 承富 brand · accent 漸變 */
-  background: linear-gradient(
-    to bottom,
-    var(--accent) 0%,
-    color-mix(in srgb, var(--accent) 88%, black) 100%
-  );
-  border-bottom: 0.5px solid color-mix(in srgb, var(--accent) 70%, black);
+  background: var(--vibrancy-light);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-bottom: 0.5px solid var(--separator);
   display: flex;
   align-items: stretch;
   padding: 0 var(--space-2);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.04em;
-  color: white;            /* 白字 */
+  color: var(--label-primary);
   user-select: none;
   pointer-events: auto;
   gap: 0;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
 }
 
-/* color-mix fallback */
-@supports not (background: color-mix(in srgb, red, blue)) {
+[data-theme="dark"] .macos-menubar {
+  background: var(--vibrancy-dark);
+}
+
+/* backdrop-filter fallback · vibrancy 換實色 */
+@supports not (backdrop-filter: blur(20px)) {
   .macos-menubar {
-    background: linear-gradient(to bottom, #007AFF 0%, #006FE0 100%);
+    background: rgba(246, 246, 246, 0.96);
+  }
+  [data-theme="dark"] .macos-menubar {
+    background: rgba(30, 30, 30, 0.96);
   }
 }
 
@@ -77,7 +84,8 @@
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.04em;
-  color: white;            /* 白字 · 配藍底 */
+  /* v1.22 · 改用 label-primary 自動跟隨 light/dark · 對比度從 ~3.2 → 7+ */
+  color: var(--label-primary);
   cursor: pointer;
   border-radius: 4px;
   transition: background var(--dur-fast);
@@ -90,7 +98,8 @@
 
 .menubar-item:hover,
 .menubar-item.open {
-  background: rgba(255, 255, 255, 0.18);
+  /* v1.22 · 改用 accent + 白字 · 跟 macOS 原生一致(active menu accent 高亮) */
+  background: var(--accent);
   color: white;
 }
 
@@ -109,7 +118,8 @@
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.03em;
-  color: rgba(255, 255, 255, 0.92);  /* 白字微透 · 配藍底 */
+  /* v1.22 · 改 label-primary 自動跟 theme · 對比度修正 */
+  color: var(--label-primary);
   cursor: pointer;
   transition: background var(--dur-fast);
 }
@@ -119,8 +129,9 @@
 }
 
 .menubar-status-item:not(.readonly):hover {
-  background: rgba(255, 255, 255, 0.18);
-  color: white;
+  /* v1.22 · vibrancy menubar 用 label-quaternary 高亮(macOS Finder 風) */
+  background: var(--label-quaternary);
+  color: var(--label-primary);
 }
 
 .status-icon {
@@ -128,8 +139,9 @@
 }
 
 .status-chevron {
-  font-size: 9px;
-  color: rgba(255, 255, 255, 0.6);  /* 白字配藍底 */
+  /* v1.22 · 從 9px → 11px(WCAG 1.4.4),色彩用 label-secondary(對比 7+) */
+  font-size: 11px;
+  color: var(--label-secondary);
 }
 
 .status-avatar {

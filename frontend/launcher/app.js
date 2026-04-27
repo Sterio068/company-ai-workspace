@@ -230,6 +230,15 @@ export const app = {
     if (!document.body.dataset.activeView) {
       document.body.dataset.activeView = this.currentView || "dashboard";
     }
+    // v1.22 a11y · 初始 sidebar 收合狀態(showView 在 hash 路由時才 fire,首頁進來無 hash → 自己設)
+    const _sb = document.querySelector(".sidebar");
+    if (_sb) {
+      const _collapsed = (this.currentView || "dashboard") === "dashboard";
+      _sb.setAttribute("aria-expanded", _collapsed ? "false" : "true");
+      _sb.setAttribute("aria-label", _collapsed
+        ? "主導覽(已收合 · 滑入或聚焦展開)"
+        : "主導覽");
+    }
 
     // 首次訪問 onboarding
     if (!localStorage.getItem("chengfu-tour-done") && window.tour) {
@@ -525,6 +534,15 @@ export const app = {
     activateLauncherView(view);
     // v1.4 macOS · body[data-active-view] · 給 dock CSS 在 chat view 隱藏(Issue 6)
     document.body.dataset.activeView = view;
+    // v1.22 a11y · sidebar 收合狀態 announce 給 screen reader(WCAG 4.1.2)
+    const sidebar = document.querySelector(".sidebar");
+    if (sidebar) {
+      const collapsed = view === "dashboard";
+      sidebar.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      sidebar.setAttribute("aria-label", collapsed
+        ? "主導覽(已收合 · 滑入或聚焦展開)"
+        : "主導覽");
+    }
     if (view !== "workspace") {
       document.querySelectorAll(".sidebar-item.ws-nav").forEach(el => el.classList.remove("active"));
     }
