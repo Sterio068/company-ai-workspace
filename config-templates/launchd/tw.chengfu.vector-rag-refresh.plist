@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  v2.0-β O · 每天 02:30 把 knowledge-base/skills + company 增量 ingest 到 vector index
+       · idempotent · 同 hash skip · 不重複付 OpenAI embedding 費用
+
+  安裝:./scripts/install-launchd.sh
+  驗證:tail -f ~/Library/Logs/chengfu-vector-rag.log
+       · curl /api-accounting/vector-rag/stats
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>tw.chengfu.vector-rag-refresh</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>export PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin &amp;&amp; cd "__REPO_ROOT__" &amp;&amp; ECC_INTERNAL_TOKEN=$(security find-generic-password -s "chengfu-ECC_INTERNAL_TOKEN" -w 2&gt;/dev/null) python3 scripts/ingest-skills-to-vector.py</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>2</integer>
+        <key>Minute</key>
+        <integer>30</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/USERNAME/Library/Logs/chengfu-vector-rag.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/USERNAME/Library/Logs/chengfu-vector-rag.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

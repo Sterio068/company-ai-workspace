@@ -21,6 +21,9 @@ pillow-heif==0.18.0       # Day 2.3 · iPhone HEIC 自動轉 JPEG(場勘 PWA)
 meilisearch==0.33.0       # 全文搜尋 client
 openai==1.55.3            # Feature #1 · Whisper STT(會議速記) + gpt-image-2 SDK(選配 · 目前 design 直接 httpx)
 
+# v1.66 Q3 · 監控 · 異常自動上報
+sentry-sdk[fastapi]==2.18.0  # Sentry · DSN 沒設則 no-op · 不影響本地 dev
+
 # 測試(選配)
 pytest==8.3.3
 mongomock==4.2.0.post1

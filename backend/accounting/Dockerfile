@@ -34,10 +34,11 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
 
 EXPOSE 8000
 
-# ROADMAP §11.15 · workers=2 · M4 24GB 夠 · 高並發不卡 single thread pool
+# v1.66 O6 · workers 2 → 4 · 並發 ×2 · 大 PDF 上傳不阻塞其他 user
+# Mac mini M4 24GB 跑 4 worker 約 800MB · 寬裕
 # 注意:多 worker 時 slowapi memory:// + module-level cache 會分散
 #       _AGENT_FORBIDDEN_CACHE 每個 worker 自己 cache · 5min TTL 仍合理
 #       OCR _OCR_AVAILABLE 每個 worker 各 probe 一次 · OK
-#       slowapi 限速「per worker」放鬆為 2x · 接受
-# 若要嚴格 cross-worker 限速 · v1.2 改 Redis backend
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+#       slowapi 限速「per worker」放鬆為 4x · 接受(30 人前再升 Redis)
+# 若要嚴格 cross-worker 限速 · v2.0 改 Redis backend
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

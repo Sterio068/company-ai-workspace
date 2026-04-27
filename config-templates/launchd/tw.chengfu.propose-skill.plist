@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  v1.66 O3 · 每月 5 號 03:00 跑 propose-skill.py
+       · AI 從近 30 天高頻對話 + 👍 回饋 提議新 Skill 草稿
+       · 寫到 knowledge-base/skills/_proposed/ 等管理員審核
+
+  安裝:./scripts/install-launchd.sh
+  驗證:tail -f ~/Library/Logs/chengfu-propose-skill.log
+       · 看 knowledge-base/skills/_proposed/ 有沒有新 markdown
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>tw.chengfu.propose-skill</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>export PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin &amp;&amp; cd "__REPO_ROOT__" &amp;&amp; ANTHROPIC_API_KEY=$(security find-generic-password -s "chengfu-ANTHROPIC_API_KEY" -w 2&gt;/dev/null) python3 scripts/propose-skill.py --days 30</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Day</key>
+        <integer>5</integer>
+        <key>Hour</key>
+        <integer>3</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/USERNAME/Library/Logs/chengfu-propose-skill.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/USERNAME/Library/Logs/chengfu-propose-skill.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

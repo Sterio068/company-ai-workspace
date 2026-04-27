@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  v1.66 O2 · 每月 1 號 08:00 寄老闆月度營運報表
+
+  觸發 backend POST /admin/monthly-report/email · 後端會:
+    · 算上月成本 / 標案漏斗 / 用量 top / 員工活躍
+    · 產 PDF + 寄老闆 (ADMIN_EMAILS)
+
+  安裝:./scripts/install-launchd.sh
+  驗證:tail -f ~/Library/Logs/chengfu-monthly-report.log
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>tw.chengfu.monthly-report</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>export PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin &amp;&amp; cd "__REPO_ROOT__" &amp;&amp; TOKEN=$(security find-generic-password -s "chengfu-ECC_INTERNAL_TOKEN" -w 2&gt;/dev/null) &amp;&amp; curl -sf -X POST -H "X-Internal-Token: $TOKEN" -H "X-User-Email: internal:cron" http://localhost/api-accounting/admin/monthly-report/email</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Day</key>
+        <integer>1</integer>
+        <key>Hour</key>
+        <integer>8</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/USERNAME/Library/Logs/chengfu-monthly-report.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/USERNAME/Library/Logs/chengfu-monthly-report.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

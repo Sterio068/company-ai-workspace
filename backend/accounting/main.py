@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, Literal
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from enum import Enum
 import os
 import json
@@ -28,6 +28,28 @@ import httpx
 from collections import OrderedDict
 from pymongo import MongoClient
 from bson import ObjectId
+
+# ============================================================
+# v1.66 Q3 · Sentry · 異常自動上報 · 設 SENTRY_DSN env 才啟用 · 沒設 no-op
+# ============================================================
+_sentry_dsn = os.getenv("SENTRY_DSN", "").strip()
+if _sentry_dsn:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        from sentry_sdk.integrations.starlette import StarletteIntegration
+        sentry_sdk.init(
+            dsn=_sentry_dsn,
+            environment=os.getenv("ECC_ENV", "development"),
+            release=os.getenv("APP_VERSION", "unversioned"),
+            traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE", "0.1")),
+            profiles_sample_rate=float(os.getenv("SENTRY_PROFILES_SAMPLE", "0.0")),
+            integrations=[FastApiIntegration(), StarletteIntegration()],
+            send_default_pii=False,  # 不送 PII (email/cookie 等)
+        )
+    except Exception as _e:
+        # sentry-sdk 沒裝或 init 失敗 · 不影響啟動
+        print(f"[sentry] init skipped: {_e}")
 
 # ============================================================
 # MongoDB
@@ -235,6 +257,14 @@ async def lifespan(app: FastAPI):
         )
     except Exception as e:
         logger.warning("[index] vision_extractions: %s", e)
+    # v1.66 Q3 · frontend errors · 30d TTL · admin dashboard 查
+    try:
+        db.frontend_errors.create_index([("created_at", -1)])
+        db.frontend_errors.create_index(
+            [("created_at", 1)], expireAfterSeconds=30 * 24 * 3600, name="ttl_30d",
+        )
+    except Exception as e:
+        logger.warning("[index] frontend_errors: %s", e)
     logger.info("indexes ensured · app ready")
     # ROADMAP §11.12 + Codex R6#1 / R7#1 · JWT secret 啟動檢查
     # 注意:LibreChat v0.8.4 access token 在 JSON · 不發 token cookie
@@ -698,3 +728,48 @@ app.include_router(_system_router.router)
 
 
 # startup() 已 migrate 到上方 lifespan() · 此處留空避免重複註冊
+
+
+# ============================================================
+# v1.66 Q3 · 前端 error report endpoint · 集中看 mongo error_log
+# ============================================================
+class FrontendErrorReport(BaseModel):
+    rid: str
+    kind: str  # uncaught / unhandled-promise
+    ts: Optional[str] = None
+    ua: Optional[str] = None
+    url: Optional[str] = None
+    message: Optional[str] = None
+    file: Optional[str] = None
+    line: Optional[int] = None
+    col: Optional[int] = None
+    stack: Optional[str] = None
+
+
+@app.post("/admin/error-log")
+def report_frontend_error(report: FrontendErrorReport, request: Request):
+    """前端 errors.js 集中收 · admin dashboard 可查 · TTL 30d"""
+    try:
+        email = current_user_email(request)  # 沒登入也接受 · email 為空
+    except Exception:
+        email = None
+    doc = report.model_dump()
+    doc["user_email"] = email
+    doc["ip"] = (request.client.host if request.client else None)
+    doc["created_at"] = datetime.now(timezone.utc)
+    try:
+        db.frontend_errors.insert_one(doc)
+    except Exception:
+        pass  # 不讓 error report 自己出錯影響使用者
+    # Sentry 接 · backend 的 sentry_sdk 已 init · 可額外送 frontend events
+    if _sentry_dsn:
+        try:
+            import sentry_sdk
+            sentry_sdk.capture_message(
+                f"[frontend] {report.kind}: {report.message or '?'}",
+                level="error",
+                extras={"rid": report.rid, "url": report.url, "stack": (report.stack or "")[:500]},
+            )
+        except Exception:
+            pass
+    return {"received": True, "rid": report.rid}
