@@ -309,6 +309,13 @@ async def run_workflow(
     executed_steps = []
 
     async with httpx.AsyncClient(timeout=300) as client:
+        # v1.57 perf P0-3 · 一次 resolve 所有 agent_ref · 取代每 step 重打 /api/agents
+        agent_id_cache: dict[str, str] = {}
+        for step in req.steps:
+            ref = step.agent_id
+            if ref not in agent_id_cache:
+                agent_id_cache[ref] = await _resolve_agent_id(client, authorization, ref)
+
         for i, step in enumerate(req.steps):
             # 檢查依賴
             for dep in step.depends_on:
@@ -321,10 +328,10 @@ async def run_workflow(
                 **{k: v.get("response", "") for k, v in results.items()},
             )
 
-            # 呼叫 Agent
+            # 呼叫 Agent · 已 resolve 直接傳 LibreChat agent id
             step_id = f"step_{i}"
             invoke_r = await invoke_agent(
-                AgentInvokeRequest(agent_id=step.agent_id, input=prompt),
+                AgentInvokeRequest(agent_id=agent_id_cache[step.agent_id], input=prompt),
                 authorization,
             )
             results[step_id] = invoke_r
@@ -526,6 +533,9 @@ async def run_preset_workflow(
         raise HTTPException(403, "workflow 執行目前停用 · admin 可從中控解除 kill switch")
     if not authorization:
         raise HTTPException(401, "需 Authorization header")
+    # v1.57 安全 · 防 internal:cron 用無人 quota 跑爆 · workflow 必須是真實使用者
+    if user_email.startswith("internal:"):
+        raise HTTPException(403, "workflow 不接受 internal token 觸發 · 必須真實使用者")
 
     allowed, used, cap = _daily_quota_check(user_email)
     if not allowed:

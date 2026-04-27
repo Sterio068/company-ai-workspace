@@ -486,7 +486,7 @@ export const chat = {
     } finally {
       this.isStreaming = false;
       if (sendBtn) sendBtn.disabled = false;
-      assistantBody?.classList.remove("chat-msg-streaming");
+      this._finishStream(assistantBody);  // v1.57 a11y · 切 aria-live + SR announce
       const msgEl = assistantBody?.closest(".chat-msg");
       if (msgEl && !msgEl.querySelector(".chat-msg-actions")) {
         this._attachFeedback(msgEl);
@@ -747,9 +747,12 @@ export const chat = {
     const emoji = role === "user"
       ? "👤"
       : (CORE_AGENTS.find(a => a.num === this.currentAgentNum)?.emoji || "🤖");
+    // v1.57 a11y · streaming 期間 body 設 aria-live=off · 防 SR 每 token 重念整段
+    // 完成時(_finishStream)切回 polite + announce「回覆完成 · 共 N 字」
+    const ariaLive = streaming ? "off" : "polite";
     el.innerHTML = `
-      <div class="chat-msg-avatar">${emoji}</div>
-      <div class="chat-msg-body ${streaming ? "chat-msg-streaming" : ""}"></div>
+      <div class="chat-msg-avatar" aria-hidden="true">${emoji}</div>
+      <div class="chat-msg-body ${streaming ? "chat-msg-streaming" : ""}" aria-live="${ariaLive}"></div>
     `;
     const body = el.querySelector(".chat-msg-body");
     if (role === "user") body.textContent = content;
@@ -758,6 +761,26 @@ export const chat = {
     this._scrollMessages();
     if (role === "assistant" && !streaming) this._attachFeedback(el);
     return body;
+  },
+
+  // v1.57 a11y · streaming 結束後切 aria-live + 在 SR-only region announce 一次
+  _finishStream(bodyEl) {
+    if (!bodyEl) return;
+    bodyEl.classList.remove("chat-msg-streaming");
+    bodyEl.setAttribute("aria-live", "polite");
+    // 在隱藏 region 喊「回覆完成」一次 · 不重念整段
+    let live = document.getElementById("chat-sr-announcer");
+    if (!live) {
+      live = document.createElement("div");
+      live.id = "chat-sr-announcer";
+      live.setAttribute("role", "status");
+      live.setAttribute("aria-live", "polite");
+      live.setAttribute("aria-atomic", "true");
+      live.style.cssText = "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap";
+      document.body.appendChild(live);
+    }
+    const len = (bodyEl.textContent || "").length;
+    live.textContent = `助理已回覆 · 共 ${len} 字`;
   },
 
   // v1.50 · RAF 節流 scroll · 串流時每 frame 只 scroll 一次 · 取代 token-rate forced layout

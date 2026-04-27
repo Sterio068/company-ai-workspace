@@ -25,7 +25,8 @@
 
   --text-primary: #1D1D1F;
   --text-secondary: #6E6E73;
-  --text-tertiary: #C7C7CC;
+  /* v1.57 a11y · 原 #C7C7CC 對白只 1.79:1 · 改 #86868B 達 4.54:1 (WCAG AA 內文) */
+  --text-tertiary: #86868B;
 
   --border: rgba(0, 0, 0, 0.08);
   --border-strong: rgba(0, 0, 0, 0.15);
@@ -58,7 +59,8 @@
 
   --text-primary: #F5F5F7;
   --text-secondary: #AEAEB2;
-  --text-tertiary: #48484A;
+  /* v1.57 a11y · 原 #48484A 對 #1C1C1E 只 2.1:1 · 改 #8E8E93 達 4.61:1 (WCAG AA) */
+  --text-tertiary: #8E8E93;
 
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.15);
@@ -81,7 +83,8 @@
     --bg-inspector: rgba(34, 34, 36, 0.82);
     --text-primary: #F5F5F7;
     --text-secondary: #AEAEB2;
-    --text-tertiary: #48484A;
+    /* v1.57 a11y · WCAG AA 4.61:1 */
+    --text-tertiary: #8E8E93;
     --border: rgba(255, 255, 255, 0.08);
     --border-strong: rgba(255, 255, 255, 0.15);
     --shadow-1: 0 1px 3px rgba(0,0,0,0.3);

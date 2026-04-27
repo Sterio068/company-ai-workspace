@@ -214,6 +214,27 @@ async def lifespan(app: FastAPI):
         db.conversations.create_index([("chengfu_summarized_at", -1)])
     except Exception as e:
         logger.debug("[index] conversations.chengfu_summarized_at skip: %s", e)
+    # v1.57 perf P0-4 · workflow_runs / vision_extractions 索引(_daily_quota_check 與 audit 查詢用)
+    try:
+        db.workflow_runs.create_index(
+            [("user_email", 1), ("started_at", -1)], name="user_started",
+        )
+        db.workflow_runs.create_index([("status", 1), ("started_at", -1)])
+        # 365 天 TTL · audit 用 · 防無限堆積
+        db.workflow_runs.create_index(
+            [("started_at", 1)], expireAfterSeconds=365 * 24 * 3600, name="ttl_365d",
+        )
+    except Exception as e:
+        logger.warning("[index] workflow_runs: %s", e)
+    try:
+        db.vision_extractions.create_index(
+            [("user_email", 1), ("extracted_at", -1)], name="user_time",
+        )
+        db.vision_extractions.create_index(
+            [("extracted_at", 1)], expireAfterSeconds=180 * 24 * 3600, name="ttl_180d",
+        )
+    except Exception as e:
+        logger.warning("[index] vision_extractions: %s", e)
     logger.info("indexes ensured · app ready")
     # ROADMAP §11.12 + Codex R6#1 / R7#1 · JWT secret 啟動檢查
     # 注意:LibreChat v0.8.4 access token 在 JSON · 不發 token cookie
