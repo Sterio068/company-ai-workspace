@@ -34,6 +34,113 @@ export const chat = {
     this._userStore = user;
     this._providerStore = provider;
     this._bindSuggestions();
+    this._initPaneResize();
+    this._initFullscreen();
+    this._initTextareaResize();
+  },
+
+  // v1.48 · 偵測 user 手動拖 textarea 右下角 · 標記 data-user-sized=1
+  // 避免 onKey auto-grow 覆蓋 user 設定的高度
+  _initTextareaResize() {
+    const ta = document.getElementById("chat-input");
+    if (!ta || typeof ResizeObserver === "undefined") return;
+    let baseHeight = ta.offsetHeight;
+    const ro = new ResizeObserver(() => {
+      // 若高度跟初始基準有意義差(>4px),視為 user 手動 drag
+      if (Math.abs(ta.offsetHeight - baseHeight) > 4) {
+        ta.dataset.userSized = "1";
+      }
+    });
+    ro.observe(ta);
+    // 雙擊縮回 auto-grow 模式
+    ta.addEventListener("dblclick", (e) => {
+      // 只在右下角區域才生效(避免文字選取雙擊)
+      const r = ta.getBoundingClientRect();
+      if (e.clientX > r.right - 20 && e.clientY > r.bottom - 20) {
+        ta.dataset.userSized = "0";
+        ta.style.height = "";
+        baseHeight = ta.offsetHeight;
+      }
+    });
+  },
+
+  // v1.48 · 左緣拖曳調寬 · localStorage 記住寬度
+  _initPaneResize() {
+    const PANE_W_KEY = "chengfu-chat-pane-w";
+    const MIN_W = 360;
+    const MAX_W = Math.min(1400, window.innerWidth);
+    const saved = parseInt(localStorage.getItem(PANE_W_KEY) || "", 10);
+    if (saved && saved >= MIN_W) {
+      document.documentElement.style.setProperty(
+        "--chat-pane-w",
+        Math.min(saved, window.innerWidth) + "px",
+      );
+    }
+    const handle = document.getElementById("chat-pane-resizer");
+    const pane = document.getElementById("chat-pane");
+    if (!handle || !pane) return;
+    let dragging = false;
+    handle.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      dragging = true;
+      pane.classList.add("resizing");
+      document.body.style.userSelect = "none";
+      document.body.style.cursor = "col-resize";
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!dragging) return;
+      const w = Math.max(MIN_W, Math.min(window.innerWidth, window.innerWidth - e.clientX));
+      document.documentElement.style.setProperty("--chat-pane-w", w + "px");
+    });
+    window.addEventListener("mouseup", () => {
+      if (!dragging) return;
+      dragging = false;
+      pane.classList.remove("resizing");
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+      const cur = getComputedStyle(document.documentElement).getPropertyValue("--chat-pane-w").trim();
+      const px = parseInt(cur, 10);
+      if (px && px >= MIN_W) localStorage.setItem(PANE_W_KEY, String(px));
+    });
+  },
+
+  // v1.48 · 全螢幕模式 · ⌘⇧F 切換 · localStorage 記住
+  _initFullscreen() {
+    const FS_KEY = "chengfu-chat-fullscreen";
+    if (localStorage.getItem(FS_KEY) === "1") {
+      this._applyFullscreen(true);
+    }
+    window.addEventListener("keydown", (e) => {
+      // ⌘⇧F (Mac) / Ctrl⇧F (其他) 切全螢幕 · 僅在 chat 開啟時
+      const inChat = document.getElementById("chat-pane")?.classList.contains("open");
+      if (!inChat) return;
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.shiftKey && (e.key === "F" || e.key === "f")) {
+        e.preventDefault();
+        this.toggleFullscreen();
+      }
+    });
+  },
+
+  toggleFullscreen() {
+    const pane = document.getElementById("chat-pane");
+    if (!pane) return;
+    const next = !pane.classList.contains("fullscreen");
+    this._applyFullscreen(next);
+    localStorage.setItem("chengfu-chat-fullscreen", next ? "1" : "0");
+  },
+
+  _applyFullscreen(on) {
+    const pane = document.getElementById("chat-pane");
+    const btn = document.getElementById("chat-fullscreen-btn");
+    if (!pane) return;
+    pane.classList.toggle("fullscreen", on);
+    document.body.classList.toggle("chat-fullscreen", on);
+    if (btn) {
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+      btn.textContent = on ? "⤓" : "⛶";
+      btn.title = on ? "退出全螢幕 (⌘⇧F)" : "全螢幕 (⌘⇧F)";
+    }
   },
 
   // v1.3 P1#15 · 空對話建議 prompt · AI 小白起步友善
@@ -251,8 +358,11 @@ export const chat = {
     }
     setTimeout(() => {
       const ta = e.target;
+      // v1.48 · 若 user 已手動拖過(data-user-sized=1),不要 auto-grow 蓋掉
+      if (ta.dataset.userSized === "1") return;
       ta.style.height = "auto";
-      ta.style.height = Math.min(200, ta.scrollHeight) + "px";
+      const cap = document.getElementById("chat-pane")?.classList.contains("fullscreen") ? 600 : 200;
+      ta.style.height = Math.min(cap, ta.scrollHeight) + "px";
     }, 0);
   },
 

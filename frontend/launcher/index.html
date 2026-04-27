@@ -7,7 +7,7 @@
 <title data-brand-title>智慧助理</title>
 <!-- v1.4 · macOS 設計 token 重置 · 在 launcher.css 之前載入 · :root tokens 被 launcher 引用 -->
 <link rel="stylesheet" href="/static/styles/tokens-macos.css?v=6">
-<link rel="stylesheet" href="/static/launcher.css?v=80">
+<link rel="stylesheet" href="/static/launcher.css?v=82">
 <!-- v1.4 macOS · menubar shell · critical · always 顯示 -->
 <link rel="stylesheet" href="/static/styles/menubar.css?v=5">
 <!-- v1.5 macOS · Dashboard F++ · 主畫面 IA · critical · 預設首頁 -->
@@ -904,6 +904,8 @@
 
 <!-- ============== CHAT PANE(Launcher 內建對話 · 路線 A)============== -->
 <aside class="chat-pane" id="chat-pane">
+  <!-- v1.48 · 左緣拖曳手把 · 拉寬對話面板 -->
+  <div class="chat-pane-resizer" id="chat-pane-resizer" title="拖曳調整寬度" aria-label="調整對話面板寬度"></div>
   <header class="chat-head">
     <button class="chat-close" onclick="chat.close()" aria-label="關閉對話">✕</button>
     <div class="chat-agent">
@@ -917,6 +919,8 @@
     <div class="chat-head-actions">
       <button class="chat-action" onclick="chat.newConversation()" title="新對話">↻</button>
       <button class="chat-action" onclick="chat.history()" title="歷史對話">🕒</button>
+      <!-- v1.48 · 全螢幕切換 · ⌘⇧F -->
+      <button class="chat-action" onclick="chat.toggleFullscreen()" title="全螢幕 (⌘⇧F)" id="chat-fullscreen-btn" aria-pressed="false">⛶</button>
     </div>
   </header>
 
@@ -1038,7 +1042,7 @@
 <div class="caption" id="caption" hidden></div>
 
 <!-- BUILD_INJECT_BUNDLE_START -->
-<script type="module" src="/static/dist/app.ABJELA36.js"></script>
+<script type="module" src="/static/dist/app.HSVRI2ZR.js"></script>
 <script type="module" src="/static/dist/onboarding.C4PKK745.js"></script>
 <!-- BUILD_INJECT_BUNDLE_END -->
 </body>

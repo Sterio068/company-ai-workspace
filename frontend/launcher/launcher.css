@@ -162,7 +162,10 @@ body[data-active-view="dashboard"] .app {
   grid-template-columns: var(--dashboard-sidebar-w, 56px) 1fr;
 }
 body[data-active-view="dashboard"] .sidebar {
-  overflow: hidden;
+  /* v1.48 · USER 反饋:左側清單無法下滑
+     原本 overflow:hidden 讓直向也鎖死 · 改為 x 鎖、y 可捲 · 標籤超出時直接吃掉 */
+  overflow-x: hidden;
+  overflow-y: auto;
   white-space: nowrap;
 }
 /* v1.22 a11y · A1 修:加 :focus-within 讓鍵盤 Tab 進去也展開(原本只 :hover) */
@@ -2690,19 +2693,52 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 /* ============================================================
    Chat Pane · Launcher 內建對話介面(路線 A)
    ============================================================ */
+/* v1.48 · chat-pane 寬度可拖曳 + 全螢幕模式
+   --chat-pane-w 由 chat.js 從 localStorage 讀回 · 預設 600px · 範圍 360–1400px
+   .fullscreen 模式 → 寬度 100vw · 隱藏左緣手把 · main 不再 padding-right */
 .chat-pane {
   position: fixed;
-  top: 0; right: -600px; bottom: 0;
-  width: min(600px, 100vw);
+  top: 0; right: 0; bottom: 0;
+  width: var(--chat-pane-w, min(600px, 100vw));
+  max-width: 100vw;
+  transform: translateX(100%);  /* 收起 · 用 transform 取代 right · 不破壞 width 變數 */
   background: var(--bg-content);
   border-left: 1px solid var(--border);
   box-shadow: -20px 0 60px rgba(0,0,0,0.12);
   display: flex;
   flex-direction: column;
   z-index: 130; /* 高於手機導覽,低於專案 drawer / modal。 */
-  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.18s ease;
 }
-.chat-pane.open { right: 0; }
+.chat-pane.open { transform: translateX(0); }
+
+/* 拖曳中關掉 transition 否則跟手不流暢 */
+.chat-pane.resizing { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.chat-pane.resizing { transition: none; }
+
+/* 左緣 6px 寬手把 · hover 顯露藍 accent · cursor col-resize */
+.chat-pane-resizer {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  z-index: 1;
+}
+.chat-pane-resizer:hover,
+.chat-pane.resizing .chat-pane-resizer {
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+/* 全螢幕模式 · 整個視窗 · 隱藏手把 · transform 重置 */
+.chat-pane.fullscreen {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  border-left: 0;
+  box-shadow: none;
+}
+.chat-pane.fullscreen .chat-pane-resizer { display: none; }
 
 .chat-head {
   display: flex;
@@ -3048,20 +3084,25 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 }
 .chat-attach-btn:hover { opacity: 1; background: var(--border); }
 
+/* v1.48 · 輸入框可垂直拉高 · min 60px / max 60vh
+   user 拖右下角小三角時 chat.js 會記住並停用 auto-grow */
 .chat-input-ta {
   flex: 1;
   border: none;
   background: none;
-  resize: none;
+  resize: vertical;
   font-family: inherit;
   font-size: var(--text-lg);
   line-height: 1.5;
   padding: 8px 4px;
-  max-height: 200px;
+  min-height: 60px;
+  max-height: 60vh;
   outline: none;
   color: var(--text-primary);
 }
 .chat-input-ta::placeholder { color: var(--text-tertiary); }
+/* 全螢幕模式 · 輸入框預設更高 · 容納長文撰寫 */
+.chat-pane.fullscreen .chat-input-ta { min-height: 120px; }
 
 .chat-send {
   width: 36px; height: 36px;
@@ -3080,11 +3121,15 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   .chat-pane { width: 100vw; right: -100vw; }
 }
 
-/* Chat 開啟時 · 遮住部分 main(可讀仍可見) */
+/* Chat 開啟時 · 遮住部分 main(可讀仍可見) · v1.48 改用 var */
 @media (min-width: 1200px) {
-  body.chat-open .main { padding-right: 620px; }
+  body.chat-open .main {
+    padding-right: calc(var(--chat-pane-w, 600px) + 20px);
+  }
   body.chat-open .inspector { display: none; }
 }
+/* 全螢幕模式 · main 完全被覆蓋 · 不需要 padding · 也不影響 dashboard */
+body.chat-fullscreen .main { padding-right: 0 !important; }
 
 /* ============================================================
    Modal v2 系統(取代 alert/confirm/prompt)
