@@ -22,12 +22,13 @@
 .dock {
   display: flex;
   align-items: flex-end;  /* icon 從 bottom 對齊 · 放大時往上長 */
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  /* v1.17 USER 反饋:dock 縮小 · gap + padding 都減 */
+  gap: var(--space-1, 4px);
+  padding: var(--space-1, 4px) var(--space-2, 8px);
   background: var(--vibrancy-light);
   backdrop-filter: var(--blur-vibrancy);
   -webkit-backdrop-filter: var(--blur-vibrancy);
-  border-radius: var(--r-xl);
+  border-radius: var(--r-lg);
   border: 0.5px solid var(--border);
   box-shadow: var(--shadow-dock);
   pointer-events: auto;  /* 內部 button 可點 */
@@ -57,12 +58,13 @@
   --icon-color: var(--accent);
 
   position: relative;
-  width: var(--dock-icon, 56px);
-  height: var(--dock-icon, 56px);
+  /* v1.17 USER 反饋:icon 縮 ~14%(56→48)· dock 整體高度從 ~74→ ~60px */
+  width: var(--dock-icon, 48px);
+  height: var(--dock-icon, 48px);
   padding: 0;
   border: 0;
   background: transparent;
-  border-radius: var(--r-xl);
+  border-radius: var(--r-lg);
   cursor: pointer;
   display: grid;
   place-items: center;

@@ -146,10 +146,43 @@ kbd {
   /* USER 反饋 2026-04-26 · 右側 inspector 浪費空間 · 收起 · Sprint C 改 Notification Center 浮出 */
   grid-template-columns: 260px 1fr;
   height: calc(100vh - var(--menubar-h, 0px));
+  transition: grid-template-columns 220ms var(--ease-spring);
 }
 
 /* inspector 完全收起 · 內容(本月用量 / 系統狀態)Sprint C 移到右滑 NC */
 .inspector { display: none !important; }
+
+/* ============================================================
+   v1.17 · Dashboard 模式預設收 sidebar(USER 反饋:Dashboard 左側應隱藏)
+   - Dashboard 自帶 toolbar/segments 切 Smart Folder · sidebar 多餘
+   - 改成 icon-only(56px)· 留 4 個 nav · ⌘1-5 仍能切 workspace
+   - hover 整個 sidebar → expand 回 260px(macOS Finder 風)
+   ============================================================ */
+body[data-active-view="dashboard"] .app {
+  grid-template-columns: var(--dashboard-sidebar-w, 56px) 1fr;
+}
+body[data-active-view="dashboard"] .sidebar {
+  overflow: hidden;
+  white-space: nowrap;
+}
+body[data-active-view="dashboard"] .sidebar:hover {
+  --dashboard-sidebar-w: 260px;
+}
+body[data-active-view="dashboard"] .app:has(.sidebar:hover) {
+  grid-template-columns: 260px 1fr;
+}
+/* 收起時 brand-name / brand-sub / sidebar-item label 整批藏起 · 只留 logo + icon */
+body[data-active-view="dashboard"] .sidebar:not(:hover) .brand-name,
+body[data-active-view="dashboard"] .sidebar:not(:hover) .brand-sub,
+body[data-active-view="dashboard"] .sidebar:not(:hover) .sidebar-section-title,
+body[data-active-view="dashboard"] .sidebar:not(:hover) .sidebar-item-label,
+body[data-active-view="dashboard"] .sidebar:not(:hover) .badge,
+body[data-active-view="dashboard"] .sidebar:not(:hover) .search-input,
+body[data-active-view="dashboard"] .sidebar:not(:hover) .ai-provider-toggle {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms;
+}
 
 @media (max-width: 1200px) {
   .app { grid-template-columns: 240px 1fr; }
@@ -158,6 +191,8 @@ kbd {
 @media (max-width: 768px) {
   .app { grid-template-columns: 1fr; }
   .sidebar { display: none; }
+  /* 手機 dashboard 模式不要 collapse(本來就藏 · 反而要顯示 mobile-drawer) */
+  body[data-active-view="dashboard"] .app { grid-template-columns: 1fr; }
 }
 
 /* ============================================================ Sidebar */

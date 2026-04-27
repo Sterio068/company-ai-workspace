@@ -77,10 +77,11 @@
 
   /* macOS standard heights · USER 反饋 2026-04-26 · 永遠顯示 menubar(不只 PWA) */
   --menubar-h:        28px;     /* macOS Sequoia 標準 24-28 · Sonoma 後 28 */
-  --dock-h:           72px;     /* 56 icon + 16 padding */
-  --dock-icon:        56px;
-  --dock-icon-hover:  80px;     /* scale 1.43 · macOS Sequoia 默認 */
-  --dock-margin:      12px;     /* dock 距 viewport bottom */
+  /* v1.17 USER 反饋:dock 縮小 · 56→48 icon · 高度 72→56(節省 16px 底部空間) */
+  --dock-h:           56px;     /* 48 icon + 8 padding */
+  --dock-icon:        48px;
+  --dock-icon-hover:  68px;     /* scale 1.42 · 維持原比例 */
+  --dock-margin:      8px;      /* dock 距 viewport bottom · 同步縮小 */
 
   /* ============================================================
      1.4 Border radius

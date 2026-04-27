@@ -7,7 +7,8 @@
 
 .notification-center {
   position: fixed;
-  top: var(--menubar-h, 28px);
+  /* v1.17 USER 反饋:側開上方緊貼 menubar · 加 8px gap 視覺呼吸 */
+  top: calc(var(--menubar-h, 28px) + 8px);
   right: 0;
   bottom: 0;
   width: 360px;
@@ -16,6 +17,9 @@
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
   border-left: 0.5px solid var(--separator);
+  /* 加 top border-radius · 視覺浮起 */
+  border-top-left-radius: 12px;
+  border-top: 0.5px solid var(--separator);
   box-shadow: -8px 0 32px rgba(0, 0, 0, 0.12);
   overflow-y: auto;
   display: flex;

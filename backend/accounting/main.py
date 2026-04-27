@@ -51,49 +51,16 @@ knowledge_audit_col = db.knowledge_audit      # /knowledge/read audit trail
 
 # ============================================================
 # Codex R7#1 / R7#2 / R7#10 · prod-mode auth 調節 helper
-# 必須在 lifespan 之前定義 · 因為 startup 會 call
+# v1.18 · architect R2 第一階段 · 抽到 auth_deps.py
+# 此處 re-export 維持 backward compat(main._is_prod 等仍可被 router lazy import)
 # ============================================================
-def _is_prod() -> bool:
-    """環境判斷 · ECC_ENV / NODE_ENV 任一為 production"""
-    return (
-        os.getenv("ECC_ENV", "").lower() == "production"
-        or os.getenv("NODE_ENV", "").lower() == "production"
-    )
-
-
-def _jwt_refresh_configured() -> bool:
-    """JWT_REFRESH_SECRET 真有設 · 不是 placeholder"""
-    sec = os.getenv("JWT_REFRESH_SECRET", "")
-    return bool(sec) and not sec.startswith("<GENERATE")
-
-
-def _legacy_auth_headers_enabled() -> bool:
-    """R7#10 · 是否允許 X-User-Email header fallback
-    · prod 預設 OFF(必走 cookie 或 internal token)
-    · dev 預設 ON(沒 LibreChat 也能 launcher 開發)
-    · prod 若 nginx 沒 strip header · 攻擊者可偽造身份 → 設 ALLOW_LEGACY_AUTH_HEADERS=1 才開"""
-    explicit = os.getenv("ALLOW_LEGACY_AUTH_HEADERS", "").strip()
-    if explicit == "1":
-        return True
-    if explicit == "0":
-        return False
-    # 預設行為 · prod=False · dev=True
-    return not _is_prod()
-
-
-def _env_mode_configured() -> bool:
-    """Codex R8#6 · ECC_ENV / NODE_ENV 必須有一個明確設(防誤配 dev mode)"""
-    return bool(os.getenv("ECC_ENV", "").strip() or os.getenv("NODE_ENV", "").strip())
-
-
-def _secrets_equal(a: str, b: str) -> bool:
-    """Codex R8#2 · 比 secret 用 hmac.compare_digest 防 timing attack"""
-    if not a or not b:
-        return False
-    try:
-        return hmac.compare_digest(a, b)
-    except Exception:
-        return False
+from auth_deps import (
+    _is_prod,
+    _jwt_refresh_configured,
+    _legacy_auth_headers_enabled,
+    _env_mode_configured,
+    _secrets_equal,
+)
 
 
 # ============================================================

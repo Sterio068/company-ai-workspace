@@ -222,6 +222,13 @@ export const app = {
       console.warn("[fpp] dashboard init failed", e);
     }
 
+    // v1.17 · 確保 body[data-active-view] 預設值為 dashboard
+    // (handleHashChange 只在有 hash 時才 call showView · 開啟首頁無 hash → 從未設過)
+    // 這個 attr 是 dashboard sidebar 收起 CSS 的 trigger
+    if (!document.body.dataset.activeView) {
+      document.body.dataset.activeView = this.currentView || "dashboard";
+    }
+
     // 首次訪問 onboarding
     if (!localStorage.getItem("chengfu-tour-done") && window.tour) {
       setTimeout(() => {
