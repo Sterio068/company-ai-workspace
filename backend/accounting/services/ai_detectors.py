@@ -14,6 +14,7 @@ Detectors:
 """
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+import hashlib  # v1.23 perf · 從 detect_all hot loop 內 import 提到 module-level
 import re
 import logging
 
@@ -250,7 +251,7 @@ def detect_all(db, metas: list, suppressed_types: set = None) -> list:
 
     # 加 id · v1.8 改 sha256 stable hash · Python hash() 是 process-randomized
     # 跨重啟 dismiss/cache 仍對得上(前面用 hash() · cron 重啟後 id 就變 dismiss 失效)
-    import hashlib
+    # v1.23 · hashlib import 提到 module-level · 不在 hot loop 重 import
     for r in sorted_list:
         h = hashlib.sha256(
             (r["src_conversation_id"] + ":" + r["type"]).encode("utf-8")

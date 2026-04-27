@@ -7,7 +7,7 @@
  * v1.5(誠實版)→ v1.6(完整版)變更:
  *   ✅ AI banner 上線(信心度 + 來源對話 + cta)
  *   ✅ Smart Folder「+ 自訂條件」橘色可點 → 開 Builder modal
- *   ✅ Today widget「待回應」變「主管家建議 N」→ 開 AI Inbox 抽屜
+ *   ✅ Today widget「待回應」變「AI 小幫手建議 N」→ 開 AI Inbox 抽屜
  *   ✅ 每條建議帶:類型 chip + 來源(可點)+ 信心度條
  *   ✅ 信心 < 80% 不上 banner · 只在 Inbox · 帶 dimmed
  *   ✅ 「不再提示這類」記憶
@@ -157,7 +157,7 @@ function _renderAiBanner() {
   return `
     <div class="fpp-ai-banner" data-fpp-banner>
       <span class="fpp-ai-icon">✨</span>
-      <span class="fpp-ai-text">主管家:${escapeHtml(top.text)} · 要我${escapeHtml(top.cta)}嗎?</span>
+      <span class="fpp-ai-text">AI 小幫手:${escapeHtml(top.text)} · 要我${escapeHtml(top.cta)}嗎?</span>
       ${_renderConfidenceBar(top.confidence)}
       <button class="fpp-ai-source" data-fpp-source="${escapeHtml(top.src)}" title="點看來源對話">
         來源:${escapeHtml(top.src)} ↗
@@ -204,8 +204,8 @@ function _renderToolbar() {
       <div class="fpp-composer">
         <span class="fpp-composer-dot" aria-hidden="true"></span>
         <input type="text" class="fpp-composer-input"
-               placeholder="交給主管家…(輸入後 ↵ 送出)"
-               aria-label="主管家對話">
+               placeholder="交給AI 小幫手…(輸入後 ↵ 送出)"
+               aria-label="AI 小幫手對話">
         <kbd class="fpp-composer-hint">↵</kbd>
       </div>
       <button class="fpp-search" data-fpp-search title="全域搜尋 (⌘K)" aria-label="搜尋">
@@ -260,7 +260,7 @@ function _renderMiniToday() {
             <span class="fpp-widget-unit">件</span>
             <span class="fpp-widget-cta">✨ 看建議</span>
           </div>
-          <div class="fpp-widget-label">主管家建議</div>
+          <div class="fpp-widget-label">AI 小幫手建議</div>
         </div>
       </div>
     </div>
@@ -311,7 +311,7 @@ function _renderGrid() {
           <div class="fpp-icon" style="--ws-color:${it.color}">
             <span class="fpp-icon-kind">${it.kind}</span>
             ${it.presence === "typing" ? `<span class="fpp-icon-presence typing" title="對方輸入中">✏</span>` : ""}
-            ${it.presence === "running" ? `<span class="fpp-icon-presence running" title="主管家進行中">⟳</span>` : ""}
+            ${it.presence === "running" ? `<span class="fpp-icon-presence running" title="AI 小幫手進行中">⟳</span>` : ""}
             ${it.unread > 0 ? `<span class="fpp-icon-badge">${it.unread}</span>` : ""}
           </div>
           <span class="fpp-item-name">${escapeHtml(it.name)}</span>
@@ -367,7 +367,7 @@ function _bindToolbar() {
     if (e.key === "Enter" && composer.value.trim()) {
       const text = composer.value.trim();
       window.app?.openAgent?.("00");
-      window.toast?.info?.(`已交給主管家:${text.slice(0, 30)}${text.length > 30 ? "…" : ""}`);
+      window.toast?.info?.(`已交給AI 小幫手:${text.slice(0, 30)}${text.length > 30 ? "…" : ""}`);
       composer.value = "";
     }
   });
@@ -568,7 +568,7 @@ function _openQuickLook() {
           <div class="fpp-msg-bubble">客戶 A:RFP v3 收到了 · 有 3 個地方要再確認…</div>
         </div>
         <div class="fpp-msg fpp-msg-me">
-          <div class="fpp-msg-bubble fpp-msg-bubble-accent">主管家:已整理回應草稿,需要您審核</div>
+          <div class="fpp-msg-bubble fpp-msg-bubble-accent">AI 小幫手:已整理回應草稿,需要您審核</div>
         </div>
         <div class="fpp-msg fpp-msg-them">
           <div class="fpp-msg-bubble">Sterio:第 2 點建議改成…</div>
@@ -735,7 +735,7 @@ function _closeBuilder() {
 function _renderBuilderConds() {
   const container = document.getElementById("fpp-builder-conds");
   if (!container) return;
-  const FIELDS = ["工作區", "回應狀態", "上次活動", "對話標題", "未讀數", "提及我", "工作包", "主管家活動"];
+  const FIELDS = ["工作區", "回應狀態", "上次活動", "對話標題", "未讀數", "提及我", "工作包", "AI 小幫手活動"];
   const OPS = ["=", "≠", "包含", ">", "<"];
   container.innerHTML = _state.builderConditions.map((c, i) => `
     <div class="fpp-cond-row">
@@ -816,12 +816,12 @@ function _openInbox() {
   overlay.innerHTML = `
     <div class="fpp-inbox">
       <div class="fpp-inbox-head">
-        <h3 class="fpp-inbox-title">✨ 主管家建議</h3>
+        <h3 class="fpp-inbox-title">✨ AI 小幫手建議</h3>
         <button class="fpp-inbox-close" aria-label="關閉">×</button>
       </div>
       <div class="fpp-inbox-meta">基於對話內容 + 截止日 + 回應狀態 · 每 30 分鐘掃描一次</div>
       <div class="fpp-inbox-list" id="fpp-inbox-list"></div>
-      <div class="fpp-inbox-footer">觸發規則可在 設定 › 主管家行為 調整</div>
+      <div class="fpp-inbox-footer">觸發規則可在 設定 › AI 小幫手行為 調整</div>
     </div>
   `;
   overlay.addEventListener("click", (e) => {
