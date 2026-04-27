@@ -31,6 +31,8 @@ import { trap as trapFocus } from "./modal-trap.js";
 // v1.32 a11y · A4 修 · trap focus release handles
 let _builderTrapRelease = null;
 let _inboxTrapRelease = null;
+// v1.40 F6 · QuickLook + Hints 也接 trap
+let _quicklookTrapRelease = null;
 
 // Mock data · 21 對話 · 與設計一致
 const MOCK_ITEMS = [
@@ -564,8 +566,8 @@ function _openQuickLook() {
             <span class="fpp-icon-kind">${escapeHtml(item.kind)}</span>
           </div>
           <div>
-            <div class="fpp-quicklook-name">${escapeHtml(item.name)}</div>
-            <div class="fpp-quicklook-meta">${item.ws} · ${item.date}</div>
+            <div class="fpp-quicklook-name" id="fpp-quicklook-title">${escapeHtml(item.name)}</div>
+            <div class="fpp-quicklook-meta">${escapeHtml(item.ws)} · ${escapeHtml(item.date)}</div>
           </div>
         </div>
         <button class="fpp-quicklook-close" aria-label="關閉">space / esc 關閉</button>
@@ -604,10 +606,19 @@ function _openQuickLook() {
   });
   document.body.appendChild(overlay);
   setTimeout(() => overlay.classList.add("open"), 10);
+  // v1.40 F6 · 接 modal trap focus + dialog ARIA + #app inert
+  _quicklookTrapRelease = trapFocus(overlay, {
+    labelledBy: "fpp-quicklook-title",
+  });
 }
 
 function _closeQuickLook() {
   _state.quickLook = false;
+  // v1.40 F6 · 釋放 trap · 恢復 focus
+  if (_quicklookTrapRelease) {
+    _quicklookTrapRelease();
+    _quicklookTrapRelease = null;
+  }
   const overlay = document.getElementById("fpp-quicklook");
   if (overlay) {
     overlay.classList.remove("open");
@@ -978,9 +989,12 @@ function _renderHintsOverlay() {
   const h = document.createElement("div");
   h.id = "fpp-hints";
   h.className = "fpp-hints";
+  // v1.40 F6 · popover ARIA(非 modal · 不 trap focus 但給 SR 結構提示)
+  h.setAttribute("role", "region");
+  h.setAttribute("aria-label", "鍵盤快捷鍵提示");
   h.innerHTML = `
     <div class="fpp-hints-head">
-      <span class="fpp-hints-title">鍵盤</span>
+      <span class="fpp-hints-title" id="fpp-hints-title">鍵盤</span>
       <button class="fpp-hints-close" aria-label="關閉" data-fpp-hints-close>×</button>
     </div>
     <div class="fpp-hints-body">
