@@ -1094,6 +1094,9 @@ export const dashboardFpp = {
     // 先 render 占位 · 不擋首屏
     _render();
     _renderHintsOverlay();
+    // v1.44 perf F-6 修 · idempotent · 先 remove 再 add 防 listener 累積
+    // 即使 init 重複呼叫(viewEl 改變的測試場景)也只會有 1 個 _onKey listener
+    document.removeEventListener("keydown", _onKey);
     document.addEventListener("keydown", _onKey);
     // 並行 fetch · 之後只 banner 重 render(suggestions 進來時 layout 不變)
     _fetchSuggestions().then(() => _renderBannerOnly());

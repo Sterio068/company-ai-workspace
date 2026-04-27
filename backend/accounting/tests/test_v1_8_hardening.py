@@ -87,8 +87,10 @@ class TestUserConversationCompat:
         captured = {}
 
         class FakeCol:
-            def find(self, query):
+            def find(self, query, projection=None):
+                # v1.44 perf F-9 修 · find() 接受 projection 第 2 arg
                 captured["query"] = query
+                captured["projection"] = projection
                 class Cur:
                     def sort(s, *a, **k): return s
                     def limit(s, *a, **k): return s

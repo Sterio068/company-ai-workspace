@@ -149,8 +149,10 @@ async def list_ai_suggestions(request: Request, _admin: str = require_admin_dep(
                 suggestions = cache["suggestions"]
                 scanned_at = cache["scanned_at"]
             else:
-                # 真要掃 · sync 函式放 thread pool · 不阻塞 event loop
-                loop = asyncio.get_event_loop()
+                # v1.44 perf F-10 修 · get_event_loop deprecated in 3.12
+                # 改 get_running_loop · async context 內安全
+                # sync 函式放 thread pool · 不阻塞 event loop
+                loop = asyncio.get_running_loop()
                 suggestions = await loop.run_in_executor(
                     None, _run_scan, db, _admin
                 )
