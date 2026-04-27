@@ -1108,7 +1108,21 @@ export const app = {
 
   selectProject(id) {
     this.activeProjectId = id;
+    // v1.39 perf F-2 修 · 拆 render scope · 不再透過 renderProjects 順帶 fire renderWorkDetail
+    // 改為呼叫 _renderProjectViews · 統一觸發點
+    this._renderProjectViews({ workDetail: true });
+  },
+
+  /**
+   * v1.39 perf · 集中所有 project view re-render · 避免 4 個 render 散叫
+   * @param {object} opts · 可控制是否含 workDetail / preview / today
+   */
+  _renderProjectViews(opts = {}) {
+    const { workDetail = true, preview = true, today = true } = opts;
     this.renderProjects();
+    if (workDetail) this.renderWorkDetail();
+    if (today) this.renderTodayWorkbench();
+    if (preview) this.renderProjectsPreview();
   },
 
   _projectDeadline(p) {
@@ -1498,10 +1512,8 @@ export const app = {
       this.activeProjectId = newest?.id || newest?._id || null;
     }
     this.closeProjectModal();
-    this.renderProjects();
-    this.renderWorkDetail();
-    this.renderTodayWorkbench();
-    this.renderProjectsPreview();
+    // v1.39 perf F-2 · 4 個獨立 render call → 1 個 helper(統一去抖點)
+    this._renderProjectViews();
     toast.success("工作包已儲存");
   },
 
@@ -1522,10 +1534,8 @@ export const app = {
     }
     this.closeProjectModal();
     if (this.activeProjectId === deletingId) this.activeProjectId = null;
-    this.renderProjects();
-    this.renderWorkDetail();
-    this.renderTodayWorkbench();
-    this.renderProjectsPreview();
+    // v1.39 perf F-2 · 統一 _renderProjectViews · 取代 4 個獨立 render
+    this._renderProjectViews();
     toast.success("工作包已刪除");
   },
 
