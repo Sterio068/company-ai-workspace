@@ -637,7 +637,7 @@ function _openBuilder(editingKey = null) {
   overlay.innerHTML = `
     <div class="fpp-builder">
       <div class="fpp-builder-head">
-        <h3 class="fpp-builder-title">${editingKey ? "編輯" : "新增"} Smart Folder</h3>
+        <h3 class="fpp-builder-title" id="fpp-builder-title">${editingKey ? "編輯" : "新增"} Smart Folder</h3>
         <button class="fpp-builder-close" aria-label="關閉">×</button>
       </div>
       <div class="fpp-builder-section">
@@ -719,6 +719,7 @@ function _openBuilder(editingKey = null) {
     document.addEventListener("keydown", _onBuilderEsc);
     _builderTrapRelease = trapFocus(overlay, {
       initialFocusSelector: "#fpp-builder-name",
+      labelledBy: "fpp-builder-title",  // v1.35 F1 · SR 念「dialog · 編輯 Smart Folder」
     });
   }, 0);
 }
@@ -829,7 +830,7 @@ function _openInbox() {
   overlay.innerHTML = `
     <div class="fpp-inbox">
       <div class="fpp-inbox-head">
-        <h3 class="fpp-inbox-title">✨ AI 小幫手建議</h3>
+        <h3 class="fpp-inbox-title" id="fpp-inbox-title">✨ AI 小幫手建議</h3>
         <button class="fpp-inbox-close" aria-label="關閉">×</button>
       </div>
       <div class="fpp-inbox-meta">基於對話內容 + 截止日 + 回應狀態 · 每 30 分鐘掃描一次</div>
@@ -849,7 +850,9 @@ function _openInbox() {
   setTimeout(() => {
     document.addEventListener("keydown", _onInboxEsc);
     // v1.32 a11y · A4 修 · trap focus(initial 自動找第一個 focusable · 通常是 close button)
-    _inboxTrapRelease = trapFocus(overlay);
+    _inboxTrapRelease = trapFocus(overlay, {
+      labelledBy: "fpp-inbox-title",  // v1.35 F1 · SR 念「dialog · AI 小幫手建議」
+    });
   }, 0);
 }
 
