@@ -25,7 +25,7 @@
   display: flex;
   align-items: stretch;
   padding: 0 var(--space-2);
-  font-size: 13px;
+  font-size: var(--text-md);
   font-weight: 500;
   letter-spacing: 0.04em;
   color: var(--label-primary);
@@ -81,7 +81,7 @@
   border: 0;
   padding: 0 var(--space-3);
   height: 100%;
-  font-size: 13px;
+  font-size: var(--text-md);
   font-weight: 500;
   letter-spacing: 0.04em;
   /* v1.22 · 改用 label-primary 自動跟隨 light/dark · 對比度從 ~3.2 → 7+ */
@@ -115,7 +115,7 @@
   background: transparent;
   border: 0;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--text-base);
   font-weight: 500;
   letter-spacing: 0.03em;
   /* v1.22 · 改 label-primary 自動跟 theme · 對比度修正 */
@@ -135,12 +135,12 @@
 }
 
 .status-icon {
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 
 .status-chevron {
   /* v1.22 · 從 9px → 11px(WCAG 1.4.4),色彩用 label-secondary(對比 7+) */
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--label-secondary);
 }
 
@@ -152,7 +152,7 @@
   border-radius: 50%;
   background: white;     /* 反轉 · 白圓底 + accent 字 */
   color: var(--accent);
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0;
 }
@@ -195,7 +195,7 @@
   border: 0.5px solid var(--border);
   border-radius: 8px;
   box-shadow: var(--shadow-popover);
-  font-size: 13px;
+  font-size: var(--text-md);
   letter-spacing: 0.04em;
   color: var(--label-primary);
   user-select: none;
@@ -241,7 +241,7 @@
 }
 
 .dd-shortcut {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--label-tertiary);
   letter-spacing: 0;
   font-family: var(--font-system);
