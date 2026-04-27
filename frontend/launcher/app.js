@@ -68,21 +68,37 @@ import { mobile } from "./modules/mobile.js";
 import { setupGlobalKeyboard } from "./modules/keyboard.js";
 import { chat } from "./modules/chat.js";
 import { voice } from "./modules/voice.js";
-import { accounting } from "./modules/accounting.js";
-import { admin } from "./modules/admin.js";
-import { userMgmt } from "./modules/user_mgmt.js";
-import { knowledge } from "./modules/knowledge.js";
-import { design } from "./modules/design.js";
-import { help } from "./modules/help.js";
-import { meeting } from "./modules/meeting.js";
-import { media } from "./modules/media.js";
-import { social } from "./modules/social.js";
-import { siteSurvey } from "./modules/site_survey.js";
+import { knowledge } from "./modules/knowledge.js";  // 跟首頁 file_search 緊耦合 · 不延遲
+import { help } from "./modules/help.js";  // 多 view 用到 + onboarding · 不延遲
 // ROADMAP §11.2 · single source of truth · 取代 cross-module currentProject 散處
 import { projectStore, KEYS as STATE_KEYS } from "./modules/state/project-store.js";
-import { tenders } from "./modules/tenders.js";
-import { workflows } from "./modules/workflows.js";
-import { crm } from "./modules/crm.js";
+
+// v1.58 perf · 11 個 view 模組改 lazy load · 第一次點該 view 才下載 + parse
+// 首屏估省 40-60 KB JS · LCP -150~250ms(尤其遠端 Cloudflare Tunnel)
+// 注意:loader 回 Promise · 呼叫端必須 await · 已 cache 的同步回(快)
+const _viewModuleLoaders = {
+  accounting: () => import("./modules/accounting.js").then(m => m.accounting),
+  admin:      () => import("./modules/admin.js").then(m => m.admin),
+  userMgmt:   () => import("./modules/user_mgmt.js").then(m => m.userMgmt),
+  design:     () => import("./modules/design.js").then(m => m.design),
+  meeting:    () => import("./modules/meeting.js").then(m => m.meeting),
+  media:      () => import("./modules/media.js").then(m => m.media),
+  social:     () => import("./modules/social.js").then(m => m.social),
+  siteSurvey: () => import("./modules/site_survey.js").then(m => m.siteSurvey),
+  tenders:    () => import("./modules/tenders.js").then(m => m.tenders),
+  workflows:  () => import("./modules/workflows.js").then(m => m.workflows),
+  crm:        () => import("./modules/crm.js").then(m => m.crm),
+};
+const _viewCache = {};
+async function _view(name) {
+  if (_viewCache[name]) return _viewCache[name];
+  const loader = _viewModuleLoaders[name];
+  if (!loader) throw new Error(`unknown view module: ${name}`);
+  _viewCache[name] = await loader();
+  return _viewCache[name];
+}
+// 暴露給 console / palette / debug
+if (typeof window !== "undefined") window._loadView = _view;
 import { installGlobalErrorHandler } from "./modules/errors.js";
 import { tpl, renderList } from "./modules/tpl.js";
 import { buildPaletteItems } from "./modules/palette-items.js";
@@ -152,7 +168,7 @@ export const app = {
     // 注入 chat / crm 的 store 依賴
     // v1.21 · provider 改直接讀 store · 不再走 this.aiProvider mirror
     chat.bind({ agents: () => this.agents, user: () => this.user, provider: () => this.getAIProvider() });
-    crm.setUser(this.user?.email);
+    // v1.58 lazy · crm.setUser 改在 _view("crm").load() 時呼叫(見 handleHashChange)
     palette.bind(() => this._paletteItems());
     // V1.1 §E-3 · 知識庫全文搜尋加入 palette(async · debounced)
     palette.addAsyncSource((q) => knowledge.paletteSearch(q));
@@ -275,11 +291,12 @@ export const app = {
     const hash = routeFromHash();
     if (isRoutableView(hash)) {
       this.showView(hash);
-      if (hash === "accounting") accounting.load();
-      if (hash === "admin")    { admin.load(); knowledge.loadAdmin(); }
-      if (hash === "tenders")    tenders.load();
-      if (hash === "workflows")  workflows.load();
-      if (hash === "crm")        crm.load();
+      // v1.58 lazy view · 第一次點才 download chunk · 後續 cache hit 同步快
+      if (hash === "accounting") _view("accounting").then(m => m.load());
+      if (hash === "admin")      _view("admin").then(m => { m.load(); knowledge.loadAdmin(); });
+      if (hash === "tenders")    _view("tenders").then(m => m.load());
+      if (hash === "workflows")  _view("workflows").then(m => m.load());
+      if (hash === "crm")        _view("crm").then(m => { m.setUser(this.user?.email); m.load(); });
       if (hash === "knowledge")  knowledge.loadBrowser();
       // showView 已經 dispatch help/meeting/media/social/site init · 此處不重複
     }
@@ -580,14 +597,14 @@ export const app = {
       const isAdmin = this.user?.role === "ADMIN";
       help.init(isAdmin);
     }
-    // v1.2 Day 1.5 · 4 個新功能 view init
+    // v1.58 lazy · 4 個 view module 第一次點才下載
     const isAdmin = this.user?.role === "ADMIN";
-    if (view === "meeting") meeting.init();
-    if (view === "media") media.init(isAdmin);
-    if (view === "social") social.init();
-    if (view === "site") siteSurvey.init();
-    // v1.3 · User Management
-    if (view === "users" && isAdmin) userMgmt.init();
+    if (view === "meeting") _view("meeting").then(m => m.init());
+    if (view === "media") _view("media").then(m => m.init(isAdmin));
+    if (view === "social") _view("social").then(m => m.init());
+    if (view === "site") _view("siteSurvey").then(m => m.init());
+    // v1.3 · User Management(admin only)
+    if (view === "users" && isAdmin) _view("userMgmt").then(m => m.init());
     // v1.24 perf · 從 3 次 setTimeout × 4 querySelector × 106 regex/node
     // 改成單次 1000ms debounce(view 切換時 view 內容已 stable)
     // 避免 ~80ms × 3 = 240ms 主線程阻塞
@@ -879,9 +896,9 @@ export const app = {
         color: "#FF3B30",
         action: () => {
           this.showView("workflows");
-          workflows.load().then(() => workflows.prepare("tender-full", {
+          _view("workflows").then(m => m.load().then(() => m.prepare("tender-full", {
             projectId: nextProject?.id,
-          }));
+          })));
         },
       },
       {
@@ -1424,20 +1441,20 @@ export const app = {
   },
 
   slashCmd(cmd) {
-    // Round 9 A · /design → 生圖 modal(有 polling 閉環)
+    // Round 9 A · /design → 生圖 modal(v1.58 lazy)
     if (cmd === "/design" || cmd === "/image" || cmd === "/生圖") {
-      design.openPromptModal();
+      _view("design").then(m => m.openPromptModal());
       return;
     }
-    // Feature #1 · /meet → 會議速記上傳
+    // Feature #1 · /meet → 會議速記上傳(v1.58 lazy)
     if (cmd === "/meet" || cmd === "/meeting" || cmd === "/會議") {
-      meeting.openUpload();
+      _view("meeting").then(m => m.openUpload());
       return;
     }
     chat.open("00", cmd + " ");
   },
 
-  openDesignModal() { design.openPromptModal(); },
+  openDesignModal() { _view("design").then(m => m.openPromptModal()); },
 
   startProjectPlanner() {
     const prompt = [
@@ -1862,11 +1879,11 @@ export const app = {
       showView: (view) => this.showView(view),
       openWorkspace: (num) => this.openWorkspace(num),
       openAgent: (num) => this.openAgent(num),
-      openAccounting: () => { this.showView("accounting"); accounting.load(); },
-      openAdmin: () => { this.showView("admin"); admin.load(); },
-      openTenders: () => { this.showView("tenders"); tenders.load(); },
-      openWorkflows: () => { this.showView("workflows"); workflows.load(); },
-      openCrm: () => { this.showView("crm"); crm.load(); },
+      openAccounting: () => { this.showView("accounting"); _view("accounting").then(m => m.load()); },
+      openAdmin: () => { this.showView("admin"); _view("admin").then(m => m.load()); },
+      openTenders: () => { this.showView("tenders"); _view("tenders").then(m => m.load()); },
+      openWorkflows: () => { this.showView("workflows"); _view("workflows").then(m => m.load()); },
+      openCrm: () => { this.showView("crm"); _view("crm").then(m => { m.setUser(this.user?.email); m.load(); }); },
       isAdmin: () => this.user?.role === "ADMIN",
       toggleShortcuts: () => shortcuts.toggle(),
       closePalette: () => this.closePalette(),
@@ -1886,19 +1903,25 @@ window.modal       = modal;
 window.toast       = toast;
 window.shortcuts   = shortcuts;
 window.voice       = voice;
-window.accounting  = accounting;
-window.admin       = admin;
-window.tenders     = tenders;
-window.workflows   = workflows;
-window.crm         = crm;
 window.Projects    = Projects;
-window.siteSurvey  = siteSurvey;
-window.meeting     = meeting;
-window.media       = media;
-window.social      = social;
 window.knowledge   = knowledge;
-window.userMgmt    = userMgmt;
 window.palette     = palette;
+// v1.58 lazy · 11 個 view module 改 proxy · console / debug 用 window.workflows.load() 仍可
+// 第一次存取觸發動態 import · 之後 cache 直回
+const _viewModuleNames = ["accounting","admin","userMgmt","design","meeting","media","social","siteSurvey","tenders","workflows","crm"];
+for (const n of _viewModuleNames) {
+  Object.defineProperty(window, n, {
+    get() {
+      // 同步取已 cache 的 · 沒 cache 觸發 import 但回 Proxy(任何 method 呼叫先 await import)
+      return _viewCache[n] || new Proxy({}, {
+        get(_, prop) {
+          return (...args) => _view(n).then(m => m[prop]?.(...args));
+        },
+      });
+    },
+    configurable: true,
+  });
+}
 
 // ============================================================
 //  URL 參數處理 · pending(Chrome Ext) · convo(歷史對話重開)
