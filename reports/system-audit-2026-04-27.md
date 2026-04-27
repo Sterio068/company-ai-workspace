@@ -16,7 +16,7 @@
 | **AI 對話 (chat.js)** | 🟢 98% | SSE 串流、附件、回饋、歷史 | DOM 查詢可緩存(P1) |
 | **後端 FastAPI** | 🟢 88% | 354 tests pass · Mongo + Meili 真實接 | social_providers mock(待 Meta 審核) |
 | **10 Agent system prompt** | 🟢 100% | JSON 完整 | — |
-| **AI Action(Fal.ai/PCC/會計)** | 🟡 67% | PCC + accounting 已掛 8 agent · v1.51 | Fal.ai 待用戶提供 FAL_KEY |
+| **AI Action(OpenAI 生圖/PCC/會計)** | 🟢 100% | 12 action 已掛 6 agent · v1.51-1.52 | — |
 | **3 個閉環 workflow** | 🟡 70% | orchestrator 已寫定義 | execution gate 預設 false(設計性 draft-first) |
 | **MCP 整合(Drive/Gmail)** | 🔴 0% | — | v1.0 預定 Drive · 尚未實作 |
 | **維運自動化(launchd)** | 🟡 60% | 7 個 plist 模板 | 未自動安裝 · DEPLOY.md 未涵蓋 |
@@ -34,20 +34,28 @@
 - `accounting-internal.json` 加 `securitySchemes.internalToken`(X-Internal-Token)
 - 已驗證 mongo:8 個 action 接到 6 個 agent · 12 個 action tool 名稱
 
-**Action × Agent 矩陣**:
+**Action × Agent 矩陣 (v1.52)**:
 | Action | 主管家 (×2) | 投標 (×2) | 財務 (×2) | 設計 (×2) |
 |---|---|---|---|---|
 | PCC 標案查詢 | ✅ | ✅ | — | — |
 | 內建會計 API | ✅ | — | ✅ | — |
-| Fal.ai 生圖 | ⏸ FAL_KEY | — | — | ⏸ FAL_KEY |
+| **OpenAI 生圖**(ChatGPT Images 2.0)| ✅ | — | — | ✅ |
+| ~~Fal.ai 生圖~~ | 不啟用 · 用 OpenAI 取代 | | | |
 
-**待業主下一步**:
-- 提供 FAL_KEY → `FAL_KEY=... python3 scripts/wire-actions.py` 自動補 4 個 agent
-- 真環境 smoke test:在 LibreChat 對 投標顧問 問「請查最近的環保標案」,看是否觸發 searchByTitle
+**v1.52 改用 OpenAI 而非 Fal.ai 的理由**:
+- ✅ 用既有 OPENAI_API_KEY · 業主不用開新 vendor 帳戶
+- ✅ ChatGPT Images 2.0 繁中文字渲染追上 Recraft v3
+- ✅ 支援 image-to-image 編輯 + inpaint mask · 客戶改稿一次到位
+- ✅ 同一個對話既生圖又改稿 · 不用切平台
 
-**已知限制(留給 v1.52)**:
+**真環境 smoke test 建議**:
+- 投標顧問:「請用 PCC 查最近 7 天的環保標案」→ 看 AI 是否呼叫 searchByTitle
+- 設計夥伴:「畫一張中秋禮盒主視覺 · 寫『2026 月圓承富』· 直式 IG Story 比例」→ 看 AI 是否呼叫 generateImage
+- 財務試算:「列出 4 月份所有費用類交易」→ 看是否呼叫 listTransactions
+
+**已知限制**:
 - 本機 macOS Docker 內部 `pcc.g0v.ronny.tw` 可能需要網路調整(Mac mini 部署應正常)
-- 若 LibreChat 升 v0.8.5+ 可能要重檢 action API 簽名變化
+- ChatGPT Images 2.0 model ID 若 OpenAI 再改名 · 可在 .env 設 CHENGFU_OPENAI_IMAGE_MODEL 覆寫
 
 ### 2. Orchestrator workflow execution 預設關閉
 

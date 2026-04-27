@@ -47,10 +47,13 @@ _BROWSER_UA = (
 )
 
 # (action 檔名, 鎖定 agent name 子字串列表 · 用 OR 邏輯)
+# 注意:openai-image-gen 是首選(用既有 OPENAI_API_KEY · 不用新 vendor)
+# fal-ai-image-gen 為備案 · 預設不啟用 · 若業主特別要 Recraft v3 才掛
 ACTION_AGENT_MAP = [
     ("pcc-tender.json",          ["✨ 主管家", "🎯 投標"]),
     ("accounting-internal.json", ["✨ 主管家", "💰 財務"]),
-    ("fal-ai-image-gen.json",    ["✨ 主管家", "🎨 設計"]),
+    ("openai-image-gen.json",    ["✨ 主管家", "🎨 設計"]),
+    # ("fal-ai-image-gen.json",  ["✨ 主管家", "🎨 設計"]),  # 備案
 ]
 
 
@@ -167,6 +170,9 @@ def needs_api_key(spec: dict) -> bool:
 def get_api_key_for(spec_filename: str) -> str | None:
     if "fal-ai" in spec_filename:
         return os.environ.get("FAL_KEY")
+    if "openai-image" in spec_filename:
+        # 用既有 OPENAI_API_KEY · 不用業主再開新帳戶
+        return os.environ.get("OPENAI_API_KEY")
     if "accounting" in spec_filename:
         # 內部服務 · 用 ECC_INTERNAL_TOKEN(同 cron · 同 admin allowlist)
         return os.environ.get("ECC_INTERNAL_TOKEN")
@@ -197,7 +203,12 @@ def wire_action(
     if needs_api_key_strict(spec, spec_path.name):
         api_key = get_api_key_for(spec_path.name)
         if not api_key:
-            envname = "FAL_KEY" if "fal-ai" in spec_path.name else "ECC_INTERNAL_TOKEN" if "accounting" in spec_path.name else "API_KEY"
+            envname = (
+                "FAL_KEY" if "fal-ai" in spec_path.name
+                else "OPENAI_API_KEY" if "openai-image" in spec_path.name
+                else "ECC_INTERNAL_TOKEN" if "accounting" in spec_path.name
+                else "API_KEY"
+            )
             return ("skip", f"需要 api_key 但 ${envname} 沒設 · 跳過 {spec_path.name}")
 
     agent_id = agent.get("id")

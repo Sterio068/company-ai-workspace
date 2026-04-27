@@ -1,0 +1,136 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OpenAI Image Generation (ChatGPT Images 2.0)",
+    "description": "承富設計夥伴呼叫 OpenAI 圖像 API 生圖。\n優勢:\n  · 用既有 OPENAI_API_KEY · 不用新 vendor 帳戶\n  · ChatGPT Images 2.0 繁中文字渲染顯著提升 · 取代 Recraft v3 需求\n  · 支援 image-to-image 編輯 + 區域重繪(inpainting)\n  · 同一個對話可一鍵改稿,不用切平台\n\n模型版本:\n  · 預設用 OpenAI 當前最新 image 模型(2026 推出 gpt-image-1 後續版 · 又稱 ChatGPT Images 2.0)\n  · 若要釘版本可顯式傳 model 參數",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "https://api.openai.com/v1" }
+  ],
+  "security": [
+    { "openaiBearer": [] }
+  ],
+  "components": {
+    "securitySchemes": {
+      "openaiBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Bearer ${OPENAI_API_KEY}"
+      }
+    }
+  },
+  "paths": {
+    "/images/generations": {
+      "post": {
+        "operationId": "generateImage",
+        "summary": "用 gpt-image-1 從文字生圖(支援繁中文字渲染)",
+        "description": "適用情境:主視覺、海報、IG 貼圖、活動 KV、含中文字的設計稿。\n建議:prompt 用繁體中文描述場景與想要的中文字內容,gpt-image-1 會自動處理排版。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["prompt"],
+                "properties": {
+                  "model": {
+                    "type": "string",
+                    "default": "gpt-image-1",
+                    "description": "預設 gpt-image-1(穩定版)· 若 ChatGPT Images 2.0 / 後續版本 ID 已知,可在這裡指定。承富設定:env CHENGFU_OPENAI_IMAGE_MODEL 可全域覆寫預設"
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "描述要生的圖。可含繁中文字指令,例如:'活動主視覺 · 標題寫\"2026 永續海洋論壇\" · 藍色漸層'"
+                  },
+                  "size": {
+                    "type": "string",
+                    "enum": ["1024x1024", "1024x1536", "1536x1024", "auto"],
+                    "default": "1024x1024",
+                    "description": "1024x1024 方圖 / 1024x1536 直式(IG Story / 海報)/ 1536x1024 橫式 (banner / OG image)"
+                  },
+                  "quality": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high", "auto"],
+                    "default": "high",
+                    "description": "low/medium/high · 承富用 high · 標案 / 客戶交付不要省"
+                  },
+                  "n": {
+                    "type": "integer",
+                    "default": 1,
+                    "minimum": 1,
+                    "maximum": 4,
+                    "description": "一次產幾張 · 主視覺發想用 3"
+                  },
+                  "background": {
+                    "type": "string",
+                    "enum": ["transparent", "opaque", "auto"],
+                    "default": "auto",
+                    "description": "transparent · 設計師可直接拿去合成 / opaque · 完整稿"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK · response.data[].b64_json 或 response.data[].url"
+          }
+        }
+      }
+    },
+    "/images/edits": {
+      "post": {
+        "operationId": "editImage",
+        "summary": "用 gpt-image-1 改稿(image-to-image · 支援 inpaint mask)",
+        "description": "情境:客戶說「LOGO 換成藍色」、「把人物換成女主播」、「天空改成黃昏」。先用 generateImage 產初稿,客戶修改意見直接餵 editImage 改。\n注意:multipart/form-data · image 是檔案 · prompt 是改的內容描述",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["image", "prompt"],
+                "properties": {
+                  "model": {
+                    "type": "string",
+                    "default": "gpt-image-1"
+                  },
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "原圖檔(png/jpg)"
+                  },
+                  "mask": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "可選 · 透明像素區域 = 要重繪的部分 · 沒附就改全圖"
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "改成什麼樣子 · 例:「把背景換成黃昏的城市」"
+                  },
+                  "size": {
+                    "type": "string",
+                    "enum": ["1024x1024", "1024x1536", "1536x1024", "auto"],
+                    "default": "auto"
+                  },
+                  "n": {
+                    "type": "integer",
+                    "default": 1,
+                    "minimum": 1,
+                    "maximum": 4
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    }
+  }
+}

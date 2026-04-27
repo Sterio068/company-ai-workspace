@@ -133,9 +133,10 @@ endpoints:
 # POST /api/agents/actions/:agent_id 完成 · librechat.yaml 只開白名單
 actions:
   allowedDomains:
-    - "fal.run"                       # Fal.ai 生圖(設計夥伴)· 需 .env FAL_KEY
-    - "pcc.g0v.ronny.tw"              # 政府電子採購網 g0v API(投標顧問)· 無需 key
-    - "http://accounting:8000"        # 內建會計 API(財務試算)· container 內網
+    - "api.openai.com"                # OpenAI gpt-image-1 / ChatGPT Images 2.0(設計)· 用既有 OPENAI_API_KEY
+    - "fal.run"                       # Fal.ai 生圖 · 備案 · 需 .env FAL_KEY(目前不掛)
+    - "pcc.g0v.ronny.tw"              # 政府電子採購網 g0v API(投標)· 無需 key
+    - "http://accounting:8000"        # 內建會計 API(財務)· container 內網
                                        # 必帶 http:// scheme · LibreChat 預設強制 https
                                        # 內部 HTTP 服務必須顯式覆蓋
 

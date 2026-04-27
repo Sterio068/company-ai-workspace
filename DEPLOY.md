@@ -291,21 +291,21 @@ python3 scripts/create-agents.py --tier core
 #### 3.1.1 接 Action(v1.51 · 讓 AI 真的會用工具)
 
 ```bash
-# 內部會計 token(從 docker container 抓現成的)
+# 從 docker container 抓現成的 token / key(都已注入)
 export ECC_INTERNAL_TOKEN=$(docker exec chengfu-accounting printenv ECC_INTERNAL_TOKEN)
-
-# (可選) 提供 Fal.ai key 才會掛生圖
-export FAL_KEY=fal-...
+export OPENAI_API_KEY=$(docker exec chengfu-librechat printenv OPENAI_API_KEY)
 
 # 一鍵接(idempotent · 重跑不疊)
 LIBRECHAT_ADMIN_EMAIL=sterio@... LIBRECHAT_ADMIN_PASSWORD=<密碼> \
 python3 scripts/wire-actions.py
 ```
 
-預期:`✓ 8` 接上(若有 FAL_KEY 是 12)。對應:
-- 🎯 投標顧問 + ✨ 主管家 → PCC 標案查詢
-- 💰 財務試算 + ✨ 主管家 → 內建會計 API
-- 🎨 設計夥伴 + ✨ 主管家 → Fal.ai 生圖(需 FAL_KEY)
+預期:`✓ 12` 接上。對應:
+- 🎯 投標顧問 + ✨ 主管家 → PCC 標案查詢(g0v · 無需 key)
+- 💰 財務試算 + ✨ 主管家 → 內建會計 API(X-Internal-Token)
+- 🎨 設計夥伴 + ✨ 主管家 → **OpenAI gpt-image-1 / ChatGPT Images 2.0** 生圖
+  · 用既有 OPENAI_API_KEY · 不用業主再開 Fal.ai 帳戶
+  · 支援文字生圖 + image-to-image 改稿 + inpaint mask
 
 - [ ] 試用一個 Agent(如「招標須知解析器」)送個訊息,確認回應正常
 
