@@ -15,6 +15,7 @@ import { springEnter, slideUp } from "./motion.js";
 import { openWindow } from "./window.js";
 import { brand } from "../branding.js";
 import { authFetch } from "../auth.js";
+import { toggleTheme as _sharedToggleTheme, toggleFullscreen as _sharedToggleFullscreen, confirmLogout as _sharedConfirmLogout } from "./actions.js";
 
 // ============================================================
 // Menu 結構定義 · v1.7 · APP_NAME 改 dynamic from brand
@@ -81,27 +82,10 @@ function _todo(msg) {
   window.toast?.info?.(`${msg} · 即將推出`);
 }
 
-function _confirmLogout() {
-  if (confirm("確定要登出?未送出的對話會丟失。")) {
-    window.location.href = "/chat/logout";
-  }
-}
-
-function _toggleTheme() {
-  const html = document.documentElement;
-  const cur = html.dataset.theme;
-  html.dataset.theme = cur === "dark" ? "light" : "dark";
-  localStorage.setItem("chengfu-theme", html.dataset.theme);
-  window.toast?.info?.(`已切到 ${html.dataset.theme === "dark" ? "深色" : "淺色"}`);
-}
-
-function _toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen?.();
-  } else {
-    document.exitFullscreen?.();
-  }
-}
+// v1.50 · 從 actions.js 共用 · 不再各自重寫
+const _confirmLogout = _sharedConfirmLogout;
+const _toggleTheme = _sharedToggleTheme;
+const _toggleFullscreen = _sharedToggleFullscreen;
 
 function _contactSupport() {
   window.toast?.info?.("Sterio · sterio068@gmail.com");

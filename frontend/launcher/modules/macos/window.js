@@ -142,10 +142,18 @@ class MacWindow {
   }
 
   minimize() {
-    // MVP · 純 hide(v1.5 加飛回 dock 動畫)
+    // v1.50 · 還原路徑:tray chip 點擊恢復 · ⌘` 循環 focus 已最小化
     this.el.style.display = "none";
     this.minimized = true;
-    if (window.toast) window.toast.info(`${this.title} 已最小化(v1.5 加恢復)`);
+    _ensureMinimizedTray();
+    _renderMinimizedTray();
+  }
+
+  restore() {
+    this.el.style.display = "";
+    this.minimized = false;
+    this.focus();
+    _renderMinimizedTray();
   }
 
   toggleMaximize() {
@@ -260,6 +268,63 @@ document.addEventListener("keydown", (e) => {
       e.preventDefault();
       active.close();
     }
+  }
+});
+
+// ============================================================
+// v1.50 · Minimized window tray · 已最小化視窗以小 chip 顯示在右下,點擊恢復
+// ============================================================
+let _trayEl = null;
+function _ensureMinimizedTray() {
+  if (_trayEl) return _trayEl;
+  _trayEl = document.createElement("div");
+  _trayEl.className = "win-tray";
+  _trayEl.setAttribute("role", "toolbar");
+  _trayEl.setAttribute("aria-label", "已最小化視窗");
+  document.body.appendChild(_trayEl);
+  // 內聯 styles · 不再多開一個 css(tray 用得少)
+  if (!document.getElementById("win-tray-style")) {
+    const s = document.createElement("style");
+    s.id = "win-tray-style";
+    s.textContent = `
+      .win-tray { position: fixed; right: 12px; bottom: 12px; display: flex; gap: 6px; flex-wrap: wrap; max-width: 50vw; z-index: 200; pointer-events: none; }
+      .win-tray:empty { display: none; }
+      .win-tray-chip { pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px;
+        background: var(--bg-content, rgba(255,255,255,0.92)); border: 1px solid var(--border, rgba(0,0,0,0.1));
+        backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+        font-size: var(--text-sm, 12px); cursor: pointer; transition: transform 0.15s; }
+      .win-tray-chip:hover { transform: translateY(-2px); }
+      .win-tray-chip-icon { font-size: 13px; }
+      .win-tray-chip-label { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    `;
+    document.head.appendChild(s);
+  }
+  return _trayEl;
+}
+
+function _renderMinimizedTray() {
+  if (!_trayEl) return;
+  const items = Array.from(_windows.values()).filter(w => w.minimized);
+  _trayEl.innerHTML = "";
+  for (const w of items) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "win-tray-chip";
+    chip.title = `恢復 ${w.title}`;
+    chip.innerHTML = `<span class="win-tray-chip-icon">▣</span><span class="win-tray-chip-label"></span>`;
+    chip.querySelector(".win-tray-chip-label").textContent = w.title;
+    chip.addEventListener("click", () => w.restore());
+    _trayEl.appendChild(chip);
+  }
+}
+
+// ⌘` 循環恢復下一個 minimized 視窗(macOS 慣例)
+document.addEventListener("keydown", (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "`") {
+    const minimized = Array.from(_windows.values()).filter(w => w.minimized);
+    if (minimized.length === 0) return;
+    e.preventDefault();
+    minimized[0].restore();
   }
 });
 

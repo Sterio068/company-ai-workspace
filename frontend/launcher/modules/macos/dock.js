@@ -57,13 +57,61 @@ function _ensureShell() {
   return _shellEl;
 }
 
+// v1.50 · 委派 keydown 到 dockEl 一次 · 取代每個 icon 一個 closure
+let _delegatedKeydown = false;
+function _ensureDelegatedKeydown() {
+  if (_delegatedKeydown || !_dockEl) return;
+  _delegatedKeydown = true;
+  _dockEl.addEventListener("keydown", (e) => {
+    const btn = e.target.closest(".dock-icon");
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.idx, 10);
+    if (!Number.isFinite(idx)) return;
+    const focusables = Array.from(_dockEl.querySelectorAll(".dock-icon"));
+    const cur = focusables.indexOf(btn);
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      e.preventDefault();
+      focusables[(cur + 1) % focusables.length]?.focus();
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      e.preventDefault();
+      focusables[(cur - 1 + focusables.length) % focusables.length]?.focus();
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      focusables[0]?.focus();
+    } else if (e.key === "End") {
+      e.preventDefault();
+      focusables[focusables.length - 1]?.focus();
+    } else if (e.key === "Escape") {
+      btn.blur();
+    } else if (e.key === "Delete" || e.key === "Backspace") {
+      e.preventDefault();
+      const item = _icons[idx]?._item;
+      if (!item) return;
+      const removed = dockStore.unpin(item.type, item.id);
+      if (removed && window.toast) window.toast.info(`已從 Dock 移除 · ${item.label}`);
+    } else if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) {
+      e.preventDefault();
+      const item = _icons[idx]?._item;
+      if (!item) return;
+      const rect = btn.getBoundingClientRect();
+      _showContextMenu(
+        { clientX: rect.left + rect.width / 2, clientY: rect.top, preventDefault() {} },
+        item,
+        idx,
+      );
+    }
+  });
+}
+
 function _render(items) {
   _ensureShell();
+  _ensureDelegatedKeydown();
   _dockEl.innerHTML = "";
   _icons = [];
 
   items.forEach((item, idx) => {
     const btn = _renderIcon(item, idx);
+    btn._item = item;  // for delegated handler
     _dockEl.appendChild(btn);
     _icons.push(btn);
   });
@@ -158,40 +206,7 @@ function _renderIcon(item, idx) {
     }
   });
 
-  // ===== Keyboard a11y · Tab / Arrow / Enter / Esc =====
-  btn.addEventListener("keydown", (e) => {
-    const focusables = Array.from(_dockEl.querySelectorAll(".dock-icon"));
-    const cur = focusables.indexOf(btn);
-    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-      e.preventDefault();
-      focusables[(cur + 1) % focusables.length]?.focus();
-    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-      e.preventDefault();
-      focusables[(cur - 1 + focusables.length) % focusables.length]?.focus();
-    } else if (e.key === "Home") {
-      e.preventDefault();
-      focusables[0]?.focus();
-    } else if (e.key === "End") {
-      e.preventDefault();
-      focusables[focusables.length - 1]?.focus();
-    } else if (e.key === "Escape") {
-      btn.blur();
-    } else if (e.key === "Delete" || e.key === "Backspace") {
-      // 鍵盤等同右鍵移除
-      e.preventDefault();
-      const removed = dockStore.unpin(item.type, item.id);
-      if (removed && window.toast) window.toast.info(`已從 Dock 移除 · ${item.label}`);
-    } else if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) {
-      e.preventDefault();
-      const rect = btn.getBoundingClientRect();
-      _showContextMenu(
-        { clientX: rect.left + rect.width / 2, clientY: rect.top, preventDefault() {} },
-        item,
-        idx,
-      );
-    }
-  });
-
+  // v1.50 · keydown 委派到 _dockEl(_ensureDelegatedKeydown)· 此處不再每 icon 註冊
   return btn;
 }
 

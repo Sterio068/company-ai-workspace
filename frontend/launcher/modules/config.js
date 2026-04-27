@@ -236,6 +236,26 @@ export const CLAUDE_SKILLS = [
   { num: "動圖",                  name: "動圖建立",            desc: "產動圖(通訊 / 社群)" },
 ];
 
+// v1.50 · 共享附件規格 · 從 app.js / chat.js 抽出 · 修規格一處生效
+export const ATTACHMENT = Object.freeze({
+  MAX_COUNT: 6,
+  MAX_BYTES: 25 * 1024 * 1024, // 25 MB
+  SUPPORTED_EXT: Object.freeze(new Set([
+    "pdf", "txt", "md", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "csv", "json",
+    "png", "jpg", "jpeg", "webp", "gif",
+  ])),
+});
+
+// v1.50 · localStorage key 集中 · 防 typo · 改 key 一處生效
+export const STORAGE_KEY = Object.freeze({
+  CHAT_PANE_W: "chengfu-chat-pane-w",
+  CHAT_FULLSCREEN: "chengfu-chat-fullscreen",
+  DOCK_SHOW: "chengfu-dock-show",
+  ONBOARDING_DONE: "chengfu-onboarding-done",
+  TOUR_DONE: "chengfu-tour-done",
+  AI_PROVIDER: "chengfu-ai-provider",
+});
+
 // CRM Kanban 階段
 export const STAGES = [
   { id: "lead",       label: "有接觸",  color: "#8E8E93" },

@@ -16,6 +16,7 @@
  *   - 鍵盤 ⌃⌘C
  */
 import { authFetch } from "../auth.js";
+import { setTheme as _sharedSetTheme, toggleFullscreen as _sharedToggleFullscreen } from "./actions.js";
 
 let _ccEl = null;
 let _isOpen = false;
@@ -170,21 +171,16 @@ function _setEngine(id) {
   window.toast?.info?.(`已切到 ${id === "openai" ? "OpenAI" : "Claude"}`);
 }
 
+// v1.50 · 透過共享 actions.setTheme · 派 theme-changed event 讓其他模組 sync
 function _setTheme(id) {
-  localStorage.setItem("chengfu-theme", id);
-  if (id === "auto") {
-    document.documentElement.dataset.theme = "auto";
-  } else {
-    document.documentElement.dataset.theme = id;
-  }
+  _sharedSetTheme(id);
   _render();
 }
 
 function _handleAction(action) {
   switch (action) {
     case "fullscreen":
-      if (document.fullscreenElement) document.exitFullscreen?.();
-      else document.documentElement.requestFullscreen?.();
+      _sharedToggleFullscreen();
       setTimeout(_render, 200);
       break;
     case "reload":

@@ -28,6 +28,9 @@
  *   - 若 modal / dropdown 開著 · 部分 disable
  */
 
+// v1.50 · 共享 actions.js · 不再各自重寫 theme/fullscreen/logout
+import { toggleTheme as _toggleTheme, toggleFullscreen as _toggleFullscreen, confirmLogout as _confirmLogout } from "./actions.js";
+
 // v1.49 · ⌘0 / ⌘P / ⌘1-5 / ⌘L 已由 keyboard.js 處理 · 移除重複避免 double-fire
 // 此處只放 keyboard.js 沒有的:⌘N / ⇧⌘N / ⌃⌘F / ⌘/ / ⌘, / ⇧⌘Q
 const SHORTCUTS = [
@@ -43,29 +46,6 @@ const SHORTCUTS = [
   // 登出
   { key: "q",     mod: "meta+shift",             action: () => _confirmLogout() },
 ];
-
-function _toggleTheme() {
-  const html = document.documentElement;
-  const cur = html.dataset.theme;
-  const next = cur === "dark" ? "light" : "dark";
-  html.dataset.theme = next;
-  localStorage.setItem("chengfu-theme", next);
-  window.toast?.info?.(`已切到 ${next === "dark" ? "深色" : "淺色"}`);
-}
-
-function _toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen?.();
-  } else {
-    document.exitFullscreen?.();
-  }
-}
-
-function _confirmLogout() {
-  if (confirm("確定登出?未送出對話會丟失")) {
-    window.location.href = "/chat/logout";
-  }
-}
 
 function _matches(e, shortcut) {
   if (e.key.toLowerCase() !== shortcut.key.toLowerCase()) return false;

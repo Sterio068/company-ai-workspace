@@ -63,16 +63,27 @@ function _ensureNC() {
   return _ncEl;
 }
 
+// v1.50 · 30s 內重開 NC 不再重 fetch · 避免每次點 NC 都打 3 個 health endpoint
+const _CACHE_TTL_MS = 30_000;
+let _cachedAt = 0;
+let _cached = null;
 async function _renderWidgets() {
   const container = _ncEl?.querySelector("#nc-widgets-container");
   if (!container) return;
 
-  // 並行 fetch 各 widget 資料
-  const [usage, health, update] = await Promise.all([
-    _fetchUsage(),
-    _fetchHealth(),
-    _fetchUpdateStatus(),
-  ]);
+  const now = Date.now();
+  let usage, health, update;
+  if (_cached && now - _cachedAt < _CACHE_TTL_MS) {
+    ({ usage, health, update } = _cached);
+  } else {
+    [usage, health, update] = await Promise.all([
+      _fetchUsage(),
+      _fetchHealth(),
+      _fetchUpdateStatus(),
+    ]);
+    _cached = { usage, health, update };
+    _cachedAt = now;
+  }
 
   container.innerHTML = `
     ${_renderUsageWidget(usage)}

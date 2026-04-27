@@ -6,15 +6,13 @@ import { escapeHtml } from "./util.js";
 import { modal } from "./modal.js";
 import { toast } from "./toast.js";
 import { authFetch, SessionExpiredError } from "./auth.js";
-import { AI_PROVIDERS, AI_PROVIDER_KEY, DEFAULT_AI_PROVIDER, CORE_AGENTS, agentRoleName } from "./config.js";
+import { AI_PROVIDERS, AI_PROVIDER_KEY, DEFAULT_AI_PROVIDER, CORE_AGENTS, agentRoleName, ATTACHMENT, STORAGE_KEY } from "./config.js";
 import { Projects } from "./projects.js";
+import { sanitizeRenderedHtml as _sanitizeRenderedHtml } from "./chat-sanitize.js";
+import { validateAttachment as _validateAttachmentFn, composeUserMessageSummary as _composeSummaryFn, isSameFile as _isSameFile } from "./chat-attachments.js";
 
-const MAX_ATTACHMENT_COUNT = 6;
-const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
-const SUPPORTED_ATTACHMENT_EXT = new Set([
-  "pdf", "txt", "md", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "csv", "json",
-  "png", "jpg", "jpeg", "webp", "gif",
-]);
+// v1.50 · 從 config.js 拉共享常數 · 與 app.js today 附件規格一致
+const { MAX_COUNT: MAX_ATTACHMENT_COUNT, MAX_BYTES: MAX_ATTACHMENT_BYTES, SUPPORTED_EXT: SUPPORTED_ATTACHMENT_EXT } = ATTACHMENT;
 
 export const chat = {
   currentAgentNum: null,
@@ -29,6 +27,17 @@ export const chat = {
   _userStore:      null,   // app 注入,用來帶 email 給 feedback
   _providerStore:  null,   // app 注入,用來決定 OpenAI / Claude 版本
 
+  // v1.50 · DOM 元件 cache · 避免每次 send/render 都 getElementById
+  // 元件在 init 後就不會 detach,可以放心 cache · 第一次查到後常駐
+  _elsCache: {},
+  _$(id) {
+    let el = this._elsCache[id];
+    if (el && el.isConnected) return el;
+    el = document.getElementById(id);
+    if (el) this._elsCache[id] = el;
+    return el;
+  },
+
   bind({ agents, user, provider }) {
     this._agentsStore = agents;
     this._userStore = user;
@@ -42,7 +51,7 @@ export const chat = {
   // v1.48 · 偵測 user 手動拖 textarea 右下角 · 標記 data-user-sized=1
   // 避免 onKey auto-grow 覆蓋 user 設定的高度
   _initTextareaResize() {
-    const ta = document.getElementById("chat-input");
+    const ta = this._$("chat-input");
     if (!ta || typeof ResizeObserver === "undefined") return;
     let baseHeight = ta.offsetHeight;
     const ro = new ResizeObserver(() => {
@@ -66,7 +75,7 @@ export const chat = {
 
   // v1.48 · 左緣拖曳調寬 · localStorage 記住寬度
   _initPaneResize() {
-    const PANE_W_KEY = "chengfu-chat-pane-w";
+    const PANE_W_KEY = STORAGE_KEY.CHAT_PANE_W;
     const MIN_W = 360;
     const MAX_W = Math.min(1400, window.innerWidth);
     const saved = parseInt(localStorage.getItem(PANE_W_KEY) || "", 10);
@@ -76,8 +85,8 @@ export const chat = {
         Math.min(saved, window.innerWidth) + "px",
       );
     }
-    const handle = document.getElementById("chat-pane-resizer");
-    const pane = document.getElementById("chat-pane");
+    const handle = this._$("chat-pane-resizer");
+    const pane = this._$("chat-pane");
     if (!handle || !pane) return;
     let dragging = false;
     handle.addEventListener("mousedown", (e) => {
@@ -106,13 +115,13 @@ export const chat = {
 
   // v1.48 · 全螢幕模式 · ⌘⇧F 切換 · localStorage 記住
   _initFullscreen() {
-    const FS_KEY = "chengfu-chat-fullscreen";
+    const FS_KEY = STORAGE_KEY.CHAT_FULLSCREEN;
     if (localStorage.getItem(FS_KEY) === "1") {
       this._applyFullscreen(true);
     }
     window.addEventListener("keydown", (e) => {
       // ⌘⇧F (Mac) / Ctrl⇧F (其他) 切全螢幕 · 僅在 chat 開啟時
-      const inChat = document.getElementById("chat-pane")?.classList.contains("open");
+      const inChat = this._$("chat-pane")?.classList.contains("open");
       if (!inChat) return;
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.shiftKey && (e.key === "F" || e.key === "f")) {
@@ -123,16 +132,16 @@ export const chat = {
   },
 
   toggleFullscreen() {
-    const pane = document.getElementById("chat-pane");
+    const pane = this._$("chat-pane");
     if (!pane) return;
     const next = !pane.classList.contains("fullscreen");
     this._applyFullscreen(next);
-    localStorage.setItem("chengfu-chat-fullscreen", next ? "1" : "0");
+    localStorage.setItem(STORAGE_KEY.CHAT_FULLSCREEN, next ? "1" : "0");
   },
 
   _applyFullscreen(on) {
-    const pane = document.getElementById("chat-pane");
-    const btn = document.getElementById("chat-fullscreen-btn");
+    const pane = this._$("chat-pane");
+    const btn = this._$("chat-fullscreen-btn");
     if (!pane) return;
     pane.classList.toggle("fullscreen", on);
     document.body.classList.toggle("chat-fullscreen", on);
@@ -150,7 +159,7 @@ export const chat = {
       if (!btn) return;
       const prompt = btn.dataset.prompt;
       if (!prompt) return;
-      const input = document.getElementById("chat-input");
+      const input = this._$("chat-input");
       if (!input) return;
       input.value = prompt;
       input.dispatchEvent(new Event("input"));  // 觸發 L1/L2/L3 classifier
@@ -249,7 +258,7 @@ export const chat = {
 
   _setProjectContext(context) {
     this.currentProjectContext = context?.projectId ? context : null;
-    const badge = document.getElementById("chat-project-link");
+    const badge = this._$("chat-project-link");
     if (!badge) return;
     if (!this.currentProjectContext) {
       badge.hidden = true;
@@ -307,7 +316,7 @@ export const chat = {
       toast.warn(`找不到 ${wanted} 版「${agentRoleName(meta) || agent.name}」,已先使用 ${actual} 版`);
     }
 
-    const msgs = document.getElementById("chat-messages");
+    const msgs = this._$("chat-messages");
     if (msgs) {
       msgs.innerHTML = `
         <div class="chat-welcome">
@@ -317,12 +326,12 @@ export const chat = {
         </div>
       `;
     }
-    document.getElementById("chat-pane")?.classList.add("open");
+    this._$("chat-pane")?.classList.add("open");
     document.body.classList.add("chat-open");
-    document.getElementById("chat-input")?.focus();
+    this._$("chat-input")?.focus();
 
     if (initialInput) {
-      const input = document.getElementById("chat-input");
+      const input = this._$("chat-input");
       if (input) {
         input.value = initialInput;
         input.dispatchEvent(new Event("input"));
@@ -334,7 +343,7 @@ export const chat = {
   },
 
   close() {
-    document.getElementById("chat-pane")?.classList.remove("open");
+    this._$("chat-pane")?.classList.remove("open");
     document.body.classList.remove("chat-open");
   },
 
@@ -343,9 +352,9 @@ export const chat = {
     this.attachments = [];
     this.pendingHandoffSave = null;
     this._setProjectContext(null);
-    const attEl = document.getElementById("chat-attachments");
+    const attEl = this._$("chat-attachments");
     if (attEl) attEl.innerHTML = "";
-    const msgs = document.getElementById("chat-messages");
+    const msgs = this._$("chat-messages");
     if (msgs) msgs.innerHTML =
       '<div class="chat-welcome"><div class="chat-welcome-title">新對話</div><div class="chat-welcome-sub">上下文清空 · 開始新話題</div></div>';
     toast.info("新對話");
@@ -361,7 +370,7 @@ export const chat = {
       // v1.48 · 若 user 已手動拖過(data-user-sized=1),不要 auto-grow 蓋掉
       if (ta.dataset.userSized === "1") return;
       ta.style.height = "auto";
-      const cap = document.getElementById("chat-pane")?.classList.contains("fullscreen") ? 600 : 200;
+      const cap = this._$("chat-pane")?.classList.contains("fullscreen") ? 600 : 200;
       ta.style.height = Math.min(cap, ta.scrollHeight) + "px";
     }, 0);
   },
@@ -370,7 +379,7 @@ export const chat = {
   _classifyTimer: null,
   onInput(e) {
     const text = (e?.target?.value || "").trim();
-    const badge = document.getElementById("chat-level-hint");
+    const badge = this._$("chat-level-hint");
     if (!badge) return;
     if (text.length < 20) {
       badge.className = "hint-level l1";
@@ -407,13 +416,13 @@ export const chat = {
   },
 
   pickFile() {
-    document.getElementById("chat-file-input")?.click();
+    this._$("chat-file-input")?.click();
   },
 
   async send(e, _piiRedacted = false) {
     if (e) e.preventDefault();
     if (this.isStreaming) return;
-    const input = document.getElementById("chat-input");
+    const input = this._$("chat-input");
     if (!input) return;
     const text = input.value.trim();
     if (!text && this.attachments.length === 0) return;
@@ -451,7 +460,7 @@ export const chat = {
     }
 
     this.isStreaming = true;
-    const sendBtn = document.getElementById("chat-send-btn");
+    const sendBtn = this._$("chat-send-btn");
     if (sendBtn) sendBtn.disabled = true;
 
     let assistantBody = null;
@@ -731,7 +740,7 @@ export const chat = {
   },
 
   appendMessage(role, content, streaming = false) {
-    const container = document.getElementById("chat-messages");
+    const container = this._$("chat-messages");
     if (!container) return document.createElement("div");
     const el = document.createElement("div");
     el.className = `chat-msg ${role}`;
@@ -746,9 +755,21 @@ export const chat = {
     if (role === "user") body.textContent = content;
     else this.renderMarkdown(body, content);
     container.appendChild(el);
-    container.scrollTop = container.scrollHeight;
+    this._scrollMessages();
     if (role === "assistant" && !streaming) this._attachFeedback(el);
     return body;
+  },
+
+  // v1.50 · RAF 節流 scroll · 串流時每 frame 只 scroll 一次 · 取代 token-rate forced layout
+  _scrollScheduled: false,
+  _scrollMessages() {
+    if (this._scrollScheduled) return;
+    this._scrollScheduled = true;
+    requestAnimationFrame(() => {
+      this._scrollScheduled = false;
+      const msgs = this._$("chat-messages");
+      if (msgs) msgs.scrollTop = msgs.scrollHeight;
+    });
   },
 
   // v4.6 · 改用 marked.js(vendor 進 modules/vendor-marked.js · 無 build step)
@@ -756,6 +777,8 @@ export const chat = {
   // marked 是 GFM 標準實作 · ~28 KB · 比手刻 regex 多但每年省一堆 bug
   async renderMarkdown(el, text) {
     if (!this._marked) {
+      // v1.50 · 第一次 import 時放 placeholder · 避免空白閃爍
+      if (el && !el.textContent) el.textContent = "…";
       try {
         const m = await import("./vendor-marked.js");
         this._marked = m.marked;
@@ -781,8 +804,7 @@ export const chat = {
       console.warn("markdown parse error", e);
       el.textContent = text;
     }
-    const msgs = document.getElementById("chat-messages");
-    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+    this._scrollMessages();
   },
 
   _renderMarkdownLegacy(el, text) {
@@ -801,8 +823,7 @@ export const chat = {
       .replace(/\n\n+/g, "</p><p>")
       .replace(/\n/g, "<br>");
     el.innerHTML = `<p>${html}</p>`;
-    const msgs = document.getElementById("chat-messages");
-    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+    this._scrollMessages();
   },
 
   _attachFeedback(msgEl) {
@@ -1002,45 +1023,45 @@ export const chat = {
     });
   },
 
+  // v1.50 · 重構 · 不再 root.innerHTML 兩次 + setTimeout(50) 重綁
+  // 改用 document-level event delegation · 自動 cleanup
   async history() {
     try {
       const r = await authFetch("/api/convos?pageSize=20");
       const data = await r.json();
       const convos = data.conversations || data.data || data;
       if (!Array.isArray(convos) || convos.length === 0) { toast.info("尚無歷史對話"); return; }
-      // 打開 modal 後 · 用 event delegation 在 modal body 點 li 時 · close modal 並 loadConvo
-      const list = convos.slice(0, 10).map(c =>
-        `<li style="padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;border-radius:6px"
-             data-convo-id="${escapeHtml(c.conversationId || c._id)}"
-             onmouseover="this.style.background='var(--bg-base)'"
-             onmouseout="this.style.background='transparent'">${escapeHtml(c.title || "未命名")}</li>`
-      ).join("");
-      // Use DOM content listener instead of alert
-      const root = document.createElement("div");
-      root.innerHTML = `<ul style="list-style:none;padding:0;margin:0" id="chat-history-list">${list}</ul>`;
-      root.addEventListener("click", async (e) => {
-        const li = e.target.closest("[data-convo-id]");
+      const items = convos.slice(0, 10).map(c => {
+        const id = c.conversationId || c._id;
+        const title = c.title || "未命名";
+        return `<li class="chat-history-item" data-convo-id="${escapeHtml(id)}"
+                  style="padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;border-radius:6px;transition:background 0.1s"
+                  onmouseover="this.style.background='var(--bg-base)'"
+                  onmouseout="this.style.background='transparent'">${escapeHtml(title)}</li>`;
+      }).join("");
+      const bodyHTML = `<ul class="chat-history-list" style="list-style:none;padding:0;margin:0;max-height:60vh;overflow-y:auto">${items}</ul>`;
+
+      // 1) document-level delegation · 點 li 觸發 loadConvo + 模擬點關閉鈕
+      let chosen = null;
+      const onClick = (e) => {
+        const li = e.target.closest(".chat-history-item");
         if (!li) return;
-        const cid = li.dataset.convoId;
-        // 關閉 modal
-        document.querySelectorAll(".modal2-backdrop.open, .modal2-box.open").forEach(el => el.classList.remove("open"));
-        setTimeout(() => {
-          document.querySelectorAll(".modal2-backdrop, .modal2-box").forEach(el => el.remove());
-        }, 200);
-        await this.loadConvo(cid);
+        chosen = li.dataset.convoId;
+        // 找關閉 button(modal.show 的 cancel)觸發
+        const closeBtn = document.querySelector(".modal2-box .btn-ghost");
+        if (closeBtn) closeBtn.click();
+      };
+      document.addEventListener("click", onClick);
+
+      await modal.show({
+        title: "歷史對話 · 點一筆開啟",
+        icon: "🕒",
+        bodyHTML,
+        cancel: "關閉",
+        primary: "完成",
       });
-      modal.alert(root.innerHTML, { title: "歷史對話 · 點一筆開啟", icon: "🕒", primary: "關閉" });
-      // alert 的 body 被 re-innerHTML · 重新綁
-      setTimeout(() => {
-        document.querySelectorAll(".modal2-body [data-convo-id]").forEach(li => {
-          li.addEventListener("click", async () => {
-            const cid = li.dataset.convoId;
-            document.querySelectorAll(".modal2-backdrop.open, .modal2-box.open").forEach(el => el.classList.remove("open"));
-            setTimeout(() => document.querySelectorAll(".modal2-backdrop, .modal2-box").forEach(el => el.remove()), 200);
-            await this.loadConvo(cid);
-          });
-        });
-      }, 50);
+      document.removeEventListener("click", onClick);
+      if (chosen) await this.loadConvo(chosen);
     } catch {
       toast.error("無法載入歷史對話");
     }
@@ -1053,11 +1074,11 @@ export const chat = {
       const r = await authFetch(`/api/messages/${convoId}?_=${Date.now()}`);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const msgs = await r.json();
-      const container = document.getElementById("chat-messages");
+      const container = this._$("chat-messages");
       if (!container) return;
 
       // 確保 chat pane 是開的(從 URL 直接進來時 · pane 可能沒開)
-      document.getElementById("chat-pane")?.classList.add("open");
+      this._$("chat-pane")?.classList.add("open");
       document.body.classList.add("chat-open");
 
       container.innerHTML = "";  // 清 welcome + 舊訊息
@@ -1083,14 +1104,14 @@ export const chat = {
   },
 
   bindFileInput() {
-    const fi = document.getElementById("chat-file-input");
+    const fi = this._$("chat-file-input");
     if (!fi) return;
     fi.addEventListener("change", async (e) => {
       this.addFiles(Array.from(e.target.files || []));
       fi.value = "";
     });
 
-    const form = document.getElementById("chat-form");
+    const form = this._$("chat-form");
     if (!form || form.dataset.fileDropBound === "true") return;
     form.dataset.fileDropBound = "true";
     form.addEventListener("dragover", (e) => {
@@ -1112,16 +1133,12 @@ export const chat = {
   addFiles(files = []) {
     const accepted = [];
     for (const file of files) {
-      const validation = this._validateAttachment(file);
+      const validation = _validateAttachmentFn(file);
       if (!validation.ok) {
         toast.warn(validation.message);
         continue;
       }
-      const duplicate = this.attachments.some(item =>
-        item.file.name === file.name &&
-        item.file.size === file.size &&
-        item.file.lastModified === file.lastModified
-      );
+      const duplicate = this.attachments.some(item => _isSameFile(item.file, file));
       if (duplicate) continue;
       if (this.attachments.length + accepted.length >= MAX_ATTACHMENT_COUNT) {
         toast.warn(`一次最多附 ${MAX_ATTACHMENT_COUNT} 個檔案`);
@@ -1140,20 +1157,10 @@ export const chat = {
     toast.success(`已加入 ${accepted.length} 個附件 · 送出時會一併讀取`);
   },
 
-  _validateAttachment(file) {
-    if (!file) return { ok: false, message: "檔案讀取失敗" };
-    if (file.size > MAX_ATTACHMENT_BYTES) {
-      return { ok: false, message: `${file.name} 超過 25MB,請壓縮或分段上傳` };
-    }
-    const ext = (file.name.split(".").pop() || "").toLowerCase();
-    if (!SUPPORTED_ATTACHMENT_EXT.has(ext)) {
-      return { ok: false, message: `${file.name} 格式暫不支援` };
-    }
-    return { ok: true };
-  },
+  // v1.50 · _validateAttachment 移至 chat-attachments.js · 純函數
 
   renderAttachments() {
-    const attEl = document.getElementById("chat-attachments");
+    const attEl = this._$("chat-attachments");
     if (!attEl) return;
     attEl.innerHTML = "";
     for (const item of this.attachments) {
@@ -1221,82 +1228,11 @@ export const chat = {
     };
   },
 
-  _composeUserMessageSummary(text, uploadedAttachments) {
-    if (!uploadedAttachments.length) return text;
-    const list = uploadedAttachments.map(file => `• ${file.filename || file.file_id}`).join("\n");
-    return [text || "請閱讀附件並整理重點。", "", "附件:", list].join("\n");
-  },
+  // v1.50 · _composeUserMessageSummary 移至 chat-attachments.js
+  _composeUserMessageSummary: _composeSummaryFn,
 };
 
-// Codex R4.3 · 第二道 XSS 防線 · 用 DOMParser 白名單過濾
-// 即使 marked renderer.html 已擋 block-level raw HTML · inline event handler 仍可能從其他路徑進來
-// 白名單 tag + 禁 on* 屬性 + 禁 script/iframe/object/embed
-const _ALLOWED_TAGS = new Set([
-  "p", "br", "hr", "strong", "em", "code", "pre", "blockquote",
-  "ul", "ol", "li", "a", "img",
-  "h1", "h2", "h3", "h4", "h5", "h6",
-  "table", "thead", "tbody", "tr", "th", "td",
-  "span", "div",
-  "del", "ins", "sub", "sup",
-]);
-const _ALLOWED_ATTRS = new Set(["href", "src", "alt", "title", "colspan", "rowspan", "class"]);
-
-function _sanitizeRenderedHtml(html) {
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(`<body>${html}</body>`, "text/html");
-    _cleanNode(doc.body);
-    return doc.body.innerHTML;
-  } catch {
-    // DOMParser 壞的話 · fallback 回 text(safer)
-    return html.replace(/<[^>]*>/g, "");
-  }
-}
-
-function _cleanNode(node) {
-  // 先複製 childNodes 再遍歷(避免變動時迭代錯)
-  const children = Array.from(node.childNodes);
-  for (const child of children) {
-    if (child.nodeType === 3) continue;  // text node · keep
-    if (child.nodeType !== 1) { child.remove(); continue; }  // 只留 Element 與 Text
-
-    const tag = child.tagName.toLowerCase();
-    if (!_ALLOWED_TAGS.has(tag)) {
-      // 不在白名單 · 但保留內文
-      const frag = document.createDocumentFragment();
-      while (child.firstChild) frag.appendChild(child.firstChild);
-      child.replaceWith(frag);
-      continue;
-    }
-    // 清 attributes · 只留白名單
-    for (const attr of Array.from(child.attributes)) {
-      const name = attr.name.toLowerCase();
-      if (name.startsWith("on")) {
-        child.removeAttribute(attr.name);  // onclick / onerror / onload
-        continue;
-      }
-      if (!_ALLOWED_ATTRS.has(name)) {
-        child.removeAttribute(attr.name);
-        continue;
-      }
-      // href/src 禁 javascript: / data: (除了 image)
-      if ((name === "href" || name === "src")) {
-        const val = attr.value.trim().toLowerCase();
-        if (val.startsWith("javascript:") || val.startsWith("vbscript:")) {
-          child.removeAttribute(attr.name);
-          continue;
-        }
-        if (name === "src" && val.startsWith("data:") && !val.startsWith("data:image/")) {
-          child.removeAttribute(attr.name);
-          continue;
-        }
-      }
-    }
-    // 遞歸
-    _cleanNode(child);
-  }
-}
-
+// v1.50 · sanitizeRenderedHtml 抽至 chat-sanitize.js(純函數 · 易測)
 
 function setText(id, val) {
   const el = document.getElementById(id);

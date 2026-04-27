@@ -37,6 +37,7 @@ import {
   WORKSPACE_TO_AGENT,
   WORKSPACE_DRAFTS,
   agentRoleName,
+  ATTACHMENT,
 } from "./modules/config.js";
 import { escapeHtml, formatDate, greetingFor, timeAgo, formatMoney, skeletonCards, localizeVisibleText } from "./modules/util.js";
 import { refreshAuthWithLock, authFetch, setUserEmail } from "./modules/auth.js";
@@ -100,12 +101,10 @@ import {
   workReadiness,
 } from "./modules/work-package.js";
 
-const TODAY_MAX_ATTACHMENT_COUNT = 6;
-const TODAY_MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
-const TODAY_SUPPORTED_ATTACHMENT_EXT = new Set([
-  "pdf", "txt", "md", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "csv", "json",
-  "png", "jpg", "jpeg", "webp", "gif",
-]);
+// v1.50 · 從 config.js ATTACHMENT 拉共享規格 · 與 chat.js 一致
+const TODAY_MAX_ATTACHMENT_COUNT = ATTACHMENT.MAX_COUNT;
+const TODAY_MAX_ATTACHMENT_BYTES = ATTACHMENT.MAX_BYTES;
+const TODAY_SUPPORTED_ATTACHMENT_EXT = ATTACHMENT.SUPPORTED_EXT;
 
 // ============================================================
 //  App Controller

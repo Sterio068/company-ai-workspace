@@ -206,10 +206,11 @@ function _renderToolbar() {
         <span class="fpp-logo-text">${escapeHtml(brand.companyShort)}</span>
         <span class="fpp-logo-arrow">▾</span>
       </button>
-      <div class="fpp-view-switch" role="tablist">
+      <div class="fpp-view-switch" role="tablist" aria-label="顯示模式">
         ${["grid", "list", "column"].map(v => `
           <button type="button" class="fpp-view-btn ${_state.view === v ? "active" : ""}"
-                  data-fpp-view="${v}" role="tab" aria-selected="${_state.view === v}">
+                  data-fpp-view="${v}" role="tab" aria-selected="${_state.view === v}"
+                  aria-controls="fpp-main">
             ${v === "grid" ? "圖示" : v === "list" ? "清單" : "分欄"}
           </button>
         `).join("")}
@@ -301,7 +302,7 @@ function _renderSegments() {
   const hiddenCount = all.length - visible.length;
 
   return `
-    <div class="fpp-segments" role="tablist">
+    <div class="fpp-segments" role="tablist" aria-label="智慧分類">
       ${visible.map(s => {
         const active = s.k === _state.segment;
         return `
