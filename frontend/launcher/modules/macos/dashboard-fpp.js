@@ -347,7 +347,12 @@ function _bindToolbar() {
   _root.querySelectorAll("[data-fpp-view]").forEach(b => {
     b.addEventListener("click", () => {
       _state.view = b.dataset.fppView;
-      _render();
+      // v1.19 perf · view (grid/list/column) 切換只動 grid · 不重 render 整頁
+      _renderGridOnly();
+      // toolbar 自身的 active class 也要更新
+      _root.querySelectorAll("[data-fpp-view]").forEach(other => {
+        other.classList.toggle("active", other.dataset.fppView === _state.view);
+      });
     });
   });
   _root.querySelector("[data-fpp-logo]")?.addEventListener("click", () => {
@@ -452,9 +457,25 @@ function _bindAiBanner() {
   });
 }
 
+// v1.19 perf · 真 banner-only re-render(從整頁 _render 改 partial)
+// banner 元素 .fpp-ai-banner outerHTML swap · re-bind 即可 · 不動 toolbar/grid
 function _renderBannerOnly() {
-  // 重 render 整 dashboard · 因為 banner 變動會影響 layout
-  _render();
+  if (!_root) return;
+  const oldBanner = _root.querySelector(".fpp-ai-banner");
+  const newHtml = _renderAiBanner();  // 可能回 "" (沒建議或全 dismissed)
+  if (oldBanner) {
+    if (newHtml) {
+      // swap outerHTML 保位置
+      oldBanner.outerHTML = newHtml;
+    } else {
+      oldBanner.remove();
+    }
+  } else if (newHtml) {
+    // 沒舊 banner · 插在 toolbar 後 mini-today 前
+    const toolbar = _root.querySelector(".fpp-toolbar");
+    if (toolbar) toolbar.insertAdjacentHTML("afterend", newHtml);
+  }
+  _bindAiBanner();  // re-bind banner 內 button
 }
 
 function _executeSuggestion(id) {
@@ -464,7 +485,8 @@ function _executeSuggestion(id) {
   window.toast?.success?.(`已${s.cta} · ${s.text.slice(0, 30)}`);
   _state.aiSuggestions = _state.aiSuggestions.filter(x => x.id !== id);
   _state.bannerDismissedIds.add(id);
-  _render();
+  // v1.19 · 只 banner 變了 · 不需重 render 整頁
+  _renderBannerOnly();
 }
 
 function _showSourceJump(src) {
@@ -684,7 +706,8 @@ function _openBuilder(editingKey = null) {
     localStorage.setItem("chengfu_custom_folders_v1", JSON.stringify(_state.customFolders));
     window.toast?.success?.(`Smart Folder「${name}」已${editingKey ? "更新" : "建立"}`);
     _closeBuilder();
-    _render();
+    // v1.19 perf · 只 segment 列加新 chip · 不需重 render 整頁
+    _renderSegmentsOnly();
   });
   // ESC
   setTimeout(() => {
@@ -1013,9 +1036,9 @@ export const dashboardFpp = {
   /** 把 view-dashboard innerHTML 接管 */
   async init(viewEl) {
     if (_state.initialized && _root === viewEl) {
-      // 重新訪問 · 重 fetch 看有沒新建議
+      // 重新訪問 · 重 fetch 看有沒新建議 · v1.19 只 banner 變 不需整頁
       await _fetchSuggestions();
-      _render();
+      _renderBannerOnly();
       return;
     }
     _root = viewEl;
@@ -1025,8 +1048,8 @@ export const dashboardFpp = {
     _render();
     _renderHintsOverlay();
     document.addEventListener("keydown", _onKey);
-    // 並行 fetch · 之後 re-render
-    _fetchSuggestions().then(() => _render());
+    // 並行 fetch · 之後只 banner 重 render(suggestions 進來時 layout 不變)
+    _fetchSuggestions().then(() => _renderBannerOnly());
   },
 
   destroy() {
