@@ -102,7 +102,7 @@
   color: white;
   padding: 10px 18px;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: var(--text-lg);
   font-weight: 500;
   z-index: 1000;
   transition: top 0.15s;
@@ -112,7 +112,7 @@
 
 html, body {
   font-family: var(--font-system);
-  font-size: 16px;        /* 放大字體友善資深同仁 */
+  font-size: var(--text-xl);        /* 放大字體友善資深同仁 */
   line-height: 1.5;
   color: var(--text-primary);
   background: var(--bg-base);
@@ -130,7 +130,7 @@ button, a.sidebar-item, a {
 
 kbd {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-sm);
   padding: 2px 6px;
   background: var(--border);
   border-radius: var(--r-sm);
@@ -187,7 +187,7 @@ body[data-active-view="dashboard"] .sidebar:not(:hover):not(:focus-within) .ai-p
 }
 /* v1.22 a11y/UX · 收起時 brand-name + sidebar-label 縮小但保留(讓 AI 小白看得到名字) */
 body[data-active-view="dashboard"] .sidebar:not(:hover):not(:focus-within) .brand-name {
-  font-size: 10px;
+  font-size: var(--text-xs);
   letter-spacing: 0.02em;
   white-space: nowrap;
   overflow: hidden;
@@ -251,7 +251,7 @@ body[data-active-view="dashboard"] .sidebar:not(:hover):not(:focus-within) .side
   font-feature-settings: "kern" 1, "palt" 1;
 }
 .brand-sub {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   margin-top: 2px;
   letter-spacing: 0.05em;          /* 副標 · 字距更鬆 · 視覺呼吸 */
@@ -286,11 +286,11 @@ body[data-active-view="dashboard"] .sidebar:not(:hover):not(:focus-within) .side
 
 .primary-nav .sidebar-item {
   min-height: 38px;
-  font-size: 14px;
+  font-size: var(--text-lg);
 }
 
 .sidebar-section-label {
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
@@ -346,7 +346,7 @@ body[data-active-view="dashboard"] .sidebar:not(:hover):not(:focus-within) .side
 .sidebar-count {
   background: color-mix(in srgb, var(--text-secondary) 12%, transparent);
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: var(--text-xs);
   padding: 1px 6px;
   border-radius: 10px;
   font-family: var(--font-mono);
@@ -371,7 +371,7 @@ body[data-active-view="dashboard"] .sidebar:not(:hover):not(:focus-within) .side
   text-overflow: ellipsis;
   white-space: nowrap;
   /* CJK 美化(2026-04-26 USER) */
-  font-size: 14px;
+  font-size: var(--text-lg);
   font-weight: 500;
   letter-spacing: 0.04em;
   font-feature-settings: "kern" 1, "palt" 1;
@@ -393,12 +393,12 @@ body[data-active-view="dashboard"] .sidebar:not(:hover):not(:focus-within) .side
   background: var(--border);
   padding: 1px 7px;
   border-radius: 100px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-family: var(--font-mono);
   color: var(--text-secondary);
 }
 
-.sidebar-shortcut { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono); }
+.sidebar-shortcut { font-size: var(--text-sm); color: var(--text-tertiary); font-family: var(--font-mono); }
 
 /* F-04 · 外部審計 · admin-only 元件預設隱藏 · setupUser() 對 admin 移除此 class
    一般同仁不會看到 sidebar engine-switch · 降認知負擔 */
@@ -421,7 +421,7 @@ html[data-role="admin"] .admin-only { display: revert !important; }
   justify-content: space-between;
   gap: var(--s-2);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 700;
 }
 
@@ -430,7 +430,7 @@ html[data-role="admin"] .admin-only { display: revert !important; }
 .engine-switch-summary::after {
   content: "設定";
   color: var(--text-tertiary);
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 600;
 }
 
@@ -449,13 +449,13 @@ html[data-role="admin"] .admin-only { display: revert !important; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
 .engine-switch-head strong {
   color: var(--blue);
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-family: var(--font-mono);
   font-weight: 700;
 }
@@ -473,7 +473,7 @@ html[data-role="admin"] .admin-only { display: revert !important; }
   height: 30px;
   border-radius: calc(var(--r-lg) - 4px);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--text-base);
   font-weight: 700;
   transition: background .16s ease, color .16s ease, box-shadow .16s ease;
 }
@@ -498,7 +498,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 
 .engine-switch p {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--text-sm);
   line-height: 1.45;
   color: var(--text-tertiary);
 }
@@ -518,12 +518,12 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   background: linear-gradient(135deg, var(--blue), var(--purple));
   color: white;
   display: grid; place-items: center;
-  font-size: 13px; font-weight: 600;
+  font-size: var(--text-md); font-weight: 600;
 }
 
 .user-info { flex: 1; min-width: 0; }
-.user-name { font-size: 13px; font-weight: 500; }
-.user-role { font-size: 11px; color: var(--text-secondary); }
+.user-name { font-size: var(--text-md); font-weight: 500; }
+.user-role { font-size: var(--text-sm); color: var(--text-secondary); }
 
 .theme-toggle {
   width: 28px; height: 28px;
@@ -556,7 +556,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   margin-bottom: var(--s-1);
 }
 
-.greeting-sub { font-size: 14px; color: var(--text-secondary); }
+.greeting-sub { font-size: var(--text-lg); color: var(--text-secondary); }
 
 .header-actions { display: flex; gap: var(--s-3); align-items: center; }
 
@@ -569,7 +569,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--text-md);
   transition: all 0.1s;
   min-width: 280px;
 }
@@ -578,7 +578,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 
 /* ============================================================ Hero */
 .block-title h2 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
-.block-hint { font-size: 12px; color: var(--text-tertiary); }
+.block-hint { font-size: var(--text-base); color: var(--text-tertiary); }
 
 .ai-os-hero {
   display: grid;
@@ -613,7 +613,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   border-radius: 999px;
   background: rgba(255,255,255,0.1);
   color: rgba(255,255,255,0.82);
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 650;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -666,7 +666,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   background: rgba(255,255,255,0.16);
   color: rgba(255,255,255,0.76);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 650;
 }
 
@@ -677,7 +677,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 
 .rhythm-step em {
   color: rgba(255,255,255,0.66);
-  font-size: 12px;
+  font-size: var(--text-base);
   font-style: normal;
 }
 
@@ -804,7 +804,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 8%, var(--bg-content));
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 
 .today-file-name {
@@ -845,7 +845,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 .today-drop-hint {
   padding: 4px 6px 2px;
   color: var(--text-tertiary);
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 
 .today-sidecar {
@@ -874,12 +874,12 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--accent);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 
 .sidecar-step span {
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--text-md);
   line-height: 1.45;
 }
 
@@ -982,7 +982,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   background: var(--bg-content);
   border: 1px solid var(--border);
   border-radius: 100px;
-  font-size: 13px;
+  font-size: var(--text-md);
   color: var(--text-primary);
   transition: all 0.1s;
 }
@@ -996,12 +996,12 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   background: var(--border);
   padding: 1px 7px;
   border-radius: 100px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-family: var(--font-mono);
   color: var(--text-secondary);
 }
 .chip-empty {
-  font-size: 13px;
+  font-size: var(--text-md);
   color: var(--text-tertiary);
   padding: var(--s-4);
   background: var(--bg-content);
@@ -1061,7 +1061,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 .ws-shortcut { margin-left: auto; }
 
 .ws-desc {
-  font-size: 13px;
+  font-size: var(--text-md);
   color: var(--text-secondary);
   line-height: 1.55;
   min-height: 42px;
@@ -1082,7 +1082,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 
 .ws-next,
 .ws-deliverable {
-  font-size: 12px;
+  font-size: var(--text-base);
   line-height: 1.45;
   border-radius: var(--r-md);
   padding: 7px 9px;
@@ -1098,7 +1098,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 }
 
 .ws-agents {
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--text-tertiary);
   display: flex;
   flex-wrap: wrap;
@@ -1109,14 +1109,14 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   background: var(--bg-base);
   padding: 2px 8px;
   border-radius: 100px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
 .ws-meta {
   display: flex;
   gap: var(--s-4);
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--text-tertiary);
   padding-top: var(--s-3);
   border-top: 1px solid var(--border);
@@ -1127,7 +1127,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  font-size: 13px;
+  font-size: var(--text-md);
   color: var(--ws-color);
   font-weight: 500;
   margin-top: var(--s-2);
@@ -1191,7 +1191,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 .workspace-output {
   margin-bottom: var(--s-3);
   color: var(--text-primary);
-  font-size: 20px;
+  font-size: var(--text-2xl);
   font-weight: 750;
   line-height: 1.35;
 }
@@ -1208,7 +1208,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 
 .workspace-project-row:last-child { border-bottom: 0; }
 .workspace-project-row strong { color: var(--text-primary); }
-.workspace-project-row span { color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
+.workspace-project-row span { color: var(--text-secondary); font-size: var(--text-md); line-height: 1.5; }
 
 .today-workbench {
   display: grid;
@@ -1236,7 +1236,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   box-shadow: 0 0 0 5px color-mix(in srgb, var(--today-color, var(--accent)) 16%, transparent), var(--shadow-2);
 }
 .today-kicker {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1249,7 +1249,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   margin-bottom: 6px;
 }
 .today-desc {
-  font-size: 12px;
+  font-size: var(--text-base);
   line-height: 1.5;
   color: var(--text-secondary);
 }
@@ -1270,7 +1270,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 }
 .today-cta {
   margin-top: 10px;
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--today-color, var(--accent));
   font-weight: 600;
 }
@@ -1296,9 +1296,9 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   align-items: center;
 }
 .recent-item:hover { background: var(--bg-base); }
-.recent-title { font-size: 14px; font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.recent-agent { font-size: 11px; color: var(--text-tertiary); background: var(--border); padding: 2px 6px; border-radius: var(--r-sm); }
-.recent-time { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono); }
+.recent-title { font-size: var(--text-lg); font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-agent { font-size: var(--text-sm); color: var(--text-tertiary); background: var(--border); padding: 2px 6px; border-radius: var(--r-sm); }
+.recent-time { font-size: var(--text-sm); color: var(--text-tertiary); font-family: var(--font-mono); }
 
 /* ============================================================ Inspector */
 .inspector {
@@ -1311,7 +1311,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 }
 .insp-section { margin-bottom: var(--s-6); }
 .insp-label {
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
@@ -1330,10 +1330,10 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 }
 .usage-row { display: flex; justify-content: space-between; align-items: baseline; }
 .usage-amt { font-family: var(--font-display); font-size: 22px; font-weight: 600; letter-spacing: -0.2px; }
-.usage-max { font-size: 13px; color: var(--text-secondary); }
+.usage-max { font-size: var(--text-md); color: var(--text-secondary); }
 .usage-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin: var(--s-3) 0; }
 .usage-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--green) 0%, var(--orange) 80%); border-radius: 3px; transition: width 0.5s; }
-.usage-stats { display: flex; gap: var(--s-3); font-size: 12px; color: var(--text-secondary); }
+.usage-stats { display: flex; gap: var(--s-3); font-size: var(--text-base); color: var(--text-secondary); }
 .usage-stat b { color: var(--text-primary); font-family: var(--font-mono); font-weight: 600; }
 
 /* 空狀態 usage · 顯示友善訊息 */
@@ -1343,7 +1343,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   inset: 0;
   display: grid; place-items: center;
   color: var(--text-tertiary);
-  font-size: 12px;
+  font-size: var(--text-base);
   background: color-mix(in srgb, var(--bg-base) 80%, transparent);
   border-radius: inherit;
   backdrop-filter: blur(2px);
@@ -1360,7 +1360,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   gap: 14px;
 }
 .tip {
-  font-size: 12px;
+  font-size: var(--text-base);
   line-height: 1.65;
   color: var(--text-secondary);
   padding-left: 4px;
@@ -1371,7 +1371,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 .tip strong { color: var(--text-primary); display: block; margin-bottom: 3px; }
 
 /* Status */
-.status-list { display: flex; flex-direction: column; gap: var(--s-2); font-size: 13px; }
+.status-list { display: flex; flex-direction: column; gap: var(--s-2); font-size: var(--text-md); }
 .status-row { display: flex; align-items: center; gap: var(--s-3); color: var(--text-secondary); }
 .status-dot {
   width: 8px; height: 8px; border-radius: 50%;
@@ -1494,12 +1494,12 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 
 .palette-label {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--text-lg);
   letter-spacing: 0.04em;
 }
 
 .palette-hint {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--label-tertiary);
   font-family: var(--font-mono);
   letter-spacing: 0;
@@ -1510,7 +1510,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   display: flex;
   gap: var(--s-4);
   padding: var(--s-3) var(--s-5);
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--text-secondary);
   background: var(--bg-base);
   border-top: 1px solid var(--border);
@@ -1542,23 +1542,23 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 }
 .tour-bubble.open { display: block; }
 .tour-step {
-  font-size: 12px; font-family: var(--font-mono);
+  font-size: var(--text-base); font-family: var(--font-mono);
   color: var(--text-tertiary);
   margin-bottom: var(--s-2);
 }
 .tour-title {
-  font-size: 20px;
+  font-size: var(--text-2xl);
   font-weight: 600;
   margin-bottom: var(--s-3);
   letter-spacing: -0.2px;
 }
-.tour-body { font-size: 14px; line-height: 1.6; color: var(--text-secondary); margin-bottom: var(--s-5); }
+.tour-body { font-size: var(--text-lg); line-height: 1.6; color: var(--text-secondary); margin-bottom: var(--s-5); }
 .tour-actions { display: flex; justify-content: space-between; gap: var(--s-3); }
 
 .btn-primary, .btn-ghost {
   padding: var(--s-2) var(--s-4);
   border-radius: var(--r-lg);
-  font-size: 14px;
+  font-size: var(--text-lg);
   font-weight: 500;
   transition: all 0.1s;
 }
@@ -1689,7 +1689,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   margin-bottom: 4px;
 }
 .stat-label {
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--text-secondary);
 }
 
@@ -1729,12 +1729,12 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   font-size: 18px;
 }
 .agent-card-name {
-  font-size: 14px;
+  font-size: var(--text-lg);
   font-weight: 600;
   flex: 1;
 }
 .agent-card-model {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--text-tertiary);
   font-family: var(--font-mono);
   background: var(--border);
@@ -1742,7 +1742,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   border-radius: var(--r-sm);
 }
 .agent-card-desc {
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--text-secondary);
   line-height: 1.5;
   flex: 1;
@@ -1818,7 +1818,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 }
 .filter-chip {
   padding: 6px 14px;
-  font-size: 13px;
+  font-size: var(--text-md);
   border-radius: 100px;
   background: var(--bg-content);
   border: 1px solid var(--border);
@@ -1883,13 +1883,13 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   font-weight: 600;
 }
 .project-card-client {
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--text-secondary);
 }
 .project-card-meta {
   display: flex;
   gap: var(--s-3);
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
   margin-top: var(--s-2);
   padding-top: var(--s-2);
@@ -1947,7 +1947,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   border: 1px solid color-mix(in srgb, var(--kind-color) 30%, var(--border));
   background: color-mix(in srgb, var(--kind-color) 10%, transparent);
   color: color-mix(in srgb, var(--kind-color) 72%, var(--text-primary));
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 700;
   letter-spacing: 0.04em;
 }
@@ -1963,7 +1963,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 .work-hero p {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 
 .readiness-ring {
@@ -1987,7 +1987,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 .readiness-ring span {
   margin-top: -22px;
   color: var(--text-tertiary);
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 
 .work-stats {
@@ -2008,12 +2008,12 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   display: block;
   margin-bottom: 5px;
   color: var(--text-tertiary);
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 
 .work-stat strong {
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--text-md);
   line-height: 1.35;
 }
 
@@ -2046,7 +2046,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   border-radius: 18px;
   background: color-mix(in srgb, var(--project-color) 14%, var(--bg-base));
   color: color-mix(in srgb, var(--project-color) 75%, var(--text-primary));
-  font-size: 12px;
+  font-size: var(--text-base);
   font-weight: 800;
   letter-spacing: -0.2px;
 }
@@ -2055,7 +2055,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   display: block;
   margin-bottom: 4px;
   color: var(--text-tertiary);
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 750;
   letter-spacing: 0.06em;
 }
@@ -2072,7 +2072,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   max-width: 620px;
   margin: 5px 0 0;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--text-md);
   line-height: 1.55;
 }
 
@@ -2117,7 +2117,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   border-radius: 12px;
   background: color-mix(in srgb, var(--project-color) 12%, var(--bg-base));
   color: color-mix(in srgb, var(--project-color) 78%, var(--text-primary));
-  font-size: 14px;
+  font-size: var(--text-lg);
   font-weight: 800;
 }
 
@@ -2125,7 +2125,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   display: block;
   margin-bottom: 5px;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--text-lg);
 }
 
 .work-suggestion-card small {
@@ -2138,7 +2138,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 .work-suggestion-card em {
   grid-column: 2;
   color: var(--accent);
-  font-size: 12px;
+  font-size: var(--text-base);
   font-style: normal;
   font-weight: 750;
 }
@@ -2167,7 +2167,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 .work-section-title {
   margin-bottom: var(--s-2);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--text-md);
   font-weight: 750;
   letter-spacing: -0.1px;
 }
@@ -2203,7 +2203,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 .gap-complete {
   border-radius: 999px;
   padding: 7px 10px;
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 
 .gap-list span {
@@ -2273,7 +2273,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   background: color-mix(in srgb, var(--blue) 8%, transparent);
   color: var(--blue);
   border-radius: var(--r-lg);
-  font-size: 13px;
+  font-size: var(--text-md);
   text-align: center;
 }
 
@@ -2297,7 +2297,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 }
 .skill-card-num {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
   margin-bottom: 4px;
 }
@@ -2307,13 +2307,13 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   margin-bottom: var(--s-2);
 }
 .skill-card-desc {
-  font-size: 13px;
+  font-size: var(--text-md);
   color: var(--text-secondary);
   line-height: 1.5;
 }
 .skill-card-ws {
   display: inline-block;
-  font-size: 11px;
+  font-size: var(--text-sm);
   padding: 2px 8px;
   border-radius: 100px;
   background: color-mix(in srgb, var(--ws-color) 12%, transparent);
@@ -2368,7 +2368,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 .modal-close {
   width: 28px; height: 28px;
   border-radius: var(--r-md);
-  font-size: 14px;
+  font-size: var(--text-lg);
   color: var(--text-secondary);
 }
 .modal-close:hover { background: var(--border); }
@@ -2383,20 +2383,20 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  font-size: 13px;
+  font-size: var(--text-md);
   color: var(--text-secondary);
 }
 .modal-body label span em {
   color: var(--red);
   font-style: normal;
-  font-size: 11px;
+  font-size: var(--text-sm);
   margin-left: 4px;
 }
 .modal-body input,
 .modal-body textarea,
 .modal-body select {
   padding: var(--s-2) var(--s-3);
-  font-size: 14px;
+  font-size: var(--text-lg);
   font-family: inherit;
   background: var(--bg-base);
   border: 1px solid var(--border);
@@ -2458,7 +2458,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 }
 
 .kanban-col-head {
-  font-size: 12px;
+  font-size: var(--text-base);
   font-weight: 600;
   color: var(--text-secondary);
   padding: 4px 8px;
@@ -2471,7 +2471,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   background: var(--border);
   padding: 1px 8px;
   border-radius: 100px;
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 
 .lead-card {
@@ -2480,7 +2480,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   border-radius: 8px;
   padding: 10px;
   cursor: grab;
-  font-size: 13px;
+  font-size: var(--text-md);
   transition: all 0.15s;
 }
 .lead-card:active { cursor: grabbing; }
@@ -2488,12 +2488,12 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 .lead-card.dragging { opacity: 0.5; }
 
 .lead-card-title { font-weight: 600; line-height: 1.4; margin-bottom: 4px; }
-.lead-card-client { font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; }
+.lead-card-client { font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: 8px; }
 .lead-card-meta {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--text-tertiary);
 }
 .lead-card-tag {
@@ -2557,10 +2557,10 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 .toast.warn    { border-left-color: var(--orange); }
 .toast.error   { border-left-color: var(--red); }
 .toast.info    { border-left-color: var(--blue); }
-.toast-body { flex: 1; font-size: 13px; line-height: 1.5; min-width: 0; }
+.toast-body { flex: 1; font-size: var(--text-md); line-height: 1.5; min-width: 0; }
 .toast-msg { font-weight: 500; color: var(--text-primary); }
 .toast-detail {
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--text-secondary);
   margin-top: 4px;
   word-break: break-word;
@@ -2573,7 +2573,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 6px 12px;
-  font-size: 12px;
+  font-size: var(--text-base);
   font-weight: 500;
   cursor: pointer;
   color: var(--text-primary);
@@ -2586,7 +2586,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   cursor: pointer;
   border: none;
   background: none;
-  font-size: 16px;
+  font-size: var(--text-xl);
   flex-shrink: 0;
   align-self: flex-start;
   color: var(--text-tertiary);
@@ -2649,10 +2649,10 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 .shortcuts.open { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: auto; }
 .shortcuts h3 { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
 .shortcuts-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.shortcuts-item { display: flex; justify-content: space-between; font-size: 13px;
+.shortcuts-item { display: flex; justify-content: space-between; font-size: var(--text-md);
                   padding: 6px 0; border-bottom: 1px solid var(--border); }
 .shortcuts-item kbd { background: var(--border); padding: 2px 8px; border-radius: 4px;
-                       font-family: var(--font-mono); font-size: 11px; }
+                       font-family: var(--font-mono); font-size: var(--text-sm); }
 
 /* ============================================================
    Chat Pane · Launcher 內建對話介面(路線 A)
@@ -2684,7 +2684,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   width: 32px; height: 32px;
   border-radius: 8px;
   display: grid; place-items: center;
-  font-size: 14px;
+  font-size: var(--text-lg);
   color: var(--text-secondary);
   transition: background 0.1s;
 }
@@ -2713,7 +2713,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   white-space: nowrap;
 }
 .chat-agent-sub {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   margin-top: 2px;
 }
@@ -2728,7 +2728,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   color: var(--accent);
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 700;
   line-height: 1.3;
   white-space: nowrap;
@@ -2744,7 +2744,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   width: 32px; height: 32px;
   border-radius: 8px;
   display: grid; place-items: center;
-  font-size: 14px;
+  font-size: var(--text-lg);
   color: var(--text-secondary);
 }
 .chat-action:hover { background: var(--border); color: var(--text-primary); }
@@ -2775,7 +2775,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   margin-bottom: 8px;
 }
 .chat-welcome-sub {
-  font-size: 13px;
+  font-size: var(--text-md);
   line-height: 1.6;
 }
 
@@ -2794,7 +2794,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px 14px;
-  font-size: 13px;
+  font-size: var(--text-md);
   color: var(--text-primary);
   text-align: left;
   cursor: pointer;
@@ -2826,7 +2826,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   width: 32px; height: 32px;
   border-radius: 100px;
   display: grid; place-items: center;
-  font-size: 14px;
+  font-size: var(--text-lg);
   flex-shrink: 0;
   background: var(--bg-base);
 }
@@ -2841,7 +2841,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 
 .chat-msg-body {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--text-lg);
   line-height: 1.65;
   min-width: 0;
   padding: 6px 0;
@@ -2859,7 +2859,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   padding: 2px 6px;
   border-radius: 4px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 .chat-msg-body pre {
   background: var(--bg-base);
@@ -2894,7 +2894,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   border: none;
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: var(--text-lg);
   opacity: 0.5;
 }
 .chat-msg-fb:hover { background: var(--border); opacity: 1; }
@@ -2905,7 +2905,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   color: var(--text-secondary);
   border-radius: 999px;
   padding: 4px 9px;
-  font-size: 12px;
+  font-size: var(--text-base);
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
@@ -2958,7 +2958,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   background: var(--bg-base);
   border: 1px solid var(--border);
   border-radius: 100px;
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 
 .chat-attachment-chip.uploading {
@@ -2980,7 +2980,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 
 .chat-attachment-status {
   color: var(--text-tertiary);
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .chat-attachment-chip button {
   border: none;
@@ -3009,7 +3009,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   width: 36px; height: 36px;
   border-radius: 10px;
   display: grid; place-items: center;
-  font-size: 16px;
+  font-size: var(--text-xl);
   opacity: 0.6;
   transition: all 0.1s;
 }
@@ -3021,7 +3021,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   background: none;
   resize: none;
   font-family: inherit;
-  font-size: 14px;
+  font-size: var(--text-lg);
   line-height: 1.5;
   padding: 8px 4px;
   max-height: 200px;
@@ -3104,7 +3104,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 
 .modal2-body {
   padding: 0 20px 16px;
-  font-size: 14px; line-height: 1.6; color: var(--text-primary);
+  font-size: var(--text-lg); line-height: 1.6; color: var(--text-primary);
 }
 
 .modal2-actions {
@@ -3115,24 +3115,24 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 }
 .modal2-actions .btn-primary {
   background: var(--accent); color: white; padding: 8px 16px;
-  border-radius: 8px; font-size: 14px; font-weight: 500; transition: all 0.1s;
+  border-radius: 8px; font-size: var(--text-lg); font-weight: 500; transition: all 0.1s;
 }
 .modal2-actions .btn-primary:hover { background: var(--accent-hover); }
 .modal2-actions .btn-danger {
   background: var(--red); color: white; padding: 8px 16px;
-  border-radius: 8px; font-size: 14px; font-weight: 500;
+  border-radius: 8px; font-size: var(--text-lg); font-weight: 500;
 }
 .modal2-actions .btn-danger:hover { background: #D70015; }
 .modal2-actions .btn-ghost {
   background: var(--border); color: var(--text-primary);
-  padding: 8px 16px; border-radius: 8px; font-size: 14px;
+  padding: 8px 16px; border-radius: 8px; font-size: var(--text-lg);
 }
 .modal2-actions .btn-ghost:hover { background: var(--border-strong); }
 
 /* v1.3 batch6 · WCAG 1.4.1 · 必填 badge · 文字 + 邊框 · 不只靠顏色 */
 .modal2-req-badge {
   display: inline-block;
-  font-size: 10px;
+  font-size: var(--text-xs);
   padding: 1px 6px;
   border: 1px solid var(--red);
   color: var(--red);
@@ -3159,7 +3159,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   margin: var(--s-2) var(--s-3) 0;
   padding: 6px 10px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   background: var(--bg-base);
   border: 1px solid var(--border);
   cursor: help;
@@ -3168,7 +3168,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
 .health-indicator.warn { color: var(--orange); }
 .health-indicator.err  { color: var(--red);    background: color-mix(in srgb, var(--red) 8%, transparent); }
 .health-dot {
-  font-size: 10px;
+  font-size: var(--text-xs);
   animation: health-pulse 2s ease-in-out infinite;
 }
 .health-indicator.ok .health-dot   { color: var(--green); }
@@ -3190,7 +3190,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   border-radius: 10px;
   background: var(--bg-content);
   border: 1px solid var(--border);
-  font-size: 20px;
+  font-size: var(--text-2xl);
   box-shadow: var(--shadow-1);
   z-index: 90;
   cursor: pointer;
@@ -3255,7 +3255,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   justify-content: center;
   text-decoration: none;
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: var(--text-xs);
   padding: 6px 4px;
   border-radius: 8px;
   transition: color 0.15s ease;
@@ -3268,7 +3268,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   line-height: 1;
   margin-bottom: 2px;
 }
-.mobile-bottom-label { font-size: 10px; line-height: 1.2; }
+.mobile-bottom-label { font-size: var(--text-xs); line-height: 1.2; }
 
 @media (max-width: 768px) {
   .mobile-bottom-nav { display: flex; }
@@ -3302,7 +3302,7 @@ html[data-ai-provider="anthropic"] .engine-switch-buttons button[data-ai-provide
   border: 1px solid var(--border);
   padding: 1px 5px;
   border-radius: 3px;
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-family: var(--font-mono);
   color: var(--text-secondary);
 }
@@ -3563,7 +3563,7 @@ select:focus-visible {
 }
 .tool-info { min-width: 0; flex: 1; }
 .tool-name {
-  font-size: 13px;
+  font-size: var(--text-md);
   font-weight: 500;
   color: var(--text-primary);
   line-height: 1.3;
@@ -3614,7 +3614,7 @@ select:focus-visible {
   gap: 4px;
 }
 .recent-content .recent-title {
-  font-size: 13px;
+  font-size: var(--text-md);
   font-weight: 500;
   color: var(--text-primary);
   white-space: nowrap;
@@ -3625,7 +3625,7 @@ select:focus-visible {
   display: flex;
   gap: 8px;
   align-items: center;
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
 }
 .recent-preset {
@@ -3657,9 +3657,9 @@ select:focus-visible {
   box-shadow: var(--shadow-2);
   transform: translateY(-1px);
 }
-.sug-icon { font-size: 16px; margin-bottom: 6px; }
+.sug-icon { font-size: var(--text-xl); margin-bottom: 6px; }
 .sug-title {
-  font-size: 13px;
+  font-size: var(--text-md);
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 3px;
@@ -3747,7 +3747,7 @@ select:focus-visible {
   margin-top: 18px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--text-tertiary);
 }
 .empty-state.error { border-top: 3px solid var(--red); }
@@ -3759,7 +3759,7 @@ select:focus-visible {
   position: fixed;
   top: 0; left: 0; right: 0;
   padding: 10px 24px;
-  font-size: 13px;
+  font-size: var(--text-md);
   color: white;
   background: var(--red);
   display: flex;
@@ -3780,7 +3780,7 @@ select:focus-visible {
   border: 1px solid rgba(255,255,255,0.35);
   padding: 4px 12px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--text-base);
   cursor: pointer;
   transition: background 0.12s;
 }
@@ -3803,7 +3803,7 @@ body.has-banner .main-header { margin-top: 44px; }
 }
 .chat-msg.assistant .chat-msg-actions::before {
   content: "有用嗎?";
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
   margin-right: 4px;
 }
@@ -3817,7 +3817,7 @@ body.has-banner .main-header { margin-top: 44px; }
   border: 1px solid var(--border);
   background: var(--bg-content);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--text-lg);
   transition: all 0.12s;
   opacity: 1;
   padding: 0;
@@ -3839,7 +3839,7 @@ body.has-banner .main-header { margin-top: 44px; }
   display: grid;
   gap: 5px;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 .handoff-save-form select,
 .handoff-save-form textarea {
@@ -3865,7 +3865,7 @@ body.has-banner .main-header { margin-top: 44px; }
   display: flex;
   gap: 16px;
   padding: 6px 14px 4px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
   line-height: 1.4;
   flex-wrap: wrap;
@@ -3877,14 +3877,14 @@ body.has-banner .main-header { margin-top: 44px; }
   border: 0.5px solid var(--border-strong);
   padding: 1px 5px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--text-secondary);
 }
 .chat-input-hints .hint-level {
   margin-left: auto;
   padding: 2px 8px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 /* v1.3 batch6 · WCAG 1.4.3 · 4.5:1 · 加深 fg color · 加深底色 */
@@ -3959,7 +3959,7 @@ button:focus-visible,
 @media (max-width: 768px) {
   .sys-banner {
     padding: 8px 16px;
-    font-size: 12px;
+    font-size: var(--text-base);
     flex-wrap: wrap;
     gap: 8px;
   }
@@ -3984,7 +3984,7 @@ button:focus-visible,
   min-height: 110px;
 }
 .roi-label {
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-tertiary);
   text-transform: uppercase;
@@ -4032,7 +4032,7 @@ button:focus-visible,
   flex-wrap: wrap;
   margin-bottom: 10px;
 }
-.roi-funnel .f-sep { color: var(--text-tertiary); font-weight: 400; font-size: 13px; }
+.roi-funnel .f-sep { color: var(--text-tertiary); font-weight: 400; font-size: var(--text-md); }
 .roi-funnel .f-num { font-family: var(--font-mono); }
 .roi-funnel .f-win { color: var(--green); }
 
@@ -4083,7 +4083,7 @@ button:focus-visible,
 .drawer-close {
   width: 28px; height: 28px;
   border-radius: var(--r-md);
-  font-size: 14px;
+  font-size: var(--text-lg);
   color: var(--text-secondary);
   background: transparent;
   border: none;
@@ -4114,7 +4114,7 @@ button:focus-visible,
 }
 .drawer-section:last-of-type { border-bottom: none; }
 .drawer-section h4 {
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-tertiary);
   letter-spacing: 0.4px;
@@ -4125,7 +4125,7 @@ button:focus-visible,
   display: grid;
   grid-template-columns: 80px 1fr;
   gap: var(--s-2) var(--s-3);
-  font-size: 14px;
+  font-size: var(--text-lg);
   line-height: 1.5;
 }
 .drawer-kv dt {
@@ -4141,7 +4141,7 @@ button:focus-visible,
   display: inline-block;
   padding: 2px 8px;
   border-radius: var(--r-md);
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 .drawer-status.active {
@@ -4163,7 +4163,7 @@ button:focus-visible,
 .drawer-handoff > summary {
   cursor: pointer;
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--text-lg);
   color: var(--text-primary);
   list-style: none;
   padding: 4px 0;
@@ -4180,7 +4180,7 @@ button:focus-visible,
   transform: rotate(90deg);
 }
 .drawer-handoff .hint {
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--text-tertiary);
   margin: var(--s-2) 0 var(--s-3);
   line-height: 1.5;
@@ -4190,7 +4190,7 @@ button:focus-visible,
 }
 .drawer-handoff .field label {
   display: block;
-  font-size: 12px;
+  font-size: var(--text-base);
   font-weight: 500;
   color: var(--text-secondary);
   margin-bottom: 4px;
@@ -4203,7 +4203,7 @@ button:focus-visible,
   background: var(--bg-content);
   color: var(--text-primary);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-md);
   resize: vertical;
   min-height: 52px;
 }
@@ -4219,7 +4219,7 @@ button:focus-visible,
   margin-top: var(--s-3);
 }
 .drawer-handoff .handoff-meta {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
   text-align: right;
   margin-top: var(--s-2);
@@ -4254,7 +4254,7 @@ button:focus-visible,
   color: var(--text-primary);
 }
 .source-path {
-  font-size: 12px;
+  font-size: var(--text-base);
   margin: var(--s-2) 0;
 }
 .source-path code {
@@ -4266,7 +4266,7 @@ button:focus-visible,
   word-break: break-all;
 }
 .source-meta {
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--text-tertiary);
   margin-bottom: var(--s-3);
 }
@@ -4276,14 +4276,14 @@ button:focus-visible,
   flex-wrap: wrap;
 }
 .source-actions button {
-  font-size: 12px;
+  font-size: var(--text-base);
   padding: 4px 12px;
 }
-.btn-sm { font-size: 12px; padding: 4px 10px; }
+.btn-sm { font-size: var(--text-base); padding: 4px 10px; }
 
 .view-knowledge { padding: var(--s-6) var(--s-8); }
 .view-header h1 { font-size: 24px; margin-bottom: 4px; }
-.view-header p { color: var(--text-tertiary); font-size: 13px; }
+.view-header p { color: var(--text-tertiary); font-size: var(--text-md); }
 
 .kb-head {
   display: flex;
@@ -4293,12 +4293,12 @@ button:focus-visible,
   margin: var(--s-4) 0 var(--s-3);
   flex-wrap: wrap;
 }
-.kb-head h3 { font-size: 16px; margin: 0; }
+.kb-head h3 { font-size: var(--text-xl); margin: 0; }
 .kb-search {
   flex: 1;
   min-width: 280px;
   padding: 8px 12px;
-  font-size: 14px;
+  font-size: var(--text-lg);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   background: var(--bg-content);
@@ -4330,7 +4330,7 @@ button:focus-visible,
 }
 .kb-source header:hover { background: var(--bg-subtle, rgba(0,0,0,0.02)); }
 .kb-source header strong { font-weight: 600; color: var(--text-primary); }
-.kb-count { color: var(--text-tertiary); font-size: 12px; }
+.kb-count { color: var(--text-tertiary); font-size: var(--text-base); }
 .kb-children {
   display: none;
   margin-top: var(--s-2);
@@ -4346,7 +4346,7 @@ button:focus-visible,
   gap: var(--s-2);
   padding: 6px 8px;
   border-radius: var(--r-md);
-  font-size: 13px;
+  font-size: var(--text-md);
   cursor: pointer;
 }
 .kb-entry:hover { background: var(--bg-subtle, rgba(0,0,0,0.04)); }
@@ -4355,12 +4355,12 @@ button:focus-visible,
 .kb-entry-size {
   margin-left: auto;
   color: var(--text-tertiary);
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-family: var(--font-mono);
 }
 .kb-empty {
   color: var(--text-tertiary);
-  font-size: 12px;
+  font-size: var(--text-base);
   padding: 4px 0;
 }
 
@@ -4377,24 +4377,24 @@ button:focus-visible,
   display: flex;
   justify-content: space-between;
   font-weight: 500;
-  font-size: 14px;
+  font-size: var(--text-lg);
   margin-bottom: 2px;
 }
 .kb-hit-source {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
   background: var(--bg-subtle, rgba(0,0,0,0.04));
   padding: 1px 8px;
   border-radius: var(--r-md);
 }
 .kb-hit-path {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
   margin-bottom: 4px;
 }
 .kb-hit-path code { font-family: var(--font-mono); }
 .kb-hit-preview {
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--text-secondary);
   line-height: 1.5;
   max-height: 40px;
@@ -4404,7 +4404,7 @@ button:focus-visible,
 .kb-file-meta {
   display: flex;
   gap: var(--s-3);
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
   padding: 4px 0;
 }
@@ -4413,7 +4413,7 @@ button:focus-visible,
   max-height: 400px;
   overflow-y: auto;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-base);
   padding: var(--s-3);
   background: var(--bg-subtle, rgba(0,0,0,0.03));
   border-radius: var(--r-md);
@@ -4422,7 +4422,7 @@ button:focus-visible,
 
 .palette-sep {
   padding: 4px 12px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -4433,7 +4433,7 @@ button:focus-visible,
 
 /* Modal2 form hints */
 .modal2-form label { display: block; margin-bottom: var(--s-3); }
-.modal2-form label > span { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+.modal2-form label > span { display: block; font-size: var(--text-base); color: var(--text-secondary); margin-bottom: 4px; }
 .modal2-form input,
 .modal2-form select,
 .modal2-form textarea {
@@ -4441,9 +4441,9 @@ button:focus-visible,
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: var(--r-md);
-  font-size: 14px;
+  font-size: var(--text-lg);
 }
-.modal2-form .hint { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; display: block; }
+.modal2-form .hint { font-size: var(--text-sm); color: var(--text-tertiary); margin-top: 2px; display: block; }
 .modal2-form em { color: var(--red); font-style: normal; }
 
 /* ============================================================
@@ -4475,7 +4475,7 @@ button:focus-visible,
   border-radius: var(--r-md);
   color: var(--text-secondary);
   text-decoration: none;
-  font-size: 13px;
+  font-size: var(--text-md);
   transition: all .15s;
 }
 .help-nav-item:hover { background: var(--surface-3); color: var(--text-primary); }
@@ -4498,12 +4498,12 @@ button:focus-visible,
 }
 .help-section h3 {
   margin: var(--s-4) 0 var(--s-2);
-  font-size: 16px;
+  font-size: var(--text-xl);
   font-weight: 600;
 }
 .help-section h4 {
   margin: var(--s-3) 0 8px;
-  font-size: 14px;
+  font-size: var(--text-lg);
   font-weight: 600;
 }
 .help-section p { line-height: 1.7; color: var(--text-secondary); margin: 0 0 12px; }
@@ -4530,7 +4530,7 @@ button:focus-visible,
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 16px;
+  font-size: var(--text-xl);
 }
 .help-ws-list { list-style: none; padding-left: 0; }
 .help-ws-list li { padding: 4px 0; }
@@ -4556,21 +4556,21 @@ button:focus-visible,
   flex-shrink: 0;
 }
 .help-ws-card h3 { margin: 0; font-size: 15px; }
-.help-ws-desc { margin: 2px 0 0; font-size: 12px; color: var(--text-tertiary); }
-.help-ws-body { font-size: 13px; }
+.help-ws-desc { margin: 2px 0 0; font-size: var(--text-base); color: var(--text-tertiary); }
+.help-ws-body { font-size: var(--text-md); }
 .help-ws-body ul { margin: 4px 0 8px; padding-left: 18px; }
 .help-ws-body code {
   background: var(--surface-3);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 
 /* Agents table */
 .help-agents-table, .help-shortcut-table, .help-secrets-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 .help-agents-table th, .help-shortcut-table th, .help-secrets-table th {
   text-align: left;
@@ -4601,7 +4601,7 @@ button:focus-visible,
   padding: var(--s-3);
   background: var(--surface-3);
   border-radius: var(--r-md);
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 
 /* Secrets panel */
@@ -4619,7 +4619,7 @@ button:focus-visible,
 }
 
 .help-secrets-summary {
-  font-size: 13px;
+  font-size: var(--text-md);
   color: var(--text-secondary);
   margin-bottom: var(--s-3);
   padding: 8px 12px;
@@ -4631,18 +4631,18 @@ button:focus-visible,
 .help-secrets-table tr.secret-unset.secret-required { background: rgba(239, 68, 68, .05); }
 
 .secret-name {
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
   font-family: SFMono-Regular, Menlo, monospace;
 }
 .secret-desc {
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--text-tertiary);
   display: inline-block;
   margin-top: 2px;
 }
 .secret-preview {
-  font-size: 11px;
+  font-size: var(--text-sm);
   background: var(--surface-3);
   padding: 2px 6px;
   border-radius: 4px;
@@ -4652,7 +4652,7 @@ button:focus-visible,
 .secret-miss { color: var(--red, #dc2626); font-weight: 600; }
 
 .badge-required, .badge-optional {
-  font-size: 10px;
+  font-size: var(--text-xs);
   padding: 1px 6px;
   border-radius: 8px;
   margin-left: 6px;
@@ -4671,7 +4671,7 @@ button:focus-visible,
   padding: 5px 10px;
   margin-right: 6px;
   border-radius: var(--r-sm);
-  font-size: 11px;
+  font-size: var(--text-sm);
   text-decoration: none;
   border: 1px solid var(--border);
   background: var(--surface-1);
@@ -4690,7 +4690,7 @@ button:focus-visible,
 }
 .help-secret-item h4 { margin-top: 0; color: var(--text-primary); }
 .help-secret-item ol { margin: 8px 0 0; padding-left: 24px; }
-.help-secret-item ol li { margin-bottom: 4px; font-size: 13px; }
+.help-secret-item ol li { margin-bottom: 4px; font-size: var(--text-md); }
 .help-secret-item a {
   color: var(--blue);
   text-decoration: none;
@@ -4701,7 +4701,7 @@ button:focus-visible,
   background: var(--surface-3);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 
 /* Provider 比較表(help → secrets → 生圖 provider) */
@@ -4713,7 +4713,7 @@ button:focus-visible,
   width: 100%;
   border-collapse: collapse;
   margin: var(--s-3) 0;
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 .help-provider-compare th, .help-provider-compare td {
   padding: 10px 12px;
@@ -4726,7 +4726,7 @@ button:focus-visible,
   font-weight: 600;
 }
 .help-provider-compare td code {
-  font-size: 11px;
+  font-size: var(--text-sm);
   background: var(--surface-3);
   padding: 2px 6px;
   border-radius: 4px;
@@ -4815,7 +4815,7 @@ button:focus-visible,
 
 /* v1.3 user-guide · help.js sidebar 加 user-guide doc list */
 .help-nav-section {
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
@@ -4842,13 +4842,13 @@ button:focus-visible,
   padding: 40px;
   text-align: center;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--text-lg);
 }
 
 .help-doc-error { color: var(--red); }
 
 .help-doc-rendered {
-  font-size: 14px;
+  font-size: var(--text-lg);
   line-height: 1.7;
   color: var(--text-primary);
 }
@@ -4876,7 +4876,7 @@ button:focus-visible,
 }
 
 .help-doc-rendered h4 {
-  font-size: 14px;
+  font-size: var(--text-lg);
   font-weight: 600;
   margin: 16px 0 6px;
 }
@@ -4896,7 +4896,7 @@ button:focus-visible,
   padding: 2px 6px;
   border-radius: 4px;
   font-family: ui-monospace, SF Mono, Menlo, Consolas, monospace;
-  font-size: 12px;
+  font-size: var(--text-base);
 }
 
 .help-doc-rendered pre {
@@ -4917,7 +4917,7 @@ button:focus-visible,
   border-collapse: collapse;
   width: 100%;
   margin: 0 0 16px;
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 
 .help-doc-rendered table th,
@@ -4960,7 +4960,7 @@ button:focus-visible,
   border-radius: 4px;
   padding: 1px 6px;
   font-family: ui-monospace, monospace;
-  font-size: 11px;
+  font-size: var(--text-sm);
   box-shadow: 0 1px 0 var(--border);
 }
 
@@ -4976,7 +4976,7 @@ button:focus-visible,
   text-align: center;
   padding: 48px 24px;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--text-lg);
 }
 .empty-state-icon {
   font-size: 48px;
@@ -4984,13 +4984,13 @@ button:focus-visible,
   opacity: 0.6;
 }
 .empty-state-title {
-  font-size: 16px;
+  font-size: var(--text-xl);
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 4px;
 }
 .empty-state-hint {
-  font-size: 13px;
+  font-size: var(--text-md);
   color: var(--text-secondary);
 }
 
@@ -5005,7 +5005,7 @@ button:focus-visible,
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 14px;
+  font-size: var(--text-lg);
 }
 .banner-warning {
   border-color: var(--orange, #FF9500);
@@ -5032,15 +5032,15 @@ button:focus-visible,
 }
 .users-stats { display: flex; gap: 20px; flex-wrap: wrap; }
 .users-stat-item {
-  font-size: 14px;
+  font-size: var(--text-lg);
   color: var(--text-secondary);
 }
-.users-stat-item b { color: var(--text-primary); font-weight: 600; font-size: 16px; }
+.users-stat-item b { color: var(--text-primary); font-weight: 600; font-size: var(--text-xl); }
 
 .users-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 .users-table th,
 .users-table td {
@@ -5051,7 +5051,7 @@ button:focus-visible,
 .users-table th {
   background: var(--surface-2);
   font-weight: 600;
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -5066,7 +5066,7 @@ button:focus-visible,
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   color: var(--accent);
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 
@@ -5074,7 +5074,7 @@ button:focus-visible,
   display: inline-block;
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 .users-role-admin { background: color-mix(in srgb, var(--red) 16%, transparent); color: var(--red); }
@@ -5089,7 +5089,7 @@ button:focus-visible,
 }
 .um-section h4 {
   margin: 0 0 10px;
-  font-size: 13px;
+  font-size: var(--text-md);
   color: var(--text-secondary);
   display: flex;
   align-items: center;
@@ -5106,7 +5106,7 @@ button:focus-visible,
 .um-section label {
   display: block;
   margin-bottom: 12px;
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--text-secondary);
 }
 .um-section input[type="text"],
@@ -5117,7 +5117,7 @@ button:focus-visible,
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  font-size: 14px;
+  font-size: var(--text-lg);
   margin-top: 4px;
   background: var(--bg-content);
   color: var(--text-primary);
@@ -5137,7 +5137,7 @@ button:focus-visible,
   background: var(--surface-3, var(--bg-content));
   border: 1px solid var(--border);
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 
 /* 權限樹 */
@@ -5150,7 +5150,7 @@ button:focus-visible,
 .um-perm-group summary {
   padding: 10px 12px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--text-md);
   font-weight: 600;
   user-select: none;
 }
@@ -5174,7 +5174,7 @@ button:focus-visible,
 .um-perm-item input[type="checkbox"] { margin: 0; flex-shrink: 0; }
 .um-perm-item span { flex: 1; }
 .um-perm-item code {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--text-tertiary);
   background: transparent;
   padding: 0;
@@ -5216,7 +5216,7 @@ button:focus-visible,
 }
 #view-help-tip .tip-icon { font-size: 18px; }
 #view-help-tip .tip-title {
-  font-size: 14px;
+  font-size: var(--text-lg);
   font-weight: 600;
   margin: 0;
   flex: 1;
@@ -5232,7 +5232,7 @@ button:focus-visible,
 }
 #view-help-tip .tip-close:hover { background: var(--bg-base); color: var(--text-primary); }
 #view-help-tip .tip-body {
-  font-size: 13px;
+  font-size: var(--text-md);
   line-height: 1.6;
   color: var(--text-primary);
   margin: 0 0 12px;
@@ -5244,7 +5244,7 @@ button:focus-visible,
   color: white;
   border: none;
   border-radius: var(--r-md);
-  font-size: 13px;
+  font-size: var(--text-md);
   font-weight: 500;
   cursor: pointer;
   transition: background 0.12s;
@@ -5255,7 +5255,7 @@ button:focus-visible,
   padding-top: 10px;
   border-top: 1px solid var(--border);
   color: var(--text-tertiary);
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 
 /* view 右上角 ❓ 按鈕 · 強制叫出 tip */
@@ -5267,7 +5267,7 @@ button:focus-visible,
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--bg-content);
-  font-size: 14px;
+  font-size: var(--text-lg);
   cursor: pointer;
   display: grid;
   place-items: center;
@@ -5284,7 +5284,7 @@ button:focus-visible,
 .view-help-btn.inline {
   position: static;
   width: 28px; height: 28px;
-  font-size: 13px;
+  font-size: var(--text-md);
   margin-right: 4px;
 }
 
@@ -5333,7 +5333,7 @@ button:focus-visible,
   margin-bottom: 20px;
 }
 .tutorial-step-num {
-  font-size: 12px;
+  font-size: var(--text-base);
   color: var(--text-secondary);
   font-family: var(--font-mono);
 }
@@ -5363,13 +5363,13 @@ button:focus-visible,
   color: var(--text-primary);
 }
 .tutorial-body {
-  font-size: 14px;
+  font-size: var(--text-lg);
   line-height: 1.7;
   color: var(--text-primary);
 }
 .tutorial-body p { margin: 0 0 10px; }
 .tutorial-body ul, .tutorial-body ol { padding-left: 20px; margin: 8px 0; }
-.tutorial-body code { font-family: var(--font-mono); font-size: 12px; }
+.tutorial-body code { font-family: var(--font-mono); font-size: var(--text-base); }
 .tutorial-actions {
   display: flex;
   justify-content: flex-end;
@@ -5380,7 +5380,7 @@ button:focus-visible,
 .tutorial-actions button {
   padding: 10px 18px;
   border-radius: var(--r-md);
-  font-size: 14px;
+  font-size: var(--text-lg);
   font-weight: 500;
   border: none;
   cursor: pointer;
@@ -5408,7 +5408,7 @@ button:focus-visible,
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   padding: 4px 10px;
-  font-size: 11px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   cursor: pointer;
 }
@@ -5477,7 +5477,7 @@ button:focus-visible,
 }
 .help-role-icon { font-size: 28px; margin-bottom: 8px; }
 .help-role-label { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
-.help-role-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+.help-role-desc { font-size: var(--text-base); color: var(--text-secondary); line-height: 1.5; }
 
 /* D · 進度 bar · 角色 task 完成度 */
 .help-progress-card {
@@ -5494,12 +5494,12 @@ button:focus-visible,
   margin-bottom: 8px;
 }
 .help-progress-text {
-  font-size: 13px;
+  font-size: var(--text-md);
   color: var(--text-primary);
   flex: 1;
 }
 .help-progress-pct {
-  font-size: 14px;
+  font-size: var(--text-lg);
   font-weight: 600;
   color: var(--accent);
   font-family: var(--font-mono);
@@ -5521,7 +5521,7 @@ button:focus-visible,
   align-items: center;
   gap: 10px;
   padding: 8px 0;
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 .help-task-item.done { color: var(--text-secondary); text-decoration: line-through; }
 .help-task-check {
@@ -5537,7 +5537,7 @@ button:focus-visible,
   padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: var(--r-md);
-  font-size: 14px;
+  font-size: var(--text-lg);
   background: var(--bg-content);
   color: var(--text-primary);
   margin-bottom: 16px;
@@ -5558,7 +5558,7 @@ button:focus-visible,
   padding: 10px 14px;
   cursor: pointer;
   border-bottom: 1px solid var(--border);
-  font-size: 13px;
+  font-size: var(--text-md);
   transition: background 0.1s;
 }
 .help-search-result:hover { background: var(--bg-base); }
@@ -5590,7 +5590,7 @@ button:focus-visible,
 /* v1.7 · Multi-tenant branding settings UI */
 .branding-form { display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--bg-content, #fff); border: 0.5px solid var(--border); border-radius: 12px; }
 .branding-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
-.branding-row label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--label-secondary); letter-spacing: 0.04em; }
-.branding-row input[type="text"], .branding-row input:not([type]) { padding: 6px 10px; border: 0.5px solid var(--border); border-radius: 6px; background: var(--bg-base, #fff); font-family: var(--font-system); font-size: 13px; outline: none; }
+.branding-row label { display: flex; flex-direction: column; gap: 4px; font-size: var(--text-base); color: var(--label-secondary); letter-spacing: 0.04em; }
+.branding-row input[type="text"], .branding-row input:not([type]) { padding: 6px 10px; border: 0.5px solid var(--border); border-radius: 6px; background: var(--bg-base, #fff); font-family: var(--font-system); font-size: var(--text-md); outline: none; }
 .branding-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.12); }
 .branding-row input[type="color"] { width: 80px; height: 32px; padding: 2px; border: 0.5px solid var(--border); border-radius: 6px; }
