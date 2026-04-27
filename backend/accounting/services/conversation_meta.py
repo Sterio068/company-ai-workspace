@@ -160,8 +160,18 @@ def iter_user_conversations(db, user_id, limit: int = 200) -> Iterator[dict]:
             user_keys.append(str(user_id))
         except Exception:
             pass
+    # v1.44 perf F-9 修 · 加 projection · 不拉 LibreChat 全 doc
+    # compute_meta 只用 _id / conversationId / title / user / updatedAt / createdAt / agent_id / model
+    # LibreChat conversation doc 含 files / options / tags / messages 等大欄位
+    # 估省 40-60% 網路傳輸(200 doc × 5KB → 200 × 2KB)
+    _CONV_PROJ = {
+        "_id": 1, "conversationId": 1, "title": 1,
+        "user": 1, "updatedAt": 1, "createdAt": 1,
+        "agent_id": 1, "model": 1,
+    }
     cursor = db.conversations.find(
-        {"user": {"$in": user_keys}} if user_keys else {"_id": None}
+        {"user": {"$in": user_keys}} if user_keys else {"_id": None},
+        _CONV_PROJ,
     ).sort("updatedAt", -1).limit(limit)
     for conv in cursor:
         yield conv
