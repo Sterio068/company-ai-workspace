@@ -482,6 +482,8 @@
 }
 
 .fpp-icon {
+  /* v1.45 calm mode · 預設淺色 pastel · hover/selected 才上飽和色
+     原 30% white mix → 70% · 21 個 icon 並排不再強烈 */
   --ws-color: var(--accent);
   position: relative;
   width: 56px;
@@ -489,14 +491,28 @@
   border-radius: 14px;
   background: linear-gradient(
     135deg,
-    color-mix(in oklab, var(--ws-color) 30%, white) 0%,
-    var(--ws-color) 100%
+    color-mix(in oklab, var(--ws-color) 12%, white) 0%,
+    color-mix(in oklab, var(--ws-color) 30%, white) 100%
   );
   display: grid;
   place-items: center;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.1);
+    0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: background var(--dur-fast);
+}
+
+/* v1.45 · selected / hover 上飽和色(原視覺) */
+.fpp-item.selected .fpp-icon,
+.fpp-item:hover .fpp-icon {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--ws-color) 30%, white) 0%,
+    var(--ws-color) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
 @supports not (background: color-mix(in oklab, red, blue)) {

@@ -93,7 +93,8 @@ let _state = {
   view: "grid",      // grid / list / column
   selected: 0,
   segment: "all",
-  showHints: true,
+  // v1.45 calm mode · 預設關 hints overlay(右下浮窗太擾 · 點 ? toggle)
+  showHints: false,
   quickLook: false,
   initialized: false,
   // v1.6
@@ -133,11 +134,12 @@ async function _fetchSuggestions() {
 // ============================================================
 function _render() {
   if (!_root) return;
+  // v1.45 calm mode · 移除 PathBar(只有「主畫面」沒意義)
+  // 保留 _renderPathBar 函式 · 之後若用 router 再 wire 回來
   _root.innerHTML = `
     ${_renderToolbar()}
     ${_renderAiBanner()}
     ${_renderMiniToday()}
-    ${_renderPathBar()}
     ${_renderSegments()}
     <div class="fpp-main" id="fpp-main">
       ${_renderGrid()}
@@ -199,10 +201,6 @@ function _renderToolbar() {
         <span class="fpp-logo-text">${escapeHtml(brand.companyShort)}</span>
         <span class="fpp-logo-arrow">▾</span>
       </button>
-      <div class="fpp-nav-arrows">
-        <button type="button" class="fpp-arrow" disabled aria-label="上一頁">‹</button>
-        <button type="button" class="fpp-arrow" disabled aria-label="下一頁">›</button>
-      </div>
       <div class="fpp-view-switch" role="tablist">
         ${["grid", "list", "column"].map(v => `
           <button type="button" class="fpp-view-btn ${_state.view === v ? "active" : ""}"
@@ -239,6 +237,11 @@ function _renderMiniToday() {
   const userName = window.app?.user?.name || window.app?.user?.email?.split("@")[0] || "你";
   const greeting = now.getHours() < 12 ? "早安" : now.getHours() < 18 ? "午安" : "晚安";
 
+  // v1.45 calm mode · Mini-Today 從 3 widget → 1 個焦點(只留有行動意義的 AI 建議)
+  // 12 次對話 / 7.4 小時節省 → 純資訊性 · 不是 today 的決策依據 · 移除
+  // 「本週省 X 小時」也移除(數字過於樂觀沒實證)
+  // 焦點:時間 · 問候 · AI 建議數(可點 → Inbox)
+  const sCnt = _state.aiSuggestions.length;
   return `
     <div class="fpp-today">
       <div class="fpp-today-time">
@@ -247,32 +250,18 @@ function _renderMiniToday() {
       </div>
       <div class="fpp-today-greeting">
         <div class="fpp-greeting-text">${greeting} ${escapeHtml(userName)}</div>
-        <div class="fpp-greeting-sub">本週省了 7.4 小時</div>
+        <div class="fpp-greeting-sub">${sCnt > 0 ? `AI 小幫手有 ${sCnt} 件建議` : "今天沒有待處理建議 · 開始工作吧"}</div>
       </div>
-      <div class="fpp-widgets">
-        <div class="fpp-widget" data-fpp-widget="conversations">
+      ${sCnt > 0 ? `
+        <div class="fpp-widget fpp-widget-accent fpp-widget-solo" data-fpp-widget="inbox">
           <div class="fpp-widget-row">
-            <span class="fpp-widget-big">12</span>
-            <span class="fpp-widget-unit">次</span>
-          </div>
-          <div class="fpp-widget-label">今日對話</div>
-        </div>
-        <div class="fpp-widget" data-fpp-widget="saved">
-          <div class="fpp-widget-row">
-            <span class="fpp-widget-big">7.4</span>
-            <span class="fpp-widget-unit">小時</span>
-          </div>
-          <div class="fpp-widget-label">本週節省</div>
-        </div>
-        <div class="fpp-widget fpp-widget-accent" data-fpp-widget="inbox">
-          <div class="fpp-widget-row">
-            <span class="fpp-widget-big">${_state.aiSuggestions.length}</span>
+            <span class="fpp-widget-big">${sCnt}</span>
             <span class="fpp-widget-unit">件</span>
             <span class="fpp-widget-cta">✨ 看建議</span>
           </div>
           <div class="fpp-widget-label">AI 小幫手建議</div>
         </div>
-      </div>
+      ` : ""}
     </div>
   `;
 }
@@ -333,19 +322,16 @@ function _renderGrid() {
 }
 
 function _renderStatusBar() {
+  // v1.45 calm mode · 移除 keyboard hint 字(在 Hints overlay 內 · 不重複)
+  // 移除 dollar 用量 + 容器健康(這 2 個 admin 才需 · 收進中控頁)
+  // 留:選中 · 待回應(行動意義)
   const item = _items[_state.selected];
   return `
     <div class="fpp-status">
       <span class="fpp-status-dot" aria-hidden="true"></span>
-      <span>6 容器 healthy</span>
-      <span class="fpp-status-sep">│</span>
       <span>選中: <b>${escapeHtml(item?.name || "—")}</b></span>
-      <span class="fpp-status-sep">│</span>
-      <span>$0.45 / $20</span>
-      <span class="fpp-status-sep">│</span>
-      <span class="fpp-status-accent">● 2 待回應</span>
       <span class="fpp-status-spacer"></span>
-      <span class="fpp-status-keys">j/k 移動 · space 預覽 · enter 開啟 · ? 提示</span>
+      <span class="fpp-status-accent">● 2 待回應</span>
     </div>
   `;
 }
