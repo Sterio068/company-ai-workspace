@@ -191,8 +191,20 @@ def get_recent_metas(db, user_email: str, user_id, limit: int = 100) -> list:
     # v1.10 batch · 一次拿所有 conv 的 messages · 端 client 分組
     conv_ids = [c.get("conversationId") or str(c.get("_id")) for c in convs]
     # 加 conversationId index 後 · 此 query 走 indexed lookup(v1.8 main.py 加的)
+    # v1.24 perf · 加 projection 只取需要欄位 · 不拉 LibreChat 全 doc
+    # 100 conv × 20 msg 完整 doc 含 files/attachments 估 60-80% network 浪費
+    _MSG_PROJECTION = {
+        "_id": 0,
+        "conversationId": 1,
+        "text": 1,
+        "content": 1,
+        "sender": 1,
+        "isCreatedByUser": 1,
+        "createdAt": 1,
+    }
     all_msgs = list(db.messages.find(
-        {"conversationId": {"$in": conv_ids}}
+        {"conversationId": {"$in": conv_ids}},
+        _MSG_PROJECTION,
     ).sort([("conversationId", 1), ("createdAt", -1)]))
     msgs_by_conv: dict = {}
     for m in all_msgs:

@@ -575,14 +575,16 @@ export const app = {
     if (view === "site") siteSurvey.init();
     // v1.3 · User Management
     if (view === "users" && isAdmin) userMgmt.init();
-    [0, 250, 1000].forEach(delay => {
-      setTimeout(() => {
-        localizeVisibleText(document.querySelector(`.view[data-view="${view}"]`));
-        localizeVisibleText(document.querySelector(".usage-aside"));
-        localizeVisibleText(document.querySelector(".command-palette"));
-        localizeVisibleText(document.querySelector(".chat-panel"));
-      }, delay);
-    });
+    // v1.24 perf · 從 3 次 setTimeout × 4 querySelector × 106 regex/node
+    // 改成單次 1000ms debounce(view 切換時 view 內容已 stable)
+    // 避免 ~80ms × 3 = 240ms 主線程阻塞
+    if (this._localizeTimer) clearTimeout(this._localizeTimer);
+    this._localizeTimer = setTimeout(() => {
+      localizeVisibleText(document.querySelector(`.view[data-view="${view}"]`));
+      localizeVisibleText(document.querySelector(".usage-aside"));
+      localizeVisibleText(document.querySelector(".command-palette"));
+      localizeVisibleText(document.querySelector(".chat-panel"));
+    }, 250);
   },
 
   // vNext C · 在當前 active view header 注入 ❓ 按鈕
