@@ -418,12 +418,10 @@ from auth_deps import serialize  # noqa: E402,F401
 # ============================================================
 _users_col = db.users  # LibreChat 的 users collection
 
-# ADMIN_EMAILS env 白名單(逗號分隔)· 相容舊部署用 ADMIN_EMAIL 單值
-# v1.3 batch6 · CRITICAL C-3 · 移除 hardcode email fallback · 避免 git leak
-# dev 仍可用 ADMIN_EMAIL env 設; prod 必須明確設 ADMIN_EMAILS
-_admin_allowlist = {e.strip().lower() for e in (
-    os.getenv("ADMIN_EMAILS", os.getenv("ADMIN_EMAIL", "")).split(",")
-) if e.strip()}
+# v1.31 · architect R2 round 5 · _admin_allowlist 抽到 auth_deps.load_admin_allowlist
+# 行為 100% 一致(從 ADMIN_EMAILS / ADMIN_EMAIL env 讀)
+from auth_deps import load_admin_allowlist
+_admin_allowlist = load_admin_allowlist()
 if not _admin_allowlist:
     logger.warning(
         "[admin] ADMIN_EMAILS 未設 · admin endpoint 將完全鎖死 · "
@@ -468,65 +466,17 @@ def current_user_email(
     return (x_user_email or "").strip().lower() or None
 
 
+# v1.31 · architect R2 round 5 · require_admin 抽到 auth_deps.make_require_admin
+# 行為 100% 一致(三道路徑:internal token / cookie + 白名單 / users.role==ADMIN)
+# 此處薄包裝 · 加 Depends(current_user_email) FastAPI 依賴(auth_deps 不知 fastapi)
+from auth_deps import make_require_admin
+_require_admin_impl = make_require_admin(_users_col, _admin_allowlist, logger=logger)
+
+
 def require_admin(request: Request,
                   email: Optional[str] = Depends(current_user_email)) -> str:
-    """硬權限 · 用在所有 /admin/* 與敏感端點。
-
-    Codex R3.2 / R5#2 · 三道路徑:
-    1. Cookie-trusted email + 白名單 / users.role == ADMIN(嚴格 · production)
-    2. X-Internal-Token header(cron / 內部 service · ECC_INTERNAL_TOKEN env)
-    3. X-User-Email + 白名單 + JWT_SECRET 未設(legacy 測試模式 · production 不接受)
-    """
-    # ============ Codex R5#2 + R8#2 · 內部 service token(daily-digest cron 用) ============
-    # R8#2 · hmac.compare_digest 防 timing attack
-    internal_token_expected = os.getenv("ECC_INTERNAL_TOKEN", "").strip()
-    if internal_token_expected:
-        provided = (request.headers.get("X-Internal-Token") or "").strip()
-        if _secrets_equal(provided, internal_token_expected):
-            return "internal:cron"
-
-    if not email:
-        raise HTTPException(403, "未識別使用者 · 請從 launcher 進入登入")
-
-    trusted = getattr(request.state, "email_trusted", False)
-    # R6#1 · 改檢查 JWT_REFRESH_SECRET(cookie 用這個簽)
-    _refresh_sec = os.getenv("JWT_REFRESH_SECRET", "")
-    jwt_configured = bool(_refresh_sec) and not _refresh_sec.startswith("<GENERATE")
-
-    if not trusted and jwt_configured:
-        logger.warning(
-            "[auth] admin endpoint %s 被非 cookie 路徑呼叫(email=%s)· 擋",
-            request.url.path, email,
-        )
-        raise HTTPException(
-            403,
-            "Admin 操作需從 launcher 登入(含 LibreChat cookie)· "
-            "X-User-Email header 單獨不足以授權 · 或設 X-Internal-Token"
-        )
-
-    if email in _admin_allowlist:
-        try:
-            u = _users_col.find_one({"email": email}, {"chengfu_active": 1})
-            if u and u.get("chengfu_active") is False:
-                raise HTTPException(403, "帳號已停用 · 請聯絡管理員")
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.warning("[auth] admin allowlist users.find_one fail email=%s · %s", email, e)
-            raise HTTPException(503, "使用者權限查詢失敗 · 請稍後再試")
-        return email
-    try:
-        u = _users_col.find_one({"email": email})
-        if u and u.get("chengfu_active") is False:
-            raise HTTPException(403, "帳號已停用 · 請聯絡管理員")
-        if u and (u.get("role") or "").upper() == "ADMIN":
-            return email
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.warning("[auth] users.find_one fail email=%s · %s", email, e)
-        raise HTTPException(503, "使用者權限查詢失敗 · 請稍後再試")
-    raise HTTPException(403, f"需要管理員權限 · {email} 不在白名單內")
+    """硬權限 · 用在所有 /admin/* 與敏感端點(thin wrapper · 真邏輯在 auth_deps)"""
+    return _require_admin_impl(request, email)
 
 
 # ============================================================

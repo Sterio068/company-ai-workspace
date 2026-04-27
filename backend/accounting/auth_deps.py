@@ -211,6 +211,98 @@ def make_cookie_verifier(users_col, logger=None):
 
 
 # ============================================================
+# v1.31 · admin allowlist + require_admin · architect R2 round 5(R2 完整)
+# ============================================================
+def load_admin_allowlist():
+    """從 env ADMIN_EMAILS / ADMIN_EMAIL 讀 admin 白名單(lower-case set)
+
+    v1.3 batch6 · CRITICAL C-3 · 移除 hardcode email fallback · 避免 git leak
+    dev 仍可用 ADMIN_EMAIL env 設;prod 必須明確設 ADMIN_EMAILS
+    """
+    raw = os.getenv("ADMIN_EMAILS", os.getenv("ADMIN_EMAIL", ""))
+    return {e.strip().lower() for e in raw.split(",") if e.strip()}
+
+
+def make_require_admin(users_col, admin_allowlist, logger=None):
+    """factory · 回 FastAPI dep callable · 三道路徑授權:
+    1. X-Internal-Token(cron / 內部 service · ECC_INTERNAL_TOKEN env · hmac compare)
+    2. cookie-trusted email + 白名單 / users.role == ADMIN(嚴格 · production)
+    3. legacy fallback(JWT_REFRESH_SECRET 未設 · 給 dev mode)
+
+    Args:
+        users_col: pymongo collection · find_one({"email": ...}) 用
+        admin_allowlist: set[str] · email lowercase
+        logger: optional · warn 用
+
+    Returns:
+        require_admin(request, email) → email | raise HTTPException
+    """
+    # 延遲 import · 避 fastapi 在 auth_deps top-level 強依賴
+    from fastapi import HTTPException
+
+    def _log(msg, *args):
+        if logger:
+            logger.warning(msg, *args)
+
+    def require_admin(request, email):
+        # 1) Internal token · 比 secret-equal
+        internal_token_expected = os.getenv("ECC_INTERNAL_TOKEN", "").strip()
+        if internal_token_expected:
+            provided = (request.headers.get("X-Internal-Token") or "").strip()
+            if _secrets_equal(provided, internal_token_expected):
+                return "internal:cron"
+
+        if not email:
+            raise HTTPException(403, "未識別使用者 · 請從 launcher 進入登入")
+
+        trusted = getattr(request.state, "email_trusted", False)
+        _refresh_sec = os.getenv("JWT_REFRESH_SECRET", "")
+        jwt_configured = bool(_refresh_sec) and not _refresh_sec.startswith("<GENERATE")
+
+        # 2) JWT 已設但 cookie 未驗證 → 擋(防 X-User-Email 偽造)
+        if not trusted and jwt_configured:
+            _log(
+                "[auth] admin endpoint %s 被非 cookie 路徑呼叫(email=%s)· 擋",
+                request.url.path, email,
+            )
+            raise HTTPException(
+                403,
+                "Admin 操作需從 launcher 登入(含 LibreChat cookie)· "
+                "X-User-Email header 單獨不足以授權 · 或設 X-Internal-Token"
+            )
+
+        # 3) 白名單 · 同步檢查 chengfu_active
+        if email in admin_allowlist:
+            try:
+                u = users_col.find_one({"email": email}, {"chengfu_active": 1})
+                if u and u.get("chengfu_active") is False:
+                    raise HTTPException(403, "帳號已停用 · 請聯絡管理員")
+            except HTTPException:
+                raise
+            except Exception as e:
+                _log("[auth] admin allowlist users.find_one fail email=%s · %s", email, e)
+                raise HTTPException(503, "使用者權限查詢失敗 · 請稍後再試")
+            return email
+
+        # 4) users.role == ADMIN · DB 內標記
+        try:
+            u = users_col.find_one({"email": email})
+            if u and u.get("chengfu_active") is False:
+                raise HTTPException(403, "帳號已停用 · 請聯絡管理員")
+            if u and (u.get("role") or "").upper() == "ADMIN":
+                return email
+        except HTTPException:
+            raise
+        except Exception as e:
+            _log("[auth] users.find_one fail email=%s · %s", email, e)
+            raise HTTPException(503, "使用者權限查詢失敗 · 請稍後再試")
+
+        raise HTTPException(403, f"需要管理員權限 · {email} 不在白名單內")
+
+    return require_admin
+
+
+# ============================================================
 # v1.25 · BSON serialize · 從 main.py 抽出(architect R2 round 2)
 # ============================================================
 def serialize(doc):
