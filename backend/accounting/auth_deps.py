@@ -115,6 +115,102 @@ def make_user_or_ip(verify_cookie_fn, get_remote_address_fn):
 
 
 # ============================================================
+# v1.30 · cookie verification + email cache · architect R2 round 4
+# ============================================================
+def make_cookie_verifier(users_col, logger=None):
+    """factory · 給 main.py 注入 users_col + logger 後產生:
+    - verify_cookie(request) → email | None
+    - lookup_user_email(user_id) → email | None(LRU cache · 60s TTL)
+
+    純函式設計 · 跟 main.py 100% 行為一致:
+    1. JWT decode refreshToken
+    2. payload.email 直接拿
+    3. 否則 payload.id → users_col.find_one 反查
+    4. 反查走 OrderedDict 60s LRU(命中 move_to_end · 滿 200 evict 最舊)
+
+    Returns:
+        (verify_cookie, lookup_user_email)
+    """
+    import time
+    from collections import OrderedDict
+    try:
+        import jwt as _jwt
+    except ImportError:
+        _jwt = None
+
+    _CACHE: "OrderedDict[str, tuple]" = OrderedDict()
+    _TTL = 60.0
+    _MAX = 200
+
+    def _log_debug(msg, *args):
+        if logger:
+            logger.debug(msg, *args)
+
+    def lookup_user_email(user_id: str):
+        """從 users_col 反查 email · 60s LRU"""
+        now = time.time()
+        cached = _CACHE.get(user_id)
+        if cached and now - cached[1] < _TTL:
+            _CACHE.move_to_end(user_id)
+            return cached[0] or None
+        try:
+            try:
+                oid = ObjectId(user_id)
+            except Exception:
+                return None
+            u = users_col.find_one({"_id": oid}, {"email": 1})
+            email = (u.get("email") or "").strip().lower() if u else ""
+            while len(_CACHE) >= _MAX:
+                _CACHE.popitem(last=False)
+            _CACHE[user_id] = (email, now)
+            return email or None
+        except Exception as e:
+            _log_debug("[auth] users lookup id=%s · %s", user_id, e)
+            return None
+
+    def verify_cookie(request):
+        """LibreChat refreshToken cookie → email"""
+        if _jwt is None:
+            return None
+        try:
+            refresh_token = request.cookies.get("refreshToken")
+            if not refresh_token:
+                return None
+            sec = os.getenv("JWT_REFRESH_SECRET", "")
+            if not sec or sec.startswith("<GENERATE"):
+                return None
+            try:
+                payload = _jwt.decode(refresh_token, sec, algorithms=["HS256"])
+            except _jwt.ExpiredSignatureError:
+                _log_debug("[auth] refreshToken expired · user should re-login")
+                return None
+            except _jwt.InvalidTokenError as e:
+                _log_debug("[auth] refreshToken invalid · %s", e)
+                return None
+            email_in_payload = (payload.get("email") or "").strip().lower()
+            if email_in_payload:
+                return email_in_payload
+            user_id = (
+                payload.get("id") or payload.get("sub") or payload.get("userId")
+            )
+            if not user_id:
+                _log_debug(
+                    "[auth] refreshToken payload 無 id 欄位 · keys=%s",
+                    list(payload.keys()),
+                )
+                return None
+            return lookup_user_email(str(user_id))
+        except Exception as e:
+            _log_debug("[auth] cookie verify outer fail: %s", e)
+            return None
+
+    # 暴露 cache 給測試
+    verify_cookie._cache = _CACHE
+    lookup_user_email._cache = _CACHE
+    return verify_cookie, lookup_user_email
+
+
+# ============================================================
 # v1.25 · BSON serialize · 從 main.py 抽出(architect R2 round 2)
 # ============================================================
 def serialize(doc):
