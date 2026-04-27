@@ -317,15 +317,15 @@ function _renderGrid() {
       ${_items.map((it, i) => `
         <button class="fpp-item ${i === _state.selected ? "selected" : ""}"
                 data-fpp-item="${i}" tabindex="${i === _state.selected ? 0 : -1}"
-                aria-label="${escapeHtml(it.name)} · ${it.date}">
-          <div class="fpp-icon" style="--ws-color:${it.color}" aria-hidden="true">
-            <span class="fpp-icon-kind">${it.kind}</span>
+                aria-label="${escapeHtml(it.name)} · ${escapeHtml(it.date)}">
+          <div class="fpp-icon" style="--ws-color:${escapeHtml(it.color)}" aria-hidden="true">
+            <span class="fpp-icon-kind">${escapeHtml(it.kind)}</span>
             ${it.presence === "typing" ? `<span class="fpp-icon-presence typing" title="對方輸入中">✏</span>` : ""}
             ${it.presence === "running" ? `<span class="fpp-icon-presence running" title="AI 小幫手進行中">⟳</span>` : ""}
-            ${it.unread > 0 ? `<span class="fpp-icon-badge">${it.unread}</span>` : ""}
+            ${it.unread > 0 ? `<span class="fpp-icon-badge">${escapeHtml(String(it.unread))}</span>` : ""}
           </div>
           <span class="fpp-item-name">${escapeHtml(it.name)}</span>
-          <span class="fpp-item-date">${it.date}</span>
+          <span class="fpp-item-date">${escapeHtml(it.date)}</span>
         </button>
       `).join("")}
     </div>
@@ -562,8 +562,8 @@ function _openQuickLook() {
     <div class="fpp-quicklook">
       <div class="fpp-quicklook-head">
         <div class="fpp-quicklook-title">
-          <div class="fpp-icon fpp-icon-large" style="--ws-color:${item.color}">
-            <span class="fpp-icon-kind">${item.kind}</span>
+          <div class="fpp-icon fpp-icon-large" style="--ws-color:${escapeHtml(item.color)}" aria-hidden="true">
+            <span class="fpp-icon-kind">${escapeHtml(item.kind)}</span>
           </div>
           <div>
             <div class="fpp-quicklook-name" id="fpp-quicklook-title">${escapeHtml(item.name)}</div>

@@ -7,7 +7,7 @@
 <title data-brand-title>智慧助理</title>
 <!-- v1.4 · macOS 設計 token 重置 · 在 launcher.css 之前載入 · :root tokens 被 launcher 引用 -->
 <link rel="stylesheet" href="/static/styles/tokens-macos.css?v=6">
-<link rel="stylesheet" href="/static/launcher.css?v=77">
+<link rel="stylesheet" href="/static/launcher.css?v=78">
 <!-- v1.4 macOS · menubar shell · critical · always 顯示 -->
 <link rel="stylesheet" href="/static/styles/menubar.css?v=5">
 <!-- v1.5 macOS · Dashboard F++ · 主畫面 IA · critical · 預設首頁 -->
@@ -45,7 +45,7 @@
 
     <nav class="sidebar-section primary-nav">
       <div class="sidebar-section-label">主區</div>
-      <a aria-label="今日(⌘0)" class="sidebar-item nav-item active" data-view="dashboard">
+      <button type="button" aria-label="今日(⌘0)" class="sidebar-item nav-item active" data-view="dashboard">
         <span class="sidebar-icon">
           <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 12L12 3l9 9"/><path d="M5 10v10h14V10"/>
@@ -53,27 +53,27 @@
         </span>
         <span class="sidebar-label">今日</span>
         <kbd class="sidebar-shortcut">⌘0</kbd>
-      </a>
-      <a aria-label="工作包" class="sidebar-item nav-item" data-view="projects">
+      </button>
+      <button type="button" aria-label="工作包" class="sidebar-item nav-item" data-view="projects">
         <span class="sidebar-icon">◎</span>
         <span class="sidebar-label">工作包</span>
         <span class="sidebar-count" id="project-count">0</span>
         <kbd class="sidebar-shortcut">⌘P</kbd>
-      </a>
-      <a aria-label="資料" class="sidebar-item nav-item" data-view="knowledge">
+      </button>
+      <button type="button" aria-label="資料" class="sidebar-item nav-item" data-view="knowledge">
         <span class="sidebar-icon">◇</span>
         <span class="sidebar-label">資料</span>
-      </a>
-      <a aria-label="營運中控" class="sidebar-item nav-item" data-view="admin" id="ops-nav" style="display:none">
+      </button>
+      <button type="button" aria-label="營運中控" class="sidebar-item nav-item" data-view="admin" id="ops-nav" style="display:none">
         <span class="sidebar-icon">▦</span>
         <span class="sidebar-label">中控</span>
         <kbd class="sidebar-shortcut">⌘M</kbd>
-      </a>
+      </button>
     </nav>
 
     <details class="sidebar-section sidebar-details">
       <summary class="sidebar-section-label">流程模板</summary>
-      <a aria-label="投標(⌘1)" class="sidebar-item ws-nav" data-ws="1" style="--ws-color:#FF3B30">
+      <button type="button" aria-label="投標(⌘1)" class="sidebar-item ws-nav" data-ws="1" style="--ws-color:#FF3B30">
         <span class="sidebar-icon" style="color:#FF3B30">
           <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none">
             <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/>
@@ -81,8 +81,8 @@
         </span>
         <span class="sidebar-label">投標</span>
         <kbd class="sidebar-shortcut">⌘1</kbd>
-      </a>
-      <a aria-label="活動執行(⌘2)" class="sidebar-item ws-nav" data-ws="2" style="--ws-color:#FF9500">
+      </button>
+      <button type="button" aria-label="活動執行(⌘2)" class="sidebar-item ws-nav" data-ws="2" style="--ws-color:#FF9500">
         <span class="sidebar-icon" style="color:#FF9500">
           <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/>
@@ -90,8 +90,8 @@
         </span>
         <span class="sidebar-label">活動執行</span>
         <kbd class="sidebar-shortcut">⌘2</kbd>
-      </a>
-      <a aria-label="設計協作(⌘3)" class="sidebar-item ws-nav" data-ws="3" style="--ws-color:#AF52DE">
+      </button>
+      <button type="button" aria-label="設計協作(⌘3)" class="sidebar-item ws-nav" data-ws="3" style="--ws-color:#AF52DE">
         <span class="sidebar-icon" style="color:#AF52DE">
           <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none">
             <circle cx="12" cy="12" r="10"/><circle cx="7" cy="10" r="1.5" fill="currentColor"/><circle cx="17" cy="10" r="1.5" fill="currentColor"/><circle cx="9.5" cy="15" r="1.5" fill="currentColor"/><circle cx="14.5" cy="15" r="1.5" fill="currentColor"/>
@@ -99,8 +99,8 @@
         </span>
         <span class="sidebar-label">設計協作</span>
         <kbd class="sidebar-shortcut">⌘3</kbd>
-      </a>
-      <a aria-label="公關溝通(⌘4)" class="sidebar-item ws-nav" data-ws="4" style="--ws-color:#34C759">
+      </button>
+      <button type="button" aria-label="公關溝通(⌘4)" class="sidebar-item ws-nav" data-ws="4" style="--ws-color:#34C759">
         <span class="sidebar-icon" style="color:#34C759">
           <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 11l18-5v12L3 13z"/><path d="M11.5 19.5L8 22v-6"/>
@@ -108,8 +108,8 @@
         </span>
         <span class="sidebar-label">公關溝通</span>
         <kbd class="sidebar-shortcut">⌘4</kbd>
-      </a>
-      <a aria-label="營運後勤(⌘5)" class="sidebar-item ws-nav" data-ws="5" style="--ws-color:#007AFF">
+      </button>
+      <button type="button" aria-label="營運後勤(⌘5)" class="sidebar-item ws-nav" data-ws="5" style="--ws-color:#007AFF">
         <span class="sidebar-icon" style="color:#007AFF">
           <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 12h4M7 8h10M7 16h7"/>
@@ -117,12 +117,12 @@
         </span>
         <span class="sidebar-label">營運後勤</span>
         <kbd class="sidebar-shortcut">⌘5</kbd>
-      </a>
+      </button>
     </details>
 
     <details class="sidebar-section sidebar-details">
       <summary class="sidebar-section-label">更多</summary>
-      <a aria-label="商機追蹤" class="sidebar-item nav-item admin-only" data-view="crm">
+      <button type="button" aria-label="商機追蹤" class="sidebar-item nav-item admin-only" data-view="crm">
         <span class="sidebar-icon">
           <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
@@ -130,8 +130,8 @@
         </span>
         <span class="sidebar-label">商機追蹤</span>
         <span class="sidebar-count" id="crm-count">—</span>
-      </a>
-      <a aria-label="會計" class="sidebar-item nav-item admin-only" data-view="accounting">
+      </button>
+      <button type="button" aria-label="會計" class="sidebar-item nav-item admin-only" data-view="accounting">
         <span class="sidebar-icon">
           <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
@@ -139,16 +139,16 @@
         </span>
         <span class="sidebar-label">會計</span>
         <span class="sidebar-count" id="accounting-tx-count">—</span>
-      </a>
-      <a aria-label="會議速記" class="sidebar-item nav-item" data-view="meeting">
+      </button>
+      <button type="button" aria-label="會議速記" class="sidebar-item nav-item" data-view="meeting">
         <span class="sidebar-icon">🎤</span>
         <span class="sidebar-label">會議速記</span>
-      </a>
-      <a aria-label="場勘" class="sidebar-item nav-item" data-view="site">
+      </button>
+      <button type="button" aria-label="場勘" class="sidebar-item nav-item" data-view="site">
         <span class="sidebar-icon">📸</span>
         <span class="sidebar-label">場勘</span>
-      </a>
-      <a aria-label="使用教學" class="sidebar-item nav-item" data-view="help">
+      </button>
+      <button type="button" aria-label="使用教學" class="sidebar-item nav-item" data-view="help">
         <span class="sidebar-icon">
           <svg class="icon" width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -1038,7 +1038,7 @@
 <div class="caption" id="caption" hidden></div>
 
 <!-- BUILD_INJECT_BUNDLE_START -->
-<script type="module" src="/static/dist/app.NTLQX5JH.js"></script>
+<script type="module" src="/static/dist/app.UYBEHL25.js"></script>
 <script type="module" src="/static/dist/onboarding.C4PKK745.js"></script>
 <!-- BUILD_INJECT_BUNDLE_END -->
 </body>
