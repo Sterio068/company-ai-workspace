@@ -119,7 +119,8 @@ export const app = {
   activeProjectId: null,
   projectFilter: "all",
   projectSearch: "",
-  aiProvider: localStorage.getItem(AI_PROVIDER_KEY) || DEFAULT_AI_PROVIDER,
+  // v1.21 · aiProvider 完全搬到 store · this.aiProvider 不再保存(architect R1 god object 縮圈)
+  // 讀:store.get("engine") · 寫:store.set("engine", ...)
   todayAttachments: [],
 
   async init() {
@@ -150,7 +151,8 @@ export const app = {
     }
 
     // 注入 chat / crm 的 store 依賴
-    chat.bind({ agents: () => this.agents, user: () => this.user, provider: () => this.aiProvider });
+    // v1.21 · provider 改直接讀 store · 不再走 this.aiProvider mirror
+    chat.bind({ agents: () => this.agents, user: () => this.user, provider: () => this.getAIProvider() });
     crm.setUser(this.user?.email);
     palette.bind(() => this._paletteItems());
     // V1.1 §E-3 · 知識庫全文搜尋加入 palette(async · debounced)
@@ -261,17 +263,15 @@ export const app = {
     }
   },
 
-  // ---------- AI Provider (v1.11 · backed by store) ----------
+  // ---------- AI Provider (v1.21 · 完全 store-backed · this.aiProvider 不再保存) ----------
   normalizeAIProvider(provider) {
     return AI_PROVIDERS[provider] ? provider : DEFAULT_AI_PROVIDER;
   },
 
   getAIProvider() {
-    // Read from store (single source of truth · backed by localStorage)
-    const cur = store.get("engine") || this.aiProvider;
-    const norm = this.normalizeAIProvider(cur);
-    this.aiProvider = norm;  // mirror · 給 .bind callbacks 用
-    return norm;
+    // 唯一 source of truth = store
+    const cur = store.get("engine");
+    return this.normalizeAIProvider(cur);
   },
 
   setAIProvider(provider) {
@@ -280,9 +280,7 @@ export const app = {
       this.renderAIProvider();
       return;
     }
-    this.aiProvider = next;
-    // store.set 自動 persist + fire engine-changed event(legacy 相容)
-    // 同時保留 AI_PROVIDER_KEY localStorage 寫入,讓未升級 module 仍能讀到
+    // store.set 自動 persist(localStorage)+ fire engine-changed event
     store.set("engine", next);
     this.renderAIProvider();
     const meta = AI_PROVIDERS[next];
