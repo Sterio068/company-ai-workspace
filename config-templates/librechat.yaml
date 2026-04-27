@@ -124,6 +124,28 @@ endpoints:
 #         agent_id: "agent_xxxxx"  # 從 create-agents.py 輸出取得
 #     # ... 其他 9 個
 
+# ==================== 語音雙向(v1.53 · 用既有 OPENAI_API_KEY)====================
+# 對承富業務最直接的兩塊:
+#   1. STT(Whisper)→ 會議速記 Agent · 業主上傳會議錄音直接出逐字稿
+#   2. TTS(gpt-4o-mini-tts)→ 公關寫手 · 新聞稿 / 主持台詞朗讀預覽
+#
+# LibreChat UI 自動長出麥克風 icon + 喇叭 icon · 不用前端額外做事
+# 模型 ID 若 OpenAI 升版可在 .env 覆寫(LIBRECHAT_STT_MODEL / LIBRECHAT_TTS_MODEL)
+speech:
+  speechTab:
+    advancedMode: true
+  stt:
+    openai:
+      url: "https://api.openai.com/v1/audio/transcriptions"
+      apiKey: "${OPENAI_API_KEY}"
+      model: "whisper-1"  # 2026 最新仍 whisper-1 · 若有 gpt-4o-transcribe 改這裡
+  tts:
+    openai:
+      url: "https://api.openai.com/v1/audio/speech"
+      apiKey: "${OPENAI_API_KEY}"
+      model: "gpt-4o-mini-tts"  # 取代 tts-1 · 自然度顯著提升
+      voices: ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
+
 # ==================== Actions(外部 API · v1.51 啟用)====================
 # Agents 透過 OpenAPI spec 呼叫的外部工具。
 # allowedDomains 是 LibreChat 安全白名單 · 沒列上去就會被 isActionDomainAllowed 擋
