@@ -40,7 +40,7 @@ def _parse_email_set(env: str, default: str = "") -> set[str]:
 
 
 @dataclass(frozen=True)
-class ChengfuSettings:
+class CompanyAISettings:
     """本公司 accounting 全域設定 · immutable · init-once"""
 
     # ---- 環境 ----
@@ -87,11 +87,11 @@ class ChengfuSettings:
         return not self.is_prod
 
 
-def _load_from_env() -> ChengfuSettings:
+def _load_from_env() -> CompanyAISettings:
     """從 env 一次讀取 · 不支援 reload(改完 restart container)"""
     env = os.getenv("ECC_ENV", "").lower() or "development"
     node = os.getenv("NODE_ENV", "").lower() or "development"
-    return ChengfuSettings(
+    return CompanyAISettings(
         env="production" if env == "production" else "development",
         node_env=node,
         jwt_refresh_secret=os.getenv("JWT_REFRESH_SECRET", ""),
@@ -116,7 +116,7 @@ def _load_from_env() -> ChengfuSettings:
 settings = _load_from_env()
 
 
-def reload_settings() -> ChengfuSettings:
+def reload_settings() -> CompanyAISettings:
     """Dev / test 用 · 覆寫 module-level singleton"""
     global settings
     settings = _load_from_env()

@@ -102,7 +102,7 @@
 **file:** `scripts/daily-digest.py:92-120`
 **問題:** 只 notify on failure · success silent · 管理員看不出漏跑
 **影響:** 5 成功 + 1 失敗(網路抖動) · admin 找不出哪天漏
-**修:** 加 success webhook · return code 驗證 · 或 `X-Chengfu-Cron-Success` header
+**修:** 加 success webhook · return code 驗證 · 或 `X-Company-AI-Cron-Success` header
 
 ---
 

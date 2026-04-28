@@ -32,7 +32,7 @@ EXCLUDES=(
 
 echo "== White-label scan =="
 
-if rg -uuu -n "承富|ChengFu|CHENGFU|chengfu" "${EXCLUDES[@]}" .; then
+if rg -uuu -n "承富|ChengFu|Chengfu|CHENGFU|chengfu" "${EXCLUDES[@]}" .; then
   echo "ERROR: old company branding remains in active source files." >&2
   exit 1
 fi
@@ -57,6 +57,7 @@ OLD_NAME_MATCHES="$(find . \
     -o -name 'installer-run.command' \) -prune -o \
   \( -name '*承富*' \
     -o -name '*ChengFu*' \
+    -o -name '*Chengfu*' \
     -o -name '*CHENGFU*' \
     -o -name '*chengfu*' \) -print)"
 if [[ -n "$OLD_NAME_MATCHES" ]]; then

@@ -24,6 +24,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY main.py .
 COPY auth_deps.py .
 COPY config.py .
+COPY field_names.py .
 COPY orchestrator.py .
 COPY infra/ ./infra/
 COPY services/ ./services/

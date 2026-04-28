@@ -203,6 +203,33 @@ echo "  ✅ 網路資訊已寫入 .host-network.json"
 echo "[2/3] 啟動 docker compose..."
 cd "${PROJECT_DIR}/config-templates"
 
+cleanup_legacy_docker_surfaces() {
+    if [[ -z "${LEGACY_SERVICE_PREFIX:-}" || "$LEGACY_SERVICE_PREFIX" == "$SERVICE_PREFIX" ]]; then
+        return 0
+    fi
+
+    # Upgrades from older builds can leave renamed containers attached to the
+    # same compose project. Remove only the container shell; bind-mounted data
+    # under config-templates/data remains intact.
+    local services=(nginx librechat mongo meili accounting uptime)
+    local removed=0
+    for service in "${services[@]}"; do
+        if docker ps -a --format '{{.Names}}' | grep -Fxq "${LEGACY_SERVICE_PREFIX}-${service}"; then
+            docker rm -f "${LEGACY_SERVICE_PREFIX}-${service}" >/dev/null 2>&1 || true
+            removed=1
+        fi
+    done
+
+    # Best-effort cleanup for old standalone networks if no containers use them.
+    for network in "${LEGACY_SERVICE_PREFIX}-network" "${LEGACY_SERVICE_PREFIX}-ai-network"; do
+        docker network rm "$network" >/dev/null 2>&1 || true
+    done
+
+    if [[ "$removed" == "1" ]]; then
+        echo "  🧹 已清理舊版 Docker 容器名稱 · 保留資料"
+    fi
+}
+
 # Image stale guard(Codex R3.5 · 擴到整個 backend/accounting/ 不只 main.py)
 # 改 services/*.py 或 requirements.txt 會漏 rebuild · 造成線上跑舊版
 ACC_DIR="${PROJECT_DIR}/backend/accounting"
@@ -237,6 +264,7 @@ if [[ -z "${COMPOSE_FILE:-}" ]]; then
         echo "  🔒 PROD 模式 · 不 merge override(prod auth fail-closed)"
     fi
 fi
+cleanup_legacy_docker_surfaces
 docker compose up -d
 
 echo "[3/3] 等待 nginx + LibreChat 就緒..."
