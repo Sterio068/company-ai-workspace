@@ -1,4 +1,4 @@
-# 承富 AI · 正式交付版驗收 Manifest
+# 公司 AI · 正式交付版驗收 Manifest
 
 時間:2026-04-28 10:46:01 CST
 Base URL:http://localhost
@@ -25,7 +25,7 @@ Run E2E:1
 
 - Passed:13
 - Failed:0
-- DMG:installer/dist/ChengFu-AI-Installer.dmg
+- DMG:installer/dist/Company-AI-Installer.dmg
 - DMG Size:69M
 - DMG SHA-256:1c6c83ab7f0d1bf7e347c74d4d0fcb6f242a93c27af3e35960bb6185ea0a46f6
 

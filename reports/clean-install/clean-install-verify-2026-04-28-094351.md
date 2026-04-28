@@ -14,7 +14,7 @@
 
 - **F-08**(External Audit 2026-04-25):乾淨 Mac VM 雙擊 DMG 全流程未在 release-verify 內覆蓋。
 
-> 注意:這份報告是在開發機 `steriodeMac-mini.local` 跑的 current-host rehearsal,只能證明目前本機 stack 複查通過,不能單獨視為 F-08 完整關閉。F-08 仍需要乾淨 macOS VM / 乾淨 Mac / 承富目標 Mac mini 的 DMG 安裝錄影與截圖。
+> 注意:這份報告是在開發機 `steriodeMac-mini.local` 跑的 current-host rehearsal,只能證明目前本機 stack 複查通過,不能單獨視為 F-08 完整關閉。F-08 仍需要乾淨 macOS VM / 乾淨 Mac / 公司目標 Mac mini 的 DMG 安裝錄影與截圖。
 
 ## 涵蓋 Gate
 

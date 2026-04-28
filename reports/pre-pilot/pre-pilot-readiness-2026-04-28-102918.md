@@ -1,8 +1,8 @@
-# 承富 AI · Phase 1 Pilot 前交付包自檢 Manifest
+# 公司 AI · Phase 1 Pilot 前交付包自檢 Manifest
 
 時間:2026-04-28 10:29:18 CST
 Git HEAD:958fde4
-DMG:installer/dist/ChengFu-AI-Installer.dmg
+DMG:installer/dist/Company-AI-Installer.dmg
 
 ## 自檢步驟
 - ✅ DMG 存在且 SHA 可追溯

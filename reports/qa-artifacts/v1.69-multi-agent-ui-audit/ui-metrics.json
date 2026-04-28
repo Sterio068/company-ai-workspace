@@ -2,7 +2,7 @@
   {
     "name": "desktop-dashboard",
     "logged": true,
-    "screenshot": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/v1.69-multi-agent-ui-audit/desktop-dashboard.png",
+    "screenshot": "/Users/sterio/Workspace/CompanyAI/reports/qa-artifacts/v1.69-multi-agent-ui-audit/desktop-dashboard.png",
     "metrics": {
       "url": "http://localhost/",
       "title": "智慧助理",
@@ -75,7 +75,7 @@
     "logs": [
       {
         "type": "warning",
-        "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at p (http://localhost/static/dist/chunks/chunk.QCWYPPJA.js:6:6255)\n    at async w (http://localhost/static/dist/chunks/chunk.QCWYPPJA.js:6:5844)\n    at async "
+        "text": "[CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at p (http://localhost/static/dist/chunks/chunk.QCWYPPJA.js:6:6255)\n    at async w (http://localhost/static/dist/chunks/chunk.QCWYPPJA.js:6:5844)\n    at async "
       },
       {
         "type": "error",
@@ -90,7 +90,7 @@
   {
     "name": "mobile-dashboard",
     "logged": true,
-    "screenshot": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/v1.69-multi-agent-ui-audit/mobile-dashboard.png",
+    "screenshot": "/Users/sterio/Workspace/CompanyAI/reports/qa-artifacts/v1.69-multi-agent-ui-audit/mobile-dashboard.png",
     "metrics": {
       "url": "http://localhost/",
       "title": "智慧助理",
@@ -163,7 +163,7 @@
     "logs": [
       {
         "type": "warning",
-        "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at p (http://localhost/static/dist/chunks/chunk.QCWYPPJA.js:6:6255)\n    at async w (http://localhost/static/dist/chunks/chunk.QCWYPPJA.js:6:5844)\n    at async "
+        "text": "[CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at p (http://localhost/static/dist/chunks/chunk.QCWYPPJA.js:6:6255)\n    at async w (http://localhost/static/dist/chunks/chunk.QCWYPPJA.js:6:5844)\n    at async "
       },
       {
         "type": "error",

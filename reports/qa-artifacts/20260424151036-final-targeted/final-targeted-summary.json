@@ -1,7 +1,7 @@
 {
   "stamp": "20260424151036",
-  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260424151036-final-targeted",
-  "sourcePath": "/tmp/chengfu-test-sources/qa-final-20260424151036",
+  "artifactDir": "/Users/sterio/Workspace/CompanyAI/reports/qa-artifacts/20260424151036-final-targeted",
+  "sourcePath": "/tmp/company-ai-test-sources/qa-final-20260424151036",
   "totals": {
     "pass": 4,
     "fail": 0
@@ -15,12 +15,12 @@
     {
       "name": "知識庫建立 + scoped 瀏覽",
       "status": "PASS",
-      "detail": "/tmp/chengfu-test-sources/qa-final-20260424151036"
+      "detail": "/tmp/company-ai-test-sources/qa-final-20260424151036"
     },
     {
       "name": "同仁管理建立 QA 帳號",
       "status": "PASS",
-      "detail": "qa-user-final-20260424151036@chengfu.local"
+      "detail": "qa-user-final-20260424151036@company-ai.local"
     },
     {
       "name": "Console 錯誤檢查(final)",

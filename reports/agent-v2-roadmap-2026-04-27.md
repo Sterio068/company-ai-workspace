@@ -11,7 +11,7 @@
 | 維度 | 已達 | 落差 |
 |---|---|---|
 | **Agent 數** | 10(Router + 9 專家)| 部分專家職能重疊(財務 vs 合約稅務) |
-| **prompt 長度** | 1.7-3.8 KB · temperature 0.2-0.7 | 缺 few-shot · 缺 chain-of-thought 模板 · 全用「承富」品牌(已 v1.56 strip 前端但 prompt 還在) |
+| **prompt 長度** | 1.7-3.8 KB · temperature 0.2-0.7 | 缺 few-shot · 缺 chain-of-thought 模板 · 全用「公司」品牌(已 v1.56 strip 前端但 prompt 還在) |
 | **Capabilities** | file_search + actions + web_search + artifacts + vision 全開 | 部分 agent 沒掛 vision 但其實該有(05/06/07) |
 | **Actions wired** | 18 個(PCC × 4 / accounting × 8 / 生圖 × 2 / vision OCR × 4)| 還沒接:Sora 影片 / Gmail draft / Calendar / Notion |
 | **Skills 引用** | 12 個 markdown skill 在 knowledge-base · 透過 file_search 查 | prompt 沒明示「優先用哪個 skill」· AI 不知道 |
@@ -60,7 +60,7 @@
 
 ### A2 · 加 few-shot 範例(P0 · 1 週)
 
-每個 agent 在 prompt 內嵌 3-5 個真實業務範例(從承富過往案例剪裁脫敏):
+每個 agent 在 prompt 內嵌 3-5 個真實業務範例(從公司過往案例剪裁脫敏):
 ```
 範例 1:
   輸入:「這個案子毛利怎麼樣?」
@@ -70,9 +70,9 @@
 
 **影響**:模型對「正確完成」的定義更明確 · 廢話減少
 
-### A3 · 移除 prompt 內所有「承富」字樣(P1 · 2h)
+### A3 · 移除 prompt 內所有「公司」字樣(P1 · 2h)
 
-v1.56 已掃前端 · presets/*.json prompt 內仍有大量「承富」(60+ 處)。
+v1.56 已掃前端 · presets/*.json prompt 內仍有大量「公司」(60+ 處)。
 方案:`scripts/sanitize-presets.py` 批次替換 · 重跑 `create-agents.py`
 
 ### A4 · 加入 chain-of-thought 觸發詞(P1 · 1d)
@@ -125,7 +125,7 @@ GPT-5.5 原生支援 reasoning · 配合 prompt 強化效果顯著
 
 ### B4 · 新增 3 個 skill(P2 · 各 2h)
 
-承富業務缺的:
+公司業務缺的:
 - `13-客戶提案破冰 SOP.md`(公關 + 主管家用)
 - `14-現場危機處理 checklist.md`(活動規劃師用)
 - `15-結案 KPI 報表標準.md`(結案營運用)
@@ -224,7 +224,7 @@ GPT-5.5 原生支援 reasoning · 配合 prompt 強化效果顯著
 v1.59 (本週可做)· 體感最強 + 風險最低
   · D1 workflow 並行 DAG (1d) · 投標 workflow 省 10s
   · B1 補齊 vision capability 給 #05 #06 (30min)
-  · A3 prompt 移除「承富」60+ 處 (2h)
+  · A3 prompt 移除「公司」60+ 處 (2h)
   · C1 部分 · 加 tool call 可見性「⚙ 正在呼叫 PCC...」(2d)
 
 v1.6.0 (2-4 週)· 結構性升級

@@ -1,7 +1,7 @@
 {
   "stamp": "20260424151725",
-  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260424151725-postinstall",
-  "sourcePath": "/tmp/chengfu-test-sources/postinstall-20260424151725",
+  "artifactDir": "/Users/sterio/Workspace/CompanyAI/reports/qa-artifacts/20260424151725-postinstall",
+  "sourcePath": "/tmp/company-ai-test-sources/postinstall-20260424151725",
   "totals": {
     "pass": 13,
     "fail": 1
@@ -40,7 +40,7 @@
     {
       "name": "知識庫資料源建立 + 瀏覽",
       "status": "PASS",
-      "detail": "/tmp/chengfu-test-sources/postinstall-20260424151725"
+      "detail": "/tmp/company-ai-test-sources/postinstall-20260424151725"
     },
     {
       "name": "流程草稿可產生但不送出",
@@ -60,7 +60,7 @@
     {
       "name": "同仁管理 modal + 建立 QA 帳號",
       "status": "PASS",
-      "detail": "qa-user-postinstall-20260424151725@chengfu.local"
+      "detail": "qa-user-postinstall-20260424151725@company-ai.local"
     },
     {
       "name": "會計/會議/場勘/Help 入口",

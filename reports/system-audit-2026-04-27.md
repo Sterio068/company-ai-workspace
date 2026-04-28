@@ -1,4 +1,4 @@
-# 承富 AI · 系統完成度審計 + 升級路徑
+# 公司 AI · 系統完成度審計 + 升級路徑
 
 **日期**:2026-04-27
 **版本基準**:v1.49(commit 8ce77aa)
@@ -50,12 +50,12 @@
 
 **真環境 smoke test 建議**:
 - 投標顧問:「請用 PCC 查最近 7 天的環保標案」→ 看 AI 是否呼叫 searchByTitle
-- 設計夥伴:「畫一張中秋禮盒主視覺 · 寫『2026 月圓承富』· 直式 IG Story 比例」→ 看 AI 是否呼叫 generateImage
+- 設計夥伴:「畫一張中秋禮盒主視覺 · 寫『2026 月圓公司』· 直式 IG Story 比例」→ 看 AI 是否呼叫 generateImage
 - 財務試算:「列出 4 月份所有費用類交易」→ 看是否呼叫 listTransactions
 
 **已知限制**:
 - 本機 macOS Docker 內部 `pcc.g0v.ronny.tw` 可能需要網路調整(Mac mini 部署應正常)
-- ChatGPT Images 2.0 model ID 若 OpenAI 再改名 · 可在 .env 設 CHENGFU_OPENAI_IMAGE_MODEL 覆寫
+- ChatGPT Images 2.0 model ID 若 OpenAI 再改名 · 可在 .env 設 COMPANY_AI_OPENAI_IMAGE_MODEL 覆寫
 
 ### 2. Orchestrator workflow execution 預設關閉
 
@@ -176,7 +176,7 @@ Phase 2(等業主開 Tier 2 預算 + Meta 審核)
 1. **Action 掛載需 LibreChat 重啟 + token 預算試跑** · 建議在 Mac mini 部署後跟業主同步,避免在 dev 環境耗 demo 額度
 2. **orchestrator execution 開啟 = 多 Agent 串接 = token 用量翻 3-5 倍** · 必須先設 budget guard
 3. **拆 app.js / chat.js** 是純粹維護性投資 · 業主感受不到,但下次重大功能會省 1 週
-4. **social_providers 解 mock 卡 Meta** · 已知阻塞,不在 ChengFu side
+4. **social_providers 解 mock 卡 Meta** · 已知阻塞,不在 CompanyAI side
 
 ---
 

@@ -54,7 +54,7 @@ Artifacts:
 | Mobile drawer screenshot | `reports/qa-artifacts/v1.69-multi-agent-ui-audit/mobile-drawer-after-fix.png` |
 | Desktop dashboard screenshot | `reports/qa-artifacts/v1.69-multi-agent-ui-audit/desktop-dashboard-after-fix.png` |
 | 正式 release manifest | 最新 `reports/release/release-manifest-*.md` |
-| DMG | `installer/dist/ChengFu-AI-Installer.dmg` · SHA-256 以最新 release manifest 記錄為準 |
+| DMG | `installer/dist/Company-AI-Installer.dmg` · SHA-256 以最新 release manifest 記錄為準 |
 | RAG report | `reports/rag-verify/rag-verify-2026-04-28-100959.md` |
 
 ## 4. 目前完成度評估

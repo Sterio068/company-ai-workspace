@@ -1,7 +1,7 @@
 ## Pre-delivery hardening final verification
 
 DATE=2026-04-24
-DMG_PATH=installer/dist/ChengFu-AI-Installer.dmg
+DMG_PATH=installer/dist/Company-AI-Installer.dmg
 DMG_VERIFY=PASS
 DMG_SHA256=317a7b950830d566a0700c9eeb452a75526662712230c36ae5be37c5fc4be320
 DMG_SIZE=19M

@@ -70,8 +70,8 @@
 | P2-6 | **app.js 拆檔成 views/*** · 2000+ 行 → views/today.js + views/projects.js + views/work-detail.js | 12h | 同 P2-5 · 模組化 |
 | P2-7 | **Mongo collection 大小儀表** · admin dashboard 加「對話量 / collection 大小 / index 命中率」+ admin alert 條件(任 collection > 1GB) | 6h | 可觀測性 · 老闆看得到容量壓力 |
 | P2-8 | **NotebookLM token 失敗區分** · `notebooklm_client.py` catch `httpx.HTTPStatusError` 區分 401/403/429/5xx · 各自回 `recovery_hint`(token_expired / quota_exceeded / api_down) | 4h | Agent 失敗時知道下一步 |
-| P2-9 | **NotebookLM settings 寫前 token 驗證** · admin 貼 token 時 lightweight GET 驗證 · 失敗 412 不寫入 · 防貼錯到別公司 GCP | 2h | 設定階段不會把承富資料送錯地方 |
-| P2-10 | **歷史 docs 白標化掃** · `承富 / ChengFu` 殘留(內部 docs 還有)· grep + sed + 人工確認 · 不動 git history | 12h | 多公司可用真的可賣 |
+| P2-9 | **NotebookLM settings 寫前 token 驗證** · admin 貼 token 時 lightweight GET 驗證 · 失敗 412 不寫入 · 防貼錯到別公司 GCP | 2h | 設定階段不會把公司資料送錯地方 |
+| P2-10 | **歷史 docs 白標化掃** · `公司 / CompanyAI` 殘留(內部 docs 還有)· grep + sed + 人工確認 · 不動 git history | 12h | 多公司可用真的可賣 |
 
 **P2 小計:80h** · 共 10 個工作天
 

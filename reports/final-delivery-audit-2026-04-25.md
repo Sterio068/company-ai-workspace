@@ -1,4 +1,4 @@
-# 承富 AI · 交付前最終審計
+# 公司 AI · 交付前最終審計
 
 日期:2026-04-25
 結論:正式交付版驗收通過。已通過本機完整 release gate、E2E、smoke、安裝檔重建與 DMG 敏感檔抽查；可作為內部分發交付版。
@@ -41,14 +41,14 @@
 - `./installer/build.sh`:passed,產出新版 DMG。
 - `npm audit --omit=dev` in `frontend/launcher` and `tests/e2e`:0 vulnerabilities。
 - `git diff --check`:passed。
-- DMG 抽查:只含 `/DMG/ChengFu-source.tar.gz` 與 `/DMG/讀我.txt`;敏感檔匹配 0。
+- DMG 抽查:只含 `/DMG/CompanyAI-source.tar.gz` 與 `/DMG/讀我.txt`;敏感檔匹配 0。
 - DMG SHA-256:以最新 `reports/release/release-manifest-*.md` 記錄為準,避免將 SHA 寫死進 DMG source snapshot 造成自我引用 hash 循環。
 
 ## 現場交付注意
 
-- 乾淨 Mac/承富目標機雙擊 GUI 安裝精靈全流程列為現場驗收項；目前已通過 AppleScript compile、DMG build、snapshot 抽查與本機 smoke。
+- 乾淨 Mac/公司目標機雙擊 GUI 安裝精靈全流程列為現場驗收項；目前已通過 AppleScript compile、DMG build、snapshot 抽查與本機 smoke。
 - 安裝器尚未 Developer ID 簽名/Notarization,內部分發可用；若要對外或降低 Gatekeeper 提示,需補 Apple Developer ID 流程。
-- LibreChat RAG/file_search 本機 E2E 已通:OpenAI 知識庫 Agent 呼叫 `file_search`,引用 `chengfu-rag-synthetic-20260428.txt` 回答主色 `#0F766E` 與 KPI；RAG adapter 需 LibreChat short-lived JWT,且 nginx 外部 `/api-accounting/rag/*` 回 403。
+- LibreChat RAG/file_search 本機 E2E 已通:OpenAI 知識庫 Agent 呼叫 `file_search`,引用 `company-ai-rag-synthetic-20260428.txt` 回答主色 `#0F766E` 與 KPI；RAG adapter 需 LibreChat short-lived JWT,且 nginx 外部 `/api-accounting/rag/*` 回 403。
 - Phase 1 試用前現場驗收包已補:`docs/PHASE1-PILOT-VALIDATION-PACK-2026-04-25.md`。交付前先跑 `./scripts/pre-pilot-verify.sh`,再依序完成乾淨 Mac/VM 安裝、去識別真實樣本 RAG 複跑、老闆 + Champion + 2 PM 的 4 人 pilot。
 
 ---
@@ -89,7 +89,7 @@
 
 ### Go / No-Go 結論
 
-- 是否可把目前 DMG 交承富 IT 安裝?**部分可以** · 前提是先在乾淨 macOS VM 跑驗 + 錄影 + 「右鍵開啟」說明
+- 是否可把目前 DMG 交公司 IT 安裝?**部分可以** · 前提是先在乾淨 macOS VM 跑驗 + 錄影 + 「右鍵開啟」說明
 - 是否可讓 10 同仁開放試用?**不建議直接全員** · 建議分 3 phase:Phase 1(老闆+Champion+2 PM 共 4 人 1 週)→ Phase 2(再加設計+公關+會計共 8 人 1 週)→ Phase 3(全員)
 - 是否需先做乾淨 Mac 安裝驗收?**強烈是**(F-08)
 

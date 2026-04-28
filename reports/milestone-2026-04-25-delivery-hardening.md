@@ -28,11 +28,11 @@
 
 - `reports/qa-artifacts/20260425002609-delivery-10tabs-v75/delivery-10tabs-summary.json`
 - Playwright 本輪 console output:desktop + mobile 全專案 25/1
-- 最新安裝檔:`installer/dist/ChengFu-AI-Installer.dmg`
+- 最新安裝檔:`installer/dist/Company-AI-Installer.dmg`
 
 ## 交付注意
 
 - `smoke-test.sh` 的 LibreChat API 功能段仍需 `LIBRECHAT_ADMIN_EMAIL` / `LIBRECHAT_ADMIN_PASSWORD`;本輪已提供環境變數驗證通過。
-- 測試過程為了清 LibreChat in-memory login limiter,多次重啟 `chengfu-librechat` / `chengfu-nginx`;未清 Mongo,未刪使用者資料。
-- 先前備份 stream 暫存檔 `/tmp/chengfu-mongo-dump-stream.gz` 仍保留且權限 `600`;未擅自刪除本機資料。
-- 異機加密備份仍需現場設定 GPG key `chengfu` 與 rclone remote;腳本已設計為未加密時不會上傳出門。
+- 測試過程為了清 LibreChat in-memory login limiter,多次重啟 `company-ai-librechat` / `company-ai-nginx`;未清 Mongo,未刪使用者資料。
+- 先前備份 stream 暫存檔 `/tmp/company-ai-mongo-dump-stream.gz` 仍保留且權限 `600`;未擅自刪除本機資料。
+- 異機加密備份仍需現場設定 GPG key `company-ai` 與 rclone remote;腳本已設計為未加密時不會上傳出門。

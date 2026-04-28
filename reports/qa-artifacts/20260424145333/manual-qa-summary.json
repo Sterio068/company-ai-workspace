@@ -1,6 +1,6 @@
 {
   "stamp": "20260424145333",
-  "artifactDir": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/20260424145333",
+  "artifactDir": "/Users/sterio/Workspace/CompanyAI/reports/qa-artifacts/20260424145333",
   "totals": {
     "pass": 0,
     "fail": 15
@@ -79,13 +79,13 @@
     {
       "name": "Console 錯誤檢查",
       "status": "FAIL",
-      "detail": "warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+      "detail": "warning: [CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | warning: [CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | warning: [CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'. | warning: [CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20) | error: Failed to load resource: the server responded with a status of 401 (Unauthorized) | error: Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
     }
   ],
   "consoleErrors": [
     {
       "type": "warning",
-      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+      "text": "[CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
     },
     {
       "type": "error",
@@ -97,7 +97,7 @@
     },
     {
       "type": "warning",
-      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+      "text": "[CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
     },
     {
       "type": "error",
@@ -109,7 +109,7 @@
     },
     {
       "type": "warning",
-      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+      "text": "[CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
     },
     {
       "type": "error",
@@ -121,7 +121,7 @@
     },
     {
       "type": "warning",
-      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+      "text": "[CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
     },
     {
       "type": "error",
@@ -133,7 +133,7 @@
     },
     {
       "type": "warning",
-      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+      "text": "[CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
     },
     {
       "type": "error",
@@ -145,7 +145,7 @@
     },
     {
       "type": "warning",
-      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+      "text": "[CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
     },
     {
       "type": "error",
@@ -157,7 +157,7 @@
     },
     {
       "type": "warning",
-      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+      "text": "[CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
     },
     {
       "type": "error",
@@ -169,7 +169,7 @@
     },
     {
       "type": "warning",
-      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+      "text": "[CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
     },
     {
       "type": "error",
@@ -181,7 +181,7 @@
     },
     {
       "type": "warning",
-      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+      "text": "[CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
     },
     {
       "type": "error",
@@ -193,7 +193,7 @@
     },
     {
       "type": "warning",
-      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+      "text": "[CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
     },
     {
       "type": "error",
@@ -205,7 +205,7 @@
     },
     {
       "type": "warning",
-      "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
+      "text": "[CompanyAI] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at refreshAuth (http://localhost/static/modules/auth.js:76:11)\n    at async Object.init (http://localhost/static/app.js?v=69:87:20)"
     },
     {
       "type": "error",
