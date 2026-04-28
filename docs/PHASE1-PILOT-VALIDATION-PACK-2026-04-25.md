@@ -1,7 +1,7 @@
 # 承富 AI · Phase 1 試用前現場驗收包
 
 日期:2026-04-25  
-版本:v1.3.0/vNext UI/UX 補強後交付候選版  
+版本:v1.69/vNext UI/UX + RAG/file_search 補強後交付候選版
 用途:在正式開放 10 人前,用乾淨 Mac/VM、LibreChat 原生 RAG、4 人 pilot 完成最後一輪可交付驗收。
 
 > 本文件不保存任何帳號、密碼、API key、token、私鑰、Cloudflare 憑證或客戶機敏資料。所有命令中的帳密都只能使用環境變數、macOS Keychain 或現場臨時輸入。
@@ -34,25 +34,27 @@ Go/No-Go 規則:
 | 項目 | 位置 / 值 |
 |---|---|
 | DMG | `installer/dist/ChengFu-AI-Installer.dmg` |
-| SHA-256 | `d85f5194b104d9f2ca4872c391350a762d8dc6bdf30f8efd1bf4a51056135ffa` |
-| Release manifest | `reports/release/release-manifest-2026-04-25-143407.md` |
+| SHA-256 | 以最新 `reports/release/release-manifest-*.md` 與 `./scripts/pre-pilot-verify.sh` 輸出為準 |
+| Release manifest | 最新 `reports/release/release-manifest-*.md` |
 | Final delivery audit | `reports/final-delivery-audit-2026-04-25.md` |
 | External audit | `docs/EXTERNAL-AUDIT-2026-04-25.md` |
 | Day 0 dry-run | `docs/DAY0-DRY-RUN.md` |
 | Champion log | `docs/CHAMPION-WEEK1-LOG.md` |
 | RAG layered index | `docs/09-RAG-LAYERED-INDEX.md` |
+| RAG/file_search 本機驗證 | `reports/rag-verify/rag-verify-2026-04-28-100959.md` |
 
 本機 release gate 證據:
 
 | 驗證 | 結果 |
 |---|---|
 | `./scripts/release-verify.sh http://localhost` | 13 passed,0 failed |
-| Backend pytest | 246 passed,13 skipped,1 warning |
-| Playwright E2E | 35 passed,3 skipped |
-| Main smoke | 15 passed,0 failed |
+| Backend pytest | 374 passed,10 skipped |
+| Playwright E2E | 68 passed,4 skipped |
+| Main smoke | 16 passed,0 failed |
 | LibreChat smoke | 13 passed,0 failed |
 | npm audit | 0 vulnerabilities |
 | DMG sensitive scan | passed |
+| RAG/file_search | 本機 OpenAI 知識庫 Agent E2E PASS |
 
 ---
 
@@ -159,7 +161,7 @@ cd ~/ChengFu
 
 ## 4. Gate 2:LibreChat 原生 RAG/file_search 驗收
 
-目的:確認「知識庫」不是只存在於自製 API 或 demo,而是 LibreChat 原生 Agent/file_search 能吃代表性文件並回出可追溯答案。
+目的:確認「知識庫」不是只存在於自製 API 或 demo,而是 LibreChat 原生 Agent/file_search 能吃代表性文件並回出可追溯答案。本機已完成一次去識別合成樣本 E2E,見 `reports/rag-verify/rag-verify-2026-04-28-100959.md`;現場 Gate 2 仍需用乾淨機器與 3-5 份去識別樣本複跑。
 
 ### 4.1 測試資料規則
 
@@ -182,6 +184,17 @@ mkdir -p knowledge-base/samples
 ```bash
 cd /Users/sterio/Workspace/ChengFu
 python3 scripts/upload-knowledge-base.py --dry-run --files 'knowledge-base/samples/*'
+```
+
+### 4.2.1 RAG adapter 內部健康檢查
+
+RAG adapter 僅供 LibreChat 容器內部呼叫,不可從 nginx 外部暴露:
+
+```bash
+cd /Users/sterio/Workspace/ChengFu
+docker compose -f config-templates/docker-compose.yml logs librechat | grep -Ei 'RAG API is running|RAG API'
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost/api-accounting/rag/health
+# 預期:外部 nginx 回 403 或 404;LibreChat log 顯示 http://accounting:8000/rag 可達
 ```
 
 ### 4.3 實際上傳

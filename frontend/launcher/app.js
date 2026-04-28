@@ -39,7 +39,7 @@ import {
   agentRoleName,
   ATTACHMENT,
 } from "./modules/config.js";
-import { escapeHtml, formatDate, greetingFor, timeAgo, formatMoney, skeletonCards, localizeVisibleText } from "./modules/util.js";
+import { escapeHtml, formatDate, greetingFor, timeAgo, formatMoney, skeletonCards, localizeVisibleText, copyToClipboard } from "./modules/util.js";
 import { refreshAuthWithLock, authFetch, setUserEmail } from "./modules/auth.js";
 // v1.7 · 暴露 authFetch 給 ESM 外的模組(branding.js inline form / 未來 plugin)
 if (typeof window !== "undefined") window.authFetch = authFetch;
@@ -66,6 +66,7 @@ import { shortcuts } from "./modules/shortcuts.js";
 import { health } from "./modules/health.js";
 import { mobile } from "./modules/mobile.js";
 import { setupGlobalKeyboard } from "./modules/keyboard.js";
+import { installDomActions } from "./modules/dom-actions.js";
 import { chat } from "./modules/chat.js";
 import { voice } from "./modules/voice.js";
 import { knowledge } from "./modules/knowledge.js";  // 跟首頁 file_search 緊耦合 · 不延遲
@@ -88,6 +89,7 @@ const _viewModuleLoaders = {
   tenders:    () => import("./modules/tenders.js").then(m => m.tenders),
   workflows:  () => import("./modules/workflows.js").then(m => m.workflows),
   crm:        () => import("./modules/crm.js").then(m => m.crm),
+  notebooklm: () => import("./modules/notebooklm.js").then(m => m.notebooklm),
 };
 const _viewCache = {};
 async function _view(name) {
@@ -131,6 +133,8 @@ export const app = {
   currentView: "dashboard",
   activeWorkspace: 1,
   editingProjectId: null,
+  _projectModalReturnFocus: null,
+  _projectModalKeyHandler: null,
   activeProjectId: null,
   projectFilter: "all",
   projectSearch: "",
@@ -147,7 +151,7 @@ export const app = {
       this.user = data.user || data;
       setUserEmail(this.user?.email);  // 讓 authFetch 帶 X-User-Email · 給後端 RBAC 用
     } catch (e) {
-      console.warn("[ChengFu] 認證失敗:", e);
+      console.warn("[AI Workspace] 認證失敗:", e);
       window.location.href = "/login";
       return;
     }
@@ -198,6 +202,7 @@ export const app = {
     this.renderWorkDetail();
     this.renderSkills();
     this.renderAIProvider();
+    this._bindAiSourcePanel();
 
     this.setupKeyboard();
     this.setupNavigation();
@@ -214,11 +219,25 @@ export const app = {
       }
     });
 
+    // v1.70 · Dashboard F++ 必須在 app 顯示前接管,避免舊 dashboard textarea 短暫可見
+    // 造成使用者或 E2E 先輸入後又被 F++ 重繪清空。
+    try {
+      const dashView = document.querySelector('.view[data-view="dashboard"]');
+      if (dashView) dashboardFpp.init(dashView);
+    } catch (e) {
+      console.warn("[fpp] dashboard init failed", e);
+    }
+
     document.getElementById("loading").style.display = "none";
     document.getElementById("app").hidden = false;
 
     health.start();
     mobile.init();
+    // 主備源 health · 啟動拉一次 + 每 60s refresh(失敗 silent)
+    // 保留 interval id · 重複 init 時清前一個避免疊
+    this.refreshAIProviderHealth();
+    if (this._healthInterval) clearInterval(this._healthInterval);
+    this._healthInterval = setInterval(() => this.refreshAIProviderHealth(), 60_000);
     // v1.4 macOS · Dock 啟動 · default seed 7 個 agent
     // v1.46 calm mode · 預設關 dock(底部 7 彩色 icon 視覺重)
     // 設 localStorage chengfu-dock-show=1 才出
@@ -235,14 +254,6 @@ export const app = {
     } catch (e) {
       console.warn("[macos] menubar init failed", e);
     }
-    // v1.5 · Dashboard F++ 接手 · default active view = dashboard
-    try {
-      const dashView = document.querySelector('.view[data-view="dashboard"]');
-      if (dashView) dashboardFpp.init(dashView);
-    } catch (e) {
-      console.warn("[fpp] dashboard init failed", e);
-    }
-
     // v1.17 · 確保 body[data-active-view] 預設值為 dashboard
     // (handleHashChange 只在有 hash 時才 call showView · 開啟首頁無 hash → 從未設過)
     // 這個 attr 是 dashboard sidebar 收起 CSS 的 trigger
@@ -291,14 +302,6 @@ export const app = {
     const hash = routeFromHash();
     if (isRoutableView(hash)) {
       this.showView(hash);
-      // v1.58 lazy view · 第一次點才 download chunk · 後續 cache hit 同步快
-      if (hash === "accounting") _view("accounting").then(m => m.load());
-      if (hash === "admin")      _view("admin").then(m => { m.load(); knowledge.loadAdmin(); });
-      if (hash === "tenders")    _view("tenders").then(m => m.load());
-      if (hash === "workflows")  _view("workflows").then(m => m.load());
-      if (hash === "crm")        _view("crm").then(m => { m.setUser(this.user?.email); m.load(); });
-      if (hash === "knowledge")  knowledge.loadBrowser();
-      // showView 已經 dispatch help/meeting/media/social/site init · 此處不重複
     }
   },
 
@@ -313,7 +316,26 @@ export const app = {
     return this.normalizeAIProvider(cur);
   },
 
+  // Delegated handler · ai-source panel 兩個 row 共用 · 取代 inline onclick
+  // (一致 J2 retry button 改法 · 不留 inline handler)
+  _bindAiSourcePanel() {
+    const panel = document.querySelector(".ai-source-panel");
+    if (!panel || panel._bound) return;
+    panel._bound = true;
+    panel.addEventListener("click", e => {
+      const row = e.target.closest(".ai-source-row[data-ai-provider]");
+      if (!row) return;
+      this.setAIProvider(row.dataset.aiProvider);
+    });
+  },
+
   setAIProvider(provider) {
+    // C1 client-side admin gate · 防 USER 從 console 切備援拉高成本
+    // 真 enforcement 在 LibreChat server (modelSpecs / preset 限定) · 此處先 UI 阻擋
+    if (this.user?.role !== "ADMIN") {
+      toast.warn("AI 引擎切換僅管理員可用");
+      return;
+    }
     const next = this.normalizeAIProvider(provider);
     if (next === this.getAIProvider()) {
       this.renderAIProvider();
@@ -326,20 +348,71 @@ export const app = {
     toast.success(`AI 引擎已切換為 ${meta.label} · 新對話生效`);
   },
 
+  // 主備源面板 render
+  // - row.active toggle(主力/備援哪個正在用)
+  // - state 文字(使用中 / 待機)+ foot 顯示目前模型描述
+  // - 非 admin: aria-disabled + tabindex=-1 防鍵盤聚焦但仍視覺呈現(WCAG 4.1.2)
   renderAIProvider() {
     const provider = this.getAIProvider();
     const meta = AI_PROVIDERS[provider] || AI_PROVIDERS[DEFAULT_AI_PROVIDER];
     document.documentElement.dataset.aiProvider = provider;
-    document.querySelectorAll("[data-ai-provider]").forEach(btn => {
-      const active = btn.dataset.aiProvider === provider;
-      btn.classList.toggle("active", active);
-      btn.setAttribute("aria-pressed", active ? "true" : "false");
-      btn.title = active ? `目前使用 ${meta.label}` : `切換到 ${btn.textContent.trim()}`;
+
+    const isAdmin = this.user?.role === "ADMIN";
+    document.querySelectorAll(".ai-source-row[data-ai-provider]").forEach(row => {
+      const id = row.dataset.aiProvider;
+      const rowMeta = AI_PROVIDERS[id];
+      if (!rowMeta) return;
+      const active = id === provider;
+      row.classList.toggle("active", active);
+      row.setAttribute("aria-pressed", active ? "true" : "false");
+      row.title = active ? `目前使用 ${rowMeta.label}` : (isAdmin ? `切換到 ${rowMeta.label}` : `${rowMeta.label}(僅管理員可切換)`);
+      // 非 admin · 鍵盤跳過 + 標 disabled · CSS pointer-events:none 配合
+      if (isAdmin) {
+        row.removeAttribute("aria-disabled");
+        row.removeAttribute("tabindex");
+      } else {
+        row.setAttribute("aria-disabled", "true");
+        row.setAttribute("tabindex", "-1");
+      }
+      const stateEl = row.querySelector(`[data-ai-source-state="${id}"]`);
+      if (stateEl) stateEl.textContent = active ? "使用中" : "待機";
     });
-    const label = document.getElementById("ai-provider-label");
-    if (label) label.textContent = meta.badge;
-    const hint = document.getElementById("ai-provider-hint");
-    if (hint) hint.textContent = meta.desc;
+
+    const foot = document.getElementById("ai-source-foot");
+    if (foot) foot.textContent = meta.desc;
+  },
+
+  // 拉 backend health 並更新主備源連線指示
+  // - 失敗 / 沒接後端時保持「unknown」(灰)· 不阻擋畫面
+  // - state 用 icon shape + 顏色雙重編碼(WCAG 1.4.1 不只靠顏色)
+  async refreshAIProviderHealth() {
+    const dots = document.querySelectorAll("[data-ai-source-health]");
+    if (!dots.length) return;
+    const ICON_MAP = { ok: "●", warn: "▲", down: "✕", unknown: "○" };
+    const LABEL_MAP = { ok: "已連線", warn: "部分功能受限", down: "無法連線", unknown: "狀態未知" };
+    const setDot = (dot, state, latency) => {
+      dot.dataset.state = state;
+      dot.textContent = ICON_MAP[state] || ICON_MAP.unknown;
+      const label = LABEL_MAP[state] || LABEL_MAP.unknown;
+      const lat = latency ? ` · ${latency}ms` : "";
+      dot.title = `${label}${lat}`;
+      dot.setAttribute("aria-label", `連線狀態:${label}`);
+    };
+    try {
+      const r = await fetch("/api-accounting/health/ai-providers", {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = await r.json();
+      const map = j?.providers || {};
+      dots.forEach(dot => {
+        const info = map[dot.dataset.aiSourceHealth];
+        setDot(dot, info?.state || "unknown", info?.latency_ms);
+      });
+    } catch {
+      dots.forEach(d => setDot(d, "unknown"));
+    }
   },
 
   // ---------- Setup ----------
@@ -396,7 +469,7 @@ export const app = {
       }
       el.addEventListener("click", e => {
         e.preventDefault();
-        this.showView(el.dataset.view);
+        this.navigateToView(el.dataset.view);
       });
     });
     document.querySelectorAll(".sidebar-item.ws-nav").forEach(el => {
@@ -405,7 +478,7 @@ export const app = {
       }
       el.addEventListener("click", e => {
         e.preventDefault();
-        this.openWorkspace(parseInt(el.dataset.ws));
+        this.navigateToWorkspace(parseInt(el.dataset.ws, 10));
       });
     });
     document.querySelectorAll("[data-slash]").forEach(el => {
@@ -428,6 +501,31 @@ export const app = {
         this.renderProjects();
       });
     });
+  },
+
+  navigateToView(view) {
+    if (!view) return;
+    const nextHash = view === "dashboard" ? "" : `#${view}`;
+    if (window.location.hash === nextHash) {
+      this.handleHashChange();
+      return;
+    }
+    if (view === "dashboard") {
+      history.pushState("", document.title, window.location.pathname);
+      this.showView("dashboard");
+      return;
+    }
+    window.location.hash = nextHash;
+  },
+
+  navigateToWorkspace(n) {
+    if (!n) return;
+    const nextHash = `#workspace-${n}`;
+    if (window.location.hash === nextHash) {
+      this.handleHashChange();
+      return;
+    }
+    window.location.hash = nextHash;
   },
 
   setupTodayActions() {
@@ -591,7 +689,12 @@ export const app = {
     }
     // V1.1 §E-3 · 切到 knowledge 自動載入
     if (view === "knowledge") knowledge.loadBrowser();
-    if (view === "admin") knowledge.loadAdmin();
+    if (view === "notebooklm") _view("notebooklm").then(m => m.load());
+    if (view === "accounting") _view("accounting").then(m => m.load());
+    if (view === "admin") _view("admin").then(m => { m.load(); knowledge.loadAdmin(); });
+    if (view === "tenders") _view("tenders").then(m => m.load());
+    if (view === "workflows") _view("workflows").then(m => m.load());
+    if (view === "crm") _view("crm").then(m => { m.setUser(this.user?.email); m.load(); });
     // 使用教學 · 切過去就 init(admin 才載 secrets)
     if (view === "help") {
       const isAdmin = this.user?.role === "ADMIN";
@@ -711,7 +814,7 @@ export const app = {
           <div class="empty-state-icon">😓</div>
           <div class="empty-state-title">無法載入對話</div>
           <div class="empty-state-hint">${(e?.message || "網路或後端錯")}</div>
-          <button class="btn-ghost" onclick="window.app?.loadConversations?.()" style="margin-top:12px">重試</button>
+          <button class="btn-ghost" data-action="app.loadConversations" style="margin-top:12px">重試</button>
         </div>`;
     }
   },
@@ -998,16 +1101,16 @@ export const app = {
           <p>${escapeHtml(draft.next || "選一個既有專案,或先建立新的專案；資料不足時再開草稿詢問。")}</p>
         </div>
         <div class="workspace-hero-actions">
-          ${firstRelated ? `<button class="btn-primary" onclick="app.openProjectDrawer('${firstRelatedId}')">接續最近專案</button>` : ""}
-          <button class="btn-ghost" onclick="app.newProject()">建立專案</button>
-          <button class="btn-ghost" onclick="app.startWorkspaceDraft(${ws.id})">開新草稿</button>
+          ${firstRelated ? `<button class="btn-primary" data-action="app.openProjectDrawer" data-action-arg="${firstRelatedId}">接續最近專案</button>` : ""}
+          <button class="btn-ghost" data-action="app.newProject">建立專案</button>
+          <button class="btn-ghost" data-action="app.startWorkspaceDraft" data-action-arg="${ws.id}">開新草稿</button>
         </div>
       </article>
       <div class="workspace-two-col">
         <section class="work-panel-card">
           <div class="work-section-title">這個工作區的專案</div>
           ${relatedProjects.length ? relatedProjects.map(p => `
-            <button type="button" class="workspace-project-row" onclick="app.openProjectDrawer('${escapeHtml(p.id || p._id)}')">
+            <button type="button" class="workspace-project-row" data-action="app.openProjectDrawer" data-action-arg="${escapeHtml(p.id || p._id)}">
               <strong>${escapeHtml(p.name || "未命名專案")}</strong>
               <span>${escapeHtml(p.client || "未指定客戶")} · ${escapeHtml(p.handoff?.next_actions?.[0] || p.description || "打開交棒卡補下一步")}</span>
             </button>
@@ -1172,8 +1275,8 @@ export const app = {
         <div class="empty-state-title">選一個專案,或讓主管家帶你建立</div>
         <div class="empty-state-hint">右側會顯示下一棒、素材缺口與智慧助理可執行動作。</div>
         <div class="work-empty-actions">
-          <button class="btn-primary" onclick="app.newProject()">建立專案</button>
-          <button class="btn-ghost" onclick="app.startProjectPlanner()">請主管家帶我建</button>
+          <button class="btn-primary" data-action="app.newProject">建立專案</button>
+          <button class="btn-ghost" data-action="app.startProjectPlanner">請主管家帶我建</button>
         </div>`;
       return;
     }
@@ -1191,7 +1294,7 @@ export const app = {
     const missing = readiness.missing.slice(0, 5);
     const statusLabel = (p.status || "active") === "closed" ? "已結案" : "進行中";
     const suggestionCards = suggestions.map((s, index) => `
-      <button class="work-suggestion-card ${index === 0 ? "primary" : ""}" onclick="app.runWorkAction('${s.kind}')">
+      <button class="work-suggestion-card ${index === 0 ? "primary" : ""}" data-action="app.runWorkAction" data-action-arg="${escapeHtml(s.kind)}">
         <span class="work-suggestion-icon">${escapeHtml(s.icon)}</span>
         <span>
           <strong>${escapeHtml(s.title)}</strong>
@@ -1231,7 +1334,7 @@ export const app = {
           <strong>${escapeHtml(leadSuggestion?.title || "先拆可執行任務")}</strong>
           <p>${escapeHtml(leadSuggestion?.desc || "讓主管家先把專案拆成今天能做的下一步。")}</p>
         </div>
-        <button class="btn-primary" onclick="app.runWorkAction('${leadSuggestion?.kind || "next"}')">${escapeHtml(leadSuggestion?.cta || "開始")}</button>
+        <button class="btn-primary" data-action="app.runWorkAction" data-action-arg="${escapeHtml(leadSuggestion?.kind || "next")}">${escapeHtml(leadSuggestion?.cta || "開始")}</button>
       </div>
 
       <div class="work-suggestion-grid" aria-label="智慧助理建議動作">
@@ -1242,9 +1345,9 @@ export const app = {
         <div class="work-section-title">現在最該推的一步</div>
         <p>${escapeHtml(next)}</p>
         <div class="work-actions">
-          <button class="btn-primary" onclick="app.runWorkAction('next')">請主管家拆下一步</button>
-          <button class="btn-ghost" onclick="app.openProjectDrawer('${escapeHtml(p.id || p._id)}')">打開交棒卡</button>
-          <button class="btn-ghost" onclick="app.runWorkAction('handoff')">產交棒草稿</button>
+          <button class="btn-primary" data-action="app.runWorkAction" data-action-arg="next">請主管家拆下一步</button>
+          <button class="btn-ghost" data-action="app.openProjectDrawer" data-action-arg="${escapeHtml(p.id || p._id)}">打開交棒卡</button>
+          <button class="btn-ghost" data-action="app.runWorkAction" data-action-arg="handoff">產交棒草稿</button>
         </div>
       </div>
 
@@ -1255,10 +1358,10 @@ export const app = {
             <div class="gap-list">
               ${missing.map(label => `<span>${escapeHtml(label)}</span>`).join("")}
             </div>
-            <button class="work-text-action" onclick="app.runWorkAction('gaps')">請智慧助理補成待確認清單 →</button>
+            <button class="work-text-action" data-action="app.runWorkAction" data-action-arg="gaps">請智慧助理補成待確認清單 →</button>
           ` : `
             <div class="gap-complete">核心欄位齊了,可以進入產出。</div>
-            <button class="work-text-action" onclick="app.runWorkAction('deliverable')">請智慧助理產第一版成果 →</button>
+            <button class="work-text-action" data-action="app.runWorkAction" data-action-arg="deliverable">請智慧助理產第一版成果 →</button>
           `}
         </section>
         <section class="work-panel-card">
@@ -1266,7 +1369,7 @@ export const app = {
           <div class="asset-list">
             ${assets.length ? assets.slice(0, 4).map(a => `<span>${escapeHtml(a)}</span>`).join("") : `<span>尚未記錄素材路徑</span>`}
           </div>
-          <button class="work-text-action" onclick="app.runWorkAction('assets')">整理素材需求 →</button>
+          <button class="work-text-action" data-action="app.runWorkAction" data-action-arg="assets">整理素材需求 →</button>
         </section>
       </div>
 
@@ -1275,7 +1378,7 @@ export const app = {
           <div class="work-section-title">推薦 Playbook</div>
           <p>${escapeHtml(kind.label)} · 會帶入這個專案的客戶、期限、預算與下一步。</p>
         </div>
-        <button class="playbook-pill" style="--ws-color:${kind.color}" onclick="app.runWorkAction('playbook')">帶入 ${escapeHtml(kind.label)} 草稿</button>
+        <button class="playbook-pill" style="--ws-color:${kind.color}" data-action="app.runWorkAction" data-action-arg="playbook">帶入 ${escapeHtml(kind.label)} 草稿</button>
       </div>`;
   },
 
@@ -1560,14 +1663,59 @@ export const app = {
   },
 
   openProjectModal() {
+    const modalEl = document.getElementById("project-modal");
+    this._projectModalReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     document.getElementById("project-modal-backdrop")?.classList.add("open");
-    document.getElementById("project-modal")?.classList.add("open");
+    modalEl?.classList.add("open");
+    modalEl?.setAttribute("aria-hidden", "false");
+    if (this._projectModalKeyHandler) document.removeEventListener("keydown", this._projectModalKeyHandler);
+    this._projectModalKeyHandler = e => this._handleProjectModalKey(e);
+    document.addEventListener("keydown", this._projectModalKeyHandler);
+    requestAnimationFrame(() => {
+      const initialFocus =
+        modalEl?.querySelector('[name="name"]:not([disabled])') ||
+        modalEl?.querySelector('input:not([disabled]), textarea:not([disabled]), select:not([disabled]), button:not([disabled])');
+      initialFocus?.focus();
+    });
   },
 
   closeProjectModal() {
     document.getElementById("project-modal-backdrop")?.classList.remove("open");
-    document.getElementById("project-modal")?.classList.remove("open");
+    const modalEl = document.getElementById("project-modal");
+    modalEl?.classList.remove("open");
+    modalEl?.setAttribute("aria-hidden", "true");
+    if (this._projectModalKeyHandler) {
+      document.removeEventListener("keydown", this._projectModalKeyHandler);
+      this._projectModalKeyHandler = null;
+    }
     this.editingProjectId = null;
+    const returnFocus = this._projectModalReturnFocus;
+    this._projectModalReturnFocus = null;
+    requestAnimationFrame(() => returnFocus?.focus?.());
+  },
+
+  _handleProjectModalKey(e) {
+    const modalEl = document.getElementById("project-modal");
+    if (!modalEl?.classList.contains("open")) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      this.closeProjectModal();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    const focusable = modalEl.querySelectorAll(
+      'a[href], input:not([disabled]), button:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
   },
 
   // ---------- Project Drawer(V1.1-SPEC §C · Q5 決議 drawer)----------
@@ -1601,6 +1749,7 @@ export const app = {
     setEl("dr-owner", p.owner || "—");
     setEl("dr-next-owner", p.next_owner || "—");
     setEl("dr-collaborators", (p.collaborators || []).join("、") || "—");
+    this._updateProjectReadiness(p, null);
 
     // status badge
     const statusEl = document.getElementById("dr-status");
@@ -1636,7 +1785,10 @@ export const app = {
     // Round 9 C · fetch handoff 改用 authFetch · 確保 X-User-Email header
     try {
       const r = await authFetch(`/api-accounting/projects/${id}/handoff`);
-      if (!r.ok) return;
+      if (!r.ok) {
+        this._updateProjectReadiness(p, {});
+        return;
+      }
       const { handoff } = await r.json();
       if (handoff && typeof handoff === "object") {
         const goal = handoff.goal || "";
@@ -1662,9 +1814,49 @@ export const app = {
         const hasContent = goal || constraints || assets || next;
         const details = document.getElementById("dr-handoff");
         if (details && hasContent) details.open = true;
+        this._updateProjectReadiness(p, handoff);
       }
     } catch (e) {
       console.warn("[drawer] handoff fetch failed", e);
+      this._updateProjectReadiness(p, {});
+    }
+  },
+
+  _updateProjectReadiness(project, handoff = {}) {
+    const h = handoff || {};
+    const assetRefs = h.asset_refs || [];
+    const nextActions = h.next_actions || [];
+    const checks = [
+      { ok: Boolean(project?.client), label: "客戶" },
+      { ok: Boolean(project?.deadline), label: "截止日" },
+      { ok: Boolean(project?.description), label: "專案描述" },
+      { ok: Boolean((h.goal || "").trim()), label: "目標" },
+      { ok: Boolean((h.constraints || []).length), label: "限制" },
+      { ok: Boolean(assetRefs.length), label: "素材來源" },
+      { ok: Boolean(nextActions.length), label: "下一步" },
+    ];
+    const done = checks.filter(item => item.ok).length;
+    const score = Math.round((done / checks.length) * 100);
+    const missing = checks.filter(item => !item.ok).map(item => item.label);
+    const setTextLocal = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    };
+    setTextLocal("dr-readiness-score", `${score}%`);
+    setTextLocal(
+      "dr-readiness-copy",
+      score >= 80
+        ? "這個專案已足夠讓 AI 接手。"
+        : "還可以補幾個欄位,AI 回答會更準。",
+    );
+    setTextLocal(
+      "dr-readiness-missing",
+      missing.length ? `建議補:${missing.join("、")}` : "欄位完整,可直接交給 AI 接續。",
+    );
+    const fill = document.getElementById("dr-readiness-fill");
+    if (fill) {
+      fill.style.width = `${score}%`;
+      fill.dataset.level = score >= 80 ? "ready" : score >= 50 ? "partial" : "low";
     }
   },
 
@@ -1754,7 +1946,7 @@ export const app = {
         "",
         `客戶:${handoff.client}`,
         `截止:${handoff.deadline}`,
-        `下一棒:${handoff.nextOwner}`,
+        `接手同仁:${handoff.nextOwner}`,
         "",
         `目標:${handoff.goal || "未填"}`,
         "",
@@ -1774,7 +1966,7 @@ export const app = {
       `【專案交棒】${handoff.projectName}`,
       `客戶:${handoff.client}`,
       `截止:${handoff.deadline}`,
-      `下一棒:${handoff.nextOwner}`,
+      `接手同仁:${handoff.nextOwner}`,
       "",
       `目標:${handoff.goal || "未填"}`,
       "",
@@ -1797,8 +1989,9 @@ export const app = {
     }
     const text = this._formatHandoffForShare(format, handoff);
     try {
-      await navigator.clipboard.writeText(text);
-      toast.success(format === "email" ? "Email 版交棒已複製" : "LINE 版交棒已複製");
+      const copied = await copyToClipboard(text);
+      if (copied) toast.success(format === "email" ? "Email 版交棒已複製" : "LINE 版交棒已複製");
+      else throw new Error("clipboard unavailable");
     } catch (e) {
       console.warn("[handoff] clipboard failed", e);
       await modal.alert(`<pre style="white-space:pre-wrap">${escapeHtml(text)}</pre>`, {
@@ -1834,24 +2027,55 @@ export const app = {
       "3. 你打算怎麼開始?",
     ].filter(Boolean).join("\n");
 
-    // Round 9 Q2 · sessionStorage 自動帶入新對話輸入框
-    // 舊行為(clipboard + redirect)保留為 fallback
-    try {
-      sessionStorage.setItem("chengfu.pendingPrompt", prompt);
-      sessionStorage.setItem("chengfu.pendingPromptSource", "handoff");
-      sessionStorage.setItem("chengfu.pendingPromptTs", String(Date.now()));
-    } catch (e) {
-      console.warn("[handoff] sessionStorage unavailable:", e);
-    }
-    // clipboard 作為 Safari 隱私模式 / 跨分頁 fallback(sessionStorage 存但沒貼到)
-    navigator.clipboard?.writeText(prompt).then(
-      () => toast.success("交棒內容已準備 · 新對話會自動帶入"),
-      () => toast.success("交棒內容已準備"),
-    );
-    // 延遲一點開新對話視窗 · 讓 user 看到 toast
-    setTimeout(() => {
-      window.location.href = "/c/new";
-    }, 400);
+    const projectName = handoff.projectName || "目前專案";
+    chat.open("00", prompt, {
+      handoffSave: {
+        projectId: this.drawerProjectId,
+        projectName,
+        target: "asset_ref",
+        label: "AI 接續回答",
+        cta: "回寫交棒卡",
+      },
+    });
+    this.closeProjectDrawer();
+    toast.info("已打開主管家 · AI 回答後可一鍵回寫此專案");
+  },
+
+  summarizeProjectWithAI() {
+    if (!this.drawerProjectId) return;
+    const handoff = this._handoffFromDrawer();
+    const projectName = handoff.projectName || "目前專案";
+    const prompt = [
+      `請協助整理「${projectName}」成可以交接的工作包。`,
+      "",
+      "目前資料:",
+      `客戶:${handoff.client}`,
+      `截止:${handoff.deadline}`,
+      `接手同仁:${handoff.nextOwner}`,
+      `目標:${handoff.goal || "未填"}`,
+      `限制:${handoff.constraints.length ? handoff.constraints.join(" / ") : "未填"}`,
+      `素材:${handoff.assets.length ? handoff.assets.join(" / ") : "未填"}`,
+      `下一步:${handoff.nextActions.length ? handoff.nextActions.join(" / ") : "未填"}`,
+      "",
+      "請輸出四段:",
+      "1. 目標一句話",
+      "2. 限制 / 風險",
+      "3. 素材缺口",
+      "4. 明天可以直接做的下一步",
+      "",
+      "若資訊不足,請明確標成「待補」。",
+    ].join("\n");
+    chat.open("00", prompt, {
+      handoffSave: {
+        projectId: this.drawerProjectId,
+        projectName,
+        target: "asset_ref",
+        label: "AI 專案整理",
+        cta: "存回此專案",
+      },
+    });
+    this.closeProjectDrawer();
+    toast.info("已交給主管家整理 · 回答後可直接存回專案");
   },
 
   // ---------- Theme(v1.3 A2 · 拆到 modules/theme.js · 此 thin wrapper 不破壞既有 caller) ----------
@@ -1908,7 +2132,7 @@ window.knowledge   = knowledge;
 window.palette     = palette;
 // v1.58 lazy · 11 個 view module 改 proxy · console / debug 用 window.workflows.load() 仍可
 // 第一次存取觸發動態 import · 之後 cache 直回
-const _viewModuleNames = ["accounting","admin","userMgmt","design","meeting","media","social","siteSurvey","tenders","workflows","crm"];
+const _viewModuleNames = ["accounting","admin","userMgmt","design","meeting","media","social","siteSurvey","tenders","workflows","crm","notebooklm"];
 for (const n of _viewModuleNames) {
   Object.defineProperty(window, n, {
     get() {
@@ -1990,6 +2214,7 @@ async function _handleConvoToOpen() {
 //  perf #5:減少 event 註冊 + 序列化執行 · 不重複 fire
 // ============================================================
 document.addEventListener("DOMContentLoaded", async () => {
+  installDomActions();
   app.init();
   // 注意:app.init 是 async 但裡面 await refreshAuthWithLock,
   // 這裡不 await · 讓下面 3 個 handler 並行(它們互斥)

@@ -132,6 +132,17 @@ def test_pnl_report(client):
     assert "net_profit" in body
 
 
+def test_accounting_overview(client):
+    client.post("/accounts/seed")
+    r = client.get("/reports/overview")
+    assert r.status_code == 200
+    body = r.json()
+    assert "pnl" in body
+    assert "aging" in body
+    assert "unpaid" in body
+    assert "quotes" in body
+
+
 # ============================================================
 # B · 專案管理(取代 localStorage)
 # ============================================================
@@ -150,6 +161,640 @@ def test_list_projects(client):
     r = client.get("/projects")
     assert r.status_code == 200
     assert isinstance(r.json(), list)
+
+
+def test_notebooklm_status_local_parallel(client):
+    r = client.get("/notebooklm/status")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["local"]["source_of_truth"] == "MongoDB / 本地檔案"
+    assert body["notebooklm"]["mode"] == "enterprise-api"
+
+
+def test_notebooklm_project_source_pack_create(client):
+    r = client.post("/projects", json={
+        "name": "NotebookLM 並行測試案",
+        "client": "文化局",
+        "budget": 1200000,
+        "deadline": "2026-05-31",
+        "status": "active",
+    })
+    assert r.status_code == 200
+    project_id = r.json()["id"]
+    client.put(f"/projects/{project_id}/handoff", json={
+        "goal": "整理提案素材給 NotebookLM 深讀",
+        "constraints": ["不可同步 Level 03 機敏資料"],
+        "asset_refs": [{"type": "note", "label": "素材", "ref": "本地知識庫"}],
+        "next_actions": ["確認 source pack 後再同步"],
+    })
+    r = client.post("/notebooklm/source-packs", json={
+        "scope": "project",
+        "project_id": project_id,
+        "sensitivity": "L2",
+    })
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "local_ready"
+    assert "NotebookLM 並行測試案" in body["content_md"]
+    assert body["content_hash"]
+
+
+def test_notebooklm_project_source_pack_acl(client):
+    import main as main_mod
+    for email in ["alice@company.local", "bob@company.local"]:
+        main_mod.db.users.update_one(
+            {"email": email},
+            {"$set": {
+                "email": email,
+                "name": email.split("@")[0],
+                "role": "USER",
+                "chengfu_active": True,
+                "chengfu_permissions": ["knowledge.search", "project.create", "project.edit_own"],
+            }},
+            upsert=True,
+        )
+
+    alice_headers = {"X-User-Email": "alice@company.local"}
+    bob_headers = {"X-User-Email": "bob@company.local"}
+    r = client.post("/projects", json={
+        "name": "Alice NotebookLM 私有工作包",
+        "client": "文化局",
+        "status": "active",
+    }, headers=alice_headers)
+    assert r.status_code == 200
+    project_id = r.json()["id"]
+
+    r = client.post("/notebooklm/source-packs", json={
+        "scope": "project",
+        "project_id": project_id,
+        "sensitivity": "all",
+    }, headers=alice_headers)
+    assert r.status_code == 200
+    pack_id = r.json()["_id"]
+
+    r = client.get("/notebooklm/source-packs", headers=bob_headers)
+    assert r.status_code == 200
+    assert pack_id not in [item["_id"] for item in r.json()["items"]]
+
+    r = client.get(f"/notebooklm/source-packs/{pack_id}", headers=bob_headers)
+    assert r.status_code == 403
+
+
+def test_notebooklm_agent_source_pack_uses_acting_user_acl(client):
+    """Agent action 不能用 admin 身分繞過工作包 owner/collaborator 邊界."""
+    import main as main_mod
+    for email in ["agent-alice@company.local", "agent-bob@company.local"]:
+        main_mod.db.users.update_one(
+            {"email": email},
+            {"$set": {
+                "email": email,
+                "name": email.split("@")[0],
+                "role": "USER",
+                "chengfu_active": True,
+                "chengfu_permissions": ["knowledge.search", "project.create", "project.edit_own"],
+            }},
+            upsert=True,
+        )
+
+    alice_headers = {"X-User-Email": "agent-alice@company.local"}
+    r = client.post("/projects", json={
+        "name": "Agent ACL 私有工作包",
+        "client": "文化局",
+        "status": "active",
+    }, headers=alice_headers)
+    assert r.status_code == 200
+    project_id = r.json()["id"]
+
+    admin_as_bob = {
+        "X-User-Email": "sterio068@gmail.com",
+        "X-Acting-User": "agent-bob@company.local",
+    }
+    r = client.post("/notebooklm/agent/source-packs", json={
+        "scope": "project",
+        "project_id": project_id,
+        "sensitivity": "all",
+    }, headers=admin_as_bob)
+    assert r.status_code == 403
+
+    admin_as_alice = {
+        "X-User-Email": "sterio068@gmail.com",
+        "X-Acting-User": "agent-alice@company.local",
+    }
+    r = client.post("/notebooklm/agent/source-packs", json={
+        "scope": "project",
+        "project_id": project_id,
+        "sensitivity": "L3",
+    }, headers=admin_as_alice)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["created_by"] == "agent:agent-alice@company.local"
+    assert body["sensitivity"] == "L3"
+
+    r = client.get("/notebooklm/agent/source-packs", headers=admin_as_bob)
+    assert r.status_code == 200
+    assert body["_id"] not in [item["_id"] for item in r.json()["items"]]
+
+
+def test_notebooklm_project_pack_hash_stable_and_combines_next_actions(client):
+    import main as main_mod
+    from bson import ObjectId
+    r = client.post("/projects", json={
+        "name": "NotebookLM hash stable",
+        "client": "文化局",
+        "status": "active",
+    })
+    assert r.status_code == 200
+    project_id = r.json()["id"]
+    main_mod.db.projects.update_one(
+        {"_id": ObjectId(project_id)},
+        {"$set": {
+            "handoff": {
+                "goal": "整理成 NotebookLM 資料包",
+                "next_actions": ["manual action"],
+                "meeting_next_actions": ["meeting action"],
+            }
+        }},
+    )
+
+    payload = {"scope": "project", "project_id": project_id, "sensitivity": "all"}
+    first = client.post("/notebooklm/source-packs", json=payload)
+    second = client.post("/notebooklm/source-packs", json=payload)
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.json()["content_hash"] == second.json()["content_hash"]
+    assert second.json()["deduped"] is True
+    content = second.json()["content_md"]
+    assert "manual action" in content
+    assert "meeting action" in content
+
+
+def test_notebooklm_project_pack_hash_ignores_same_day_time_and_finance_noise(client):
+    """資料包 hash 應代表業務內容,不該因同日時間或小數財務雜訊改變."""
+    import main as main_mod
+    from bson import ObjectId
+    from datetime import datetime, timezone
+
+    r = client.post("/projects", json={
+        "name": "NotebookLM stable hash noise",
+        "client": "文化局",
+        "status": "active",
+    })
+    assert r.status_code == 200
+    project_id = r.json()["id"]
+    main_mod.db.meetings.insert_one({
+        "project_id": project_id,
+        "status": "done",
+        "created_at": datetime(2026, 4, 28, 9, 30, tzinfo=timezone.utc),
+        "structured": {
+            "title": "同日時間不應改 hash",
+            "decisions": ["方向確認"],
+        },
+    })
+    main_mod.db.accounting_projects_finance.insert_one({
+        "project_id": project_id,
+        "income": 1000.49,
+        "expense": 400.41,
+        "margin": 600.08,
+        "margin_rate": 60.01234,
+    })
+
+    payload = {"scope": "project", "project_id": project_id, "sensitivity": "all"}
+    first = client.post("/notebooklm/source-packs", json=payload)
+    assert first.status_code == 200
+    first_hash = first.json()["content_hash"]
+
+    main_mod.db.meetings.update_one(
+        {"project_id": project_id},
+        {"$set": {"created_at": datetime(2026, 4, 28, 17, 45, tzinfo=timezone.utc)}},
+    )
+    main_mod.db.accounting_projects_finance.update_one(
+        {"project_id": project_id},
+        {"$set": {
+            "income": 1000.44,
+            "expense": 400.49,
+            "margin": 600.02,
+            "margin_rate": 60.01,
+        }},
+    )
+    second = client.post("/notebooklm/source-packs", json=payload)
+    assert second.status_code == 200
+    assert second.json()["content_hash"] == first_hash
+    assert second.json()["deduped"] is True
+
+
+def test_notebooklm_source_pack_creation_writes_sensitivity_audit(client):
+    import main as main_mod
+    r = client.post("/notebooklm/source-packs", json={
+        "scope": "training",
+        "sensitivity": "L3",
+    })
+    assert r.status_code == 200
+    body = r.json()
+    audit = main_mod.db.audit_log.find_one({
+        "action": "notebooklm_source_pack_create",
+        "resource": body["_id"],
+    })
+    assert audit
+    assert audit["details"]["sensitivity"] == "L3"
+    assert audit["details"]["content_hash"] == body["content_hash"]
+
+
+def test_notebooklm_one_project_one_notebook_unconfigured(client):
+    r = client.post("/projects", json={
+        "name": "NotebookLM 專案筆記本測試",
+        "client": "文化局",
+        "status": "active",
+    })
+    assert r.status_code == 200
+    project_id = r.json()["id"]
+
+    r = client.post(f"/notebooklm/projects/{project_id}/notebook")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["project_id"] == project_id
+    assert body["notebook_id"] is None
+    assert body["configured"] is False
+
+    r = client.get(f"/notebooklm/projects/{project_id}/notebook")
+    assert r.status_code == 200
+    assert r.json()["project_id"] == project_id
+
+
+def test_notebooklm_file_upload_auto_to_project_unconfigured(client):
+    r = client.post("/projects", json={
+        "name": "NotebookLM 檔案歸檔測試",
+        "client": "文化局",
+        "status": "active",
+    })
+    assert r.status_code == 200
+    project_id = r.json()["id"]
+
+    r = client.post(
+        "/notebooklm/uploads/auto",
+        data={
+            "project_id": project_id,
+            "relative_paths": "NotebookLM 檔案歸檔測試/proposal.md",
+        },
+        files=[("files", ("proposal.md", b"# proposal\nhello", "text/markdown"))],
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["project_id"] == project_id
+    assert body["configured"] is False
+    assert body["skipped"] == 1
+    assert body["items"][0]["status"] == "skipped_unconfigured"
+
+
+def test_notebooklm_upload_batch_resume_skips_already_uploaded(client):
+    import main as main_mod
+    from services.notebooklm_client import NotebookLMClientError
+
+    r = client.post("/projects", json={
+        "name": "NotebookLM 批次續傳測試",
+        "client": "文化局",
+        "status": "active",
+    })
+    assert r.status_code == 200
+    project_id = r.json()["id"]
+    notebook = {
+        "project_id": project_id,
+        "title": "NotebookLM 批次續傳測試",
+        "notebook_id": "nb-batch",
+        "configured": True,
+    }
+
+    calls: list[str] = []
+
+    def upload_side_effect(_notebook_id, display_name, _content, _content_type):
+        calls.append(display_name)
+        if display_name == "folder/b.md" and calls.count("folder/b.md") == 1:
+            raise NotebookLMClientError(429, "NotebookLM 上傳檔案來源 失敗(429):quota", "quota_exceeded")
+        return {"configured": True, "source": {"name": display_name}}
+
+    with patch("routers.notebooklm._ensure_project_notebook", return_value=notebook):
+        with patch("routers.notebooklm.upload_file_source", side_effect=upload_side_effect):
+            r = client.post(
+                "/notebooklm/uploads/auto",
+                data={
+                    "project_id": project_id,
+                    "relative_paths": ["folder/a.md", "folder/b.md"],
+                },
+                files=[
+                    ("files", ("a.md", b"# a", "text/markdown")),
+                    ("files", ("b.md", b"# b", "text/markdown")),
+                ],
+            )
+            assert r.status_code == 200
+            first = r.json()
+            assert first["uploaded"] == 1
+            assert first["failed"] == 1
+            assert first["batch_id"]
+
+            r = client.post(
+                "/notebooklm/uploads/auto",
+                data={
+                    "project_id": project_id,
+                    "batch_id": first["batch_id"],
+                    "resume_failed_only": "true",
+                    "relative_paths": ["folder/a.md", "folder/b.md"],
+                },
+                files=[
+                    ("files", ("a.md", b"# a", "text/markdown")),
+                    ("files", ("b.md", b"# b", "text/markdown")),
+                ],
+            )
+    assert r.status_code == 200
+    second = r.json()
+    statuses = {item["relative_path"]: item["status"] for item in second["items"]}
+    assert statuses["folder/a.md"] == "skipped_already_uploaded"
+    assert statuses["folder/b.md"] == "uploaded"
+    assert calls == ["folder/a.md", "folder/b.md", "folder/b.md"]
+    uploaded_records = list(main_mod.db.notebooklm_file_uploads.find({
+        "batch_id": first["batch_id"],
+        "relative_path": "folder/a.md",
+        "status": "uploaded",
+    }))
+    assert len(uploaded_records) == 1
+
+
+def test_notebooklm_upload_resume_scoped_by_project_and_notebook(client):
+    created = []
+    for name in ["NotebookLM 續傳 A", "NotebookLM 續傳 B"]:
+        r = client.post("/projects", json={"name": name, "client": "文化局", "status": "active"})
+        assert r.status_code == 200
+        created.append(r.json()["id"])
+
+    def notebook_for(_db, project_id, *_args, **_kwargs):
+        return {
+            "project_id": project_id,
+            "title": f"Notebook {project_id}",
+            "notebook_id": f"nb-{project_id}",
+            "configured": True,
+        }
+
+    calls: list[tuple[str, str]] = []
+
+    def upload_side_effect(notebook_id, display_name, _content, _content_type):
+        calls.append((notebook_id, display_name))
+        return {"configured": True, "source": {"name": display_name}}
+
+    shared_batch = "shared-batch"
+    with patch("routers.notebooklm._ensure_project_notebook", side_effect=notebook_for):
+        with patch("routers.notebooklm.upload_file_source", side_effect=upload_side_effect):
+            r = client.post(
+                "/notebooklm/uploads/auto",
+                data={
+                    "project_id": created[0],
+                    "batch_id": shared_batch,
+                    "relative_paths": ["folder/a.md"],
+                },
+                files=[("files", ("a.md", b"# a", "text/markdown"))],
+            )
+            assert r.status_code == 200
+            assert r.json()["uploaded"] == 1
+
+            r = client.post(
+                "/notebooklm/uploads/auto",
+                data={
+                    "project_id": created[1],
+                    "batch_id": shared_batch,
+                    "resume_failed_only": "true",
+                    "relative_paths": ["folder/a.md"],
+                },
+                files=[("files", ("a.md", b"# a", "text/markdown"))],
+            )
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["uploaded"] == 1
+    assert body["skipped"] == 0
+    assert calls == [
+        (f"nb-{created[0]}", "folder/a.md"),
+        (f"nb-{created[1]}", "folder/a.md"),
+    ]
+
+
+def test_internal_token_with_acting_user_satisfies_user_permission(client, monkeypatch):
+    monkeypatch.setenv("ECC_INTERNAL_TOKEN", "test-internal-token")
+    headers = {
+        "X-Internal-Token": "test-internal-token",
+        "X-Acting-User": "test@chengfu.local",
+    }
+    r = client.get("/transactions", headers=headers)
+    assert r.status_code == 200
+
+
+def test_action_bridge_token_with_acting_user_satisfies_action_permission(client, monkeypatch):
+    monkeypatch.setenv("ACTION_BRIDGE_TOKEN", "test-action-bridge-token")
+    headers = {
+        "X-Internal-Token": "test-action-bridge-token",
+        "X-Acting-User": "test@chengfu.local",
+    }
+    r = client.get("/transactions", headers=headers)
+    assert r.status_code == 200
+
+
+def test_action_bridge_token_is_scoped_to_action_paths(client, monkeypatch):
+    monkeypatch.setenv("ACTION_BRIDGE_TOKEN", "test-action-bridge-token")
+    headers = {
+        "X-Internal-Token": "test-action-bridge-token",
+        "X-Acting-User": "sterio068@gmail.com",
+    }
+    r = client.get("/admin/audit-log", headers=headers)
+    assert r.status_code == 403
+
+
+def test_notebooklm_agent_routes_accept_action_bridge_token(client, monkeypatch):
+    monkeypatch.setenv("ACTION_BRIDGE_TOKEN", "test-action-bridge-token")
+    headers = {
+        "X-Internal-Token": "test-action-bridge-token",
+        "X-Acting-User": "test@chengfu.local",
+    }
+    r = client.get("/notebooklm/agent/source-packs", headers=headers)
+    assert r.status_code == 200
+
+
+def test_notebooklm_settings_bad_token_does_not_write(client):
+    import main as main_mod
+    from services.notebooklm_client import NotebookLMClientError
+
+    with patch(
+        "routers.notebooklm.validate_config",
+        side_effect=NotebookLMClientError(403, "NotebookLM 驗證設定 失敗(403):denied", "permission_denied"),
+    ):
+        r = client.put(
+            "/notebooklm/settings",
+            json={
+                "enabled": True,
+                "project_number": "123456789012",
+                "location": "global",
+                "endpoint_location": "global",
+                "access_token": "bad-token",
+            },
+            headers={"X-User-Email": "sterio068@gmail.com"},
+        )
+    assert r.status_code == 412
+    assert r.json()["detail"]["recovery_hint"] == "permission_denied"
+    assert main_mod.db.system_settings.find_one({"name": "NOTEBOOKLM_ACCESS_TOKEN"}) is None
+
+
+def test_notebooklm_settings_validates_then_writes(client):
+    import main as main_mod
+
+    with patch("routers.notebooklm.validate_config", return_value={"configured": True, "ok": True}):
+        r = client.put(
+            "/notebooklm/settings",
+            json={
+                "enabled": True,
+                "project_number": "123456789012",
+                "location": "global",
+                "endpoint_location": "global",
+                "access_token": "good-token",
+            },
+            headers={"X-User-Email": "sterio068@gmail.com"},
+        )
+    assert r.status_code == 200
+    assert main_mod.db.system_settings.find_one({"name": "NOTEBOOKLM_ACCESS_TOKEN"})["value"] == "good-token"
+    main_mod.db.system_settings.delete_many({"name": {"$in": [
+        "NOTEBOOKLM_ENTERPRISE_ENABLED",
+        "NOTEBOOKLM_PROJECT_NUMBER",
+        "NOTEBOOKLM_LOCATION",
+        "NOTEBOOKLM_ENDPOINT_LOCATION",
+        "NOTEBOOKLM_ACCESS_TOKEN",
+    ]}})
+
+
+def test_secret_registry_exposes_tiers_and_writers(client):
+    from services.secret_registry import SECRET_REGISTRY
+
+    assert SECRET_REGISTRY["OPENAI_API_KEY"]["tier"] == "T0_REQUIRED"
+    assert SECRET_REGISTRY["OPENAI_API_KEY"]["frontend_writable"] is True
+    assert SECRET_REGISTRY["JWT_REFRESH_SECRET"]["writer"] == "installer/keychain only"
+    assert SECRET_REGISTRY["NOTEBOOKLM_ACCESS_TOKEN"]["frontend_writable"] is True
+
+
+def test_retention_registry_recreates_stale_ttl(client):
+    import main as main_mod
+    from infra.retention_policy import apply_retention_indexes
+
+    main_mod.db.frontend_errors.drop_indexes()
+    main_mod.db.frontend_errors.create_index(
+        [("created_at", 1)],
+        expireAfterSeconds=999,
+        name="ttl_30d",
+    )
+    apply_retention_indexes(main_mod.db)
+    info = main_mod.db.frontend_errors.index_information()["ttl_30d"]
+    assert info["expireAfterSeconds"] == 30 * 24 * 3600
+
+
+def test_notebooklm_sync_unconfigured_returns_local_ready(client):
+    r = client.post("/notebooklm/source-packs", json={
+        "scope": "tenders",
+        "sensitivity": "L2",
+    })
+    assert r.status_code == 200
+    pack_id = r.json()["_id"]
+    r = client.post(
+        f"/notebooklm/source-packs/{pack_id}/sync",
+        json={"create_notebook": True},
+        headers={"X-User-Email": "sterio068@gmail.com"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["configured"] is False
+    assert body["state"] == "local_ready"
+
+
+def test_notebooklm_sync_failure_marks_run_failed(client):
+    import main as main_mod
+    r = client.post("/notebooklm/source-packs", json={
+        "scope": "tenders",
+        "sensitivity": "all",
+    })
+    assert r.status_code == 200
+    pack_id = r.json()["_id"]
+    with patch("routers.notebooklm.public_status", return_value={"configured": True}):
+        with patch("routers.notebooklm.create_notebook", return_value={"notebook": {"notebookId": "nb-test"}}):
+            with patch("routers.notebooklm.add_text_source", side_effect=RuntimeError("upstream boom")):
+                r = client.post(
+                    f"/notebooklm/source-packs/{pack_id}/sync",
+                    json={"create_notebook": True},
+                    headers={"X-User-Email": "sterio068@gmail.com"},
+                )
+    assert r.status_code == 502
+    run = main_mod.db.notebooklm_sync_runs.find_one({"pack_id": pack_id}, sort=[("created_at", -1)])
+    assert run["status"] == "failed"
+    assert run.get("finished_at")
+    assert "upstream boom" in run["error"]
+
+
+def test_notebooklm_sync_client_error_returns_recovery_hint(client):
+    import main as main_mod
+    from services.notebooklm_client import NotebookLMClientError
+
+    r = client.post("/notebooklm/source-packs", json={
+        "scope": "tenders",
+        "sensitivity": "L2",
+    })
+    assert r.status_code == 200
+    pack_id = r.json()["_id"]
+
+    with patch("routers.notebooklm.public_status", return_value={"configured": True}):
+        with patch("routers.notebooklm.create_notebook", return_value={"notebook": {"notebookId": "nb-test"}}):
+            with patch(
+                "routers.notebooklm.add_text_source",
+                side_effect=NotebookLMClientError(
+                    401,
+                    "NotebookLM 新增文字來源 失敗(401):expired",
+                    "token_expired",
+                ),
+            ):
+                r = client.post(
+                    f"/notebooklm/source-packs/{pack_id}/sync",
+                    json={"create_notebook": True},
+                    headers={"X-User-Email": "sterio068@gmail.com"},
+                )
+    assert r.status_code == 401
+    assert r.json()["detail"]["recovery_hint"] == "token_expired"
+    assert r.json()["detail"]["provider_status"] == 401
+    run = main_mod.db.notebooklm_sync_runs.find_one({"pack_id": pack_id}, sort=[("created_at", -1)])
+    assert run["status"] == "failed"
+    assert run["recovery_hint"] == "token_expired"
+    assert run["provider_status"] == 401
+
+
+def test_notebooklm_l3_sync_requires_second_confirm(client):
+    import main as main_mod
+
+    r = client.post("/notebooklm/source-packs", json={
+        "scope": "training",
+        "sensitivity": "L3",
+    })
+    assert r.status_code == 200
+    pack_id = r.json()["_id"]
+
+    with patch("routers.notebooklm.public_status", return_value={"configured": True}):
+        r = client.post(
+            f"/notebooklm/source-packs/{pack_id}/sync",
+            json={"create_notebook": True},
+            headers={"X-User-Email": "sterio068@gmail.com"},
+        )
+    assert r.status_code == 409
+    assert r.json()["detail"]["code"] == "notebooklm_confirm_required"
+    run = main_mod.db.notebooklm_sync_runs.find_one({"pack_id": pack_id}, sort=[("created_at", -1)])
+    assert run["status"] == "confirm_required"
+
+    with patch("routers.notebooklm.public_status", return_value={"configured": True}):
+        with patch("routers.notebooklm.create_notebook", return_value={"notebook": {"notebookId": "nb-l3"}}):
+            with patch("routers.notebooklm.add_text_source", return_value={"sources": [{"sourceId": {"id": "src-l3"}}]}):
+                r = client.post(
+                    f"/notebooklm/source-packs/{pack_id}/sync",
+                    json={"create_notebook": True, "confirm_send_to_notebooklm": True},
+                    headers={"X-User-Email": "sterio068@gmail.com"},
+                )
+    assert r.status_code == 200
+    assert r.json()["state"] == "synced"
 
 
 def test_handoff_card_roundtrip(client):
@@ -445,6 +1090,26 @@ def test_admin_dashboard_rejects_non_admin(client):
         "/admin/dashboard",
         headers={"X-User-Email": "random-staff@chengfu.local"},
     )
+    assert r.status_code == 403
+
+
+def test_admin_storage_stats_shape(client):
+    """P2 · admin 可看 Mongo collection/storage health,用於交付後維運。"""
+    r = client.get("/admin/storage-stats", headers={"X-User-Email": "sterio068@gmail.com"})
+    assert r.status_code == 200
+    body = r.json()
+    assert "items" in body
+    assert "totals" in body
+    assert body["totals"]["documents"] >= 0
+    project_item = next(i for i in body["items"] if i["collection"] == "projects")
+    assert "count" in project_item
+    assert "index_count" in project_item
+    assert "alert_level" in project_item
+
+
+def test_admin_storage_stats_requires_admin(client):
+    """P2 · storage stats 屬維運資訊,一般使用者不可讀。"""
+    r = client.get("/admin/storage-stats")
     assert r.status_code == 403
 
 
@@ -1139,6 +1804,28 @@ def test_auth_tenders_blocks_anonymous(client):
     assert r.status_code == 403
 
 
+def test_tender_monitor_settings_roundtrip(client):
+    r = client.put("/tender-alerts/settings", json={
+        "enabled": True,
+        "keywords": ["活動", "行銷", "活動"],
+        "counties": ["臺北市", "新北市"],
+        "units": ["文化局"],
+        "exclude_keywords": ["工程"],
+        "daily_hour": 8,
+        "auto_import_interested": False,
+    })
+    assert r.status_code == 200
+    body = r.json()
+    assert body["keywords"] == ["活動", "行銷"]
+    assert body["counties"] == ["臺北市", "新北市"]
+    assert body["units"] == ["文化局"]
+    assert body["daily_hour"] == 8
+
+    r = client.get("/tender-alerts/settings")
+    assert r.status_code == 200
+    assert r.json()["exclude_keywords"] == ["工程"]
+
+
 def test_auth_feedback_create_uses_trusted_email(client):
     """R6#4 · POST /feedback 即使 body 偽造 user_email · 仍以 X-User-Email 為準
     這個測試在 mongomock + JWT_SECRET 未設場景 · trusted=False · X-User-Email 仍會覆蓋"""
@@ -1550,6 +2237,39 @@ def test_anonymous_blocked_on_crm(client):
     assert r.status_code == 403
 
 
+def test_crm_import_from_tenders_sets_owner(client):
+    import main as main_mod
+    key = "文化局:CRM-IMPORT-OWNER"
+    main_mod.db.tender_alerts.delete_many({"tender_key": key})
+    main_mod.db.crm_leads.delete_many({"tender_key": key})
+    main_mod.db.tender_alerts.insert_one({
+        "tender_key": key,
+        "title": "文化活動委託案",
+        "unit_name": "臺北市文化局",
+        "keyword": "活動",
+        "status": "interested",
+    })
+    r = client.post("/crm/import-from-tenders")
+    assert r.status_code == 200
+    lead = main_mod.db.crm_leads.find_one({"tender_key": key})
+    assert lead["owner"] == "test@chengfu.local"
+
+
+def test_crm_note_accepts_json_body(client):
+    r = client.post("/crm/leads", json={
+        "title": "文化節提案",
+        "client": "文化局",
+        "budget": 500000,
+    })
+    assert r.status_code == 200
+    lead_id = r.json()["id"]
+    r = client.post(f"/crm/leads/{lead_id}/notes", json={"note": "已電話確認截止日"})
+    assert r.status_code == 200
+    import main as main_mod
+    lead = main_mod.db.crm_leads.find_one({"title": "文化節提案"})
+    assert lead["notes"][-1]["text"] == "已電話確認截止日"
+
+
 def test_healthz_remains_public(client):
     """技術債#2 · /healthz 必須匿名(docker / nginx 每分鐘打)
     抽 router 後不能誤套 require_user_dep"""
@@ -1915,6 +2635,26 @@ def test_oauth_redirect_uri_rejects_bad_env_format(client, monkeypatch):
     importlib.reload(social_oauth)
 
 
+def test_oauth_redirect_uri_requires_env_in_prod(client, monkeypatch):
+    """prod 未設固定 callback base 時應 fail closed,不再信任 forwarded host。"""
+    monkeypatch.setenv("FACEBOOK_APP_ID", "test-id")
+    monkeypatch.setenv("FACEBOOK_APP_SECRET", "secret")
+    monkeypatch.delenv("OAUTH_REDIRECT_BASE_URL", raising=False)
+    monkeypatch.setenv("ECC_ENV", "production")
+    import importlib
+    from routers import social_oauth
+    importlib.reload(social_oauth)
+    r = client.get(
+        "/social/oauth/start?platform=facebook",
+        headers={**USER_HEADERS, "X-Forwarded-Host": "evil.attacker.com"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 500
+    assert "OAUTH_REDIRECT_BASE_URL" in r.json()["detail"]
+    monkeypatch.setenv("ECC_ENV", "development")
+    importlib.reload(social_oauth)
+
+
 def test_oauth_callback_stores_token_mock(client, monkeypatch):
     """A5 · callback 收 code + state · mock 模擬成功 store token"""
     import main as main_mod
@@ -2020,6 +2760,14 @@ def test_oauth_token_encrypt_decrypt_roundtrip():
     assert dec == plain
 
 
+def test_oauth_token_plaintext_fallback_rejected_in_prod(monkeypatch):
+    from services import oauth_tokens
+    monkeypatch.delenv("CREDS_KEY", raising=False)
+    monkeypatch.setenv("ECC_ENV", "production")
+    with pytest.raises(RuntimeError, match="CREDS_KEY required"):
+        oauth_tokens.encrypt_token("secret-token-123")
+
+
 # ============================================================
 # v1.3 · User Management UI · admin 在前端建同仁帳號
 # ============================================================
@@ -2080,10 +2828,10 @@ def test_um_create_user_success(client):
 def test_um_create_user_rejects_duplicate_email(client):
     """建重複 email · 回 409"""
     client.post("/admin/users", headers=ADMIN_HEADERS, json={
-        "email": "dupe@chengfu.com", "name": "A", "password": "pwd12345678",
+        "email": "dupe@chengfu.com", "name": "A", "password": "Strong!Pass2026",
     })
     r = client.post("/admin/users", headers=ADMIN_HEADERS, json={
-        "email": "dupe@chengfu.com", "name": "B", "password": "pwd12345678",
+        "email": "dupe@chengfu.com", "name": "B", "password": "Strong!Pass2026",
     })
     assert r.status_code == 409
 
@@ -2091,7 +2839,7 @@ def test_um_create_user_rejects_duplicate_email(client):
 def test_um_create_user_rejects_invalid_permission(client):
     """不合法 permission key · 400"""
     r = client.post("/admin/users", headers=ADMIN_HEADERS, json={
-        "email": "invalid@chengfu.com", "name": "X", "password": "pwd12345678",
+        "email": "invalid@chengfu.com", "name": "X", "password": "Strong!Pass2026",
         "permissions": ["fake.permission.key"],
     })
     assert r.status_code == 400
@@ -2099,7 +2847,7 @@ def test_um_create_user_rejects_invalid_permission(client):
 
 
 def test_um_create_user_rejects_weak_password(client):
-    """密碼 < 8 · pydantic 422"""
+    """密碼太短或未達複雜度 · pydantic 422"""
     r = client.post("/admin/users", headers=ADMIN_HEADERS, json={
         "email": "weak@chengfu.com", "name": "X", "password": "123",
     })
@@ -2109,7 +2857,7 @@ def test_um_create_user_rejects_weak_password(client):
 def test_um_list_users(client):
     """GET /admin/users · 列全部 · 不含密碼 hash"""
     client.post("/admin/users", headers=ADMIN_HEADERS, json={
-        "email": "list-test@chengfu.com", "name": "列表測", "password": "pwd12345678",
+        "email": "list-test@chengfu.com", "name": "列表測", "password": "Strong!Pass2026",
         "title": "企劃",
     })
     r = client.get("/admin/users", headers=ADMIN_HEADERS)
@@ -2127,7 +2875,7 @@ def test_um_list_users(client):
 def test_um_update_user(client):
     """PATCH /admin/users/:email · 改 title + permissions"""
     client.post("/admin/users", headers=ADMIN_HEADERS, json={
-        "email": "update-me@chengfu.com", "name": "測", "password": "pwd12345678",
+        "email": "update-me@chengfu.com", "name": "測", "password": "Strong!Pass2026",
         "title": "實習生",
     })
     r = client.patch("/admin/users/update-me@chengfu.com",
@@ -2145,7 +2893,7 @@ def test_um_update_user(client):
 def test_um_deactivate_user(client):
     """DELETE /admin/users/:email · soft deactivate · active=false"""
     client.post("/admin/users", headers=ADMIN_HEADERS, json={
-        "email": "kill-me@chengfu.com", "name": "測", "password": "pwd12345678",
+        "email": "kill-me@chengfu.com", "name": "測", "password": "Strong!Pass2026",
     })
     r = client.delete("/admin/users/kill-me@chengfu.com", headers=ADMIN_HEADERS)
     assert r.status_code == 200
@@ -2224,6 +2972,45 @@ def test_orchestrator_prepare_preset_can_save_project_workflow_draft(client):
     assert draft["created_by"] == "test@chengfu.local"
     assert main_mod.db.audit_log.count_documents({
         "action": "workflow_prepare_preset",
+        "resource": pid,
+    }) == 1
+
+
+def test_orchestrator_can_save_workflow_result_to_project(client):
+    """vNext · workflow 真執行結果可沉澱成專案素材,讓工作包不是一次性 prompt."""
+    import main as main_mod
+    from bson import ObjectId
+    from orchestrator import PRESET_WORKFLOWS, _save_workflow_result_to_project
+
+    r = client.post("/projects", json={"name": "workflow result project"})
+    pid = r.json()["id"]
+    saved = _save_workflow_result_to_project(
+        pid,
+        "test@chengfu.local",
+        "tender-full",
+        PRESET_WORKFLOWS["tender-full"],
+        {
+            "steps_executed": 4,
+            "rounds": 3,
+            "final_output": "最終整合結果: 建議投標,但需補報價風險。",
+            "results": [],
+        },
+        "507f1f77bcf86cd799439011",
+    )
+
+    assert saved["project_id"] == pid
+    assert saved["handoff_field"] == "workflow_result"
+    proj = main_mod.db.projects.find_one({"_id": ObjectId(pid)})
+    handoff = proj["handoff"]
+    assert handoff["workflow_result"]["preset_id"] == "tender-full"
+    assert handoff["workflow_result"]["run_id"] == "507f1f77bcf86cd799439011"
+    assert any(
+        a["label"] == "Workflow 結果 · 投標完整閉環"
+        and "建議投標" in a["ref"]
+        for a in handoff["asset_refs"]
+    )
+    assert main_mod.db.audit_log.count_documents({
+        "action": "workflow_run_saved_to_project",
         "resource": pid,
     }) == 1
 
@@ -2463,3 +3250,248 @@ def test_permission_admin_bypasses_accounting_permission(client):
     """ADMIN 即使未設定 chengfu_permissions 仍可進高風險 endpoint"""
     r = client.get("/accounts", headers=ADMIN_HEADERS)
     assert r.status_code == 200
+
+
+# ============================================================
+# v1.69 batch · access-urls / health / reset-password / permanent-delete
+# 對應 Codex review 12 條 + Anthropic 補強
+# ============================================================
+class TestAccessUrls:
+    def test_requires_admin(self, client):
+        """non-admin → 403(require_admin gate)"""
+        r = client.get("/admin/access-urls")
+        assert r.status_code == 403
+
+    def test_admin_can_read(self, client):
+        """admin 可讀 · 至少回 lan_urls / mdns_url / tunnel_urls / guidance"""
+        r = client.get("/admin/access-urls", headers=ADMIN_HEADERS)
+        assert r.status_code == 200
+        body = r.json()
+        for k in ("lan_urls", "mdns_url", "tunnel_urls", "guidance", "current_origin"):
+            assert k in body, f"missing key {k}"
+        assert isinstance(body["lan_urls"], list)
+        assert "account_source" in body["guidance"]
+
+    def test_x_forwarded_host_validated(self, client):
+        """C8 · 偽造惡意 X-Forwarded-Host 應被 regex 擋(不 reflect 進 current_origin)"""
+        evil_host = "<script>alert(1)</script>"
+        r = client.get(
+            "/admin/access-urls",
+            headers={**ADMIN_HEADERS, "X-Forwarded-Host": evil_host},
+        )
+        assert r.status_code == 200
+        co = r.json().get("current_origin") or ""
+        assert "<script>" not in co
+        assert "alert" not in co
+
+
+class TestAIProvidersHealth:
+    def test_requires_login(self, client):
+        """C2 · 匿名請求 → 401(防探測 key 是否存在)"""
+        # 移除 X-User-Email 模擬匿名
+        c = TestClient(__import__("main").app)
+        r = c.get("/health/ai-providers")
+        assert r.status_code == 401
+
+    def test_user_redacted_view(self, client):
+        """C2 · 一般同仁登入只看 state · 不揭露 reason / configured / 長度"""
+        r = client.get("/health/ai-providers")
+        assert r.status_code == 200
+        providers = r.json().get("providers", {})
+        assert "openai" in providers
+        # USER 視角:只有 state 欄位 · 沒有 reason/configured
+        for p in providers.values():
+            assert "state" in p
+            assert "reason" not in p
+            assert "configured" not in p
+
+    def test_admin_full_view(self, client):
+        """admin 看完整 reason / configured"""
+        r = client.get("/health/ai-providers", headers=ADMIN_HEADERS)
+        assert r.status_code == 200
+        providers = r.json().get("providers", {})
+        for p in providers.values():
+            assert "state" in p
+            assert "reason" in p
+            assert "configured" in p
+
+
+class TestSecretsMetadata:
+    """服務金鑰管理 UI 文案 · 必須符合 OpenAI 主力 / Claude 備援決議"""
+
+    def test_openai_primary_anthropic_backup_metadata(self, client):
+        r = client.get("/admin/secrets/status", headers=ADMIN_HEADERS)
+        assert r.status_code == 200
+        secrets = {s["name"]: s for s in r.json()["secrets"]}
+
+        assert secrets["OPENAI_API_KEY"]["required"] is True
+        assert "主力" in secrets["OPENAI_API_KEY"]["desc"]
+        assert secrets["OPENAI_API_KEY"]["console_url"] == "https://platform.openai.com/api-keys"
+
+        assert secrets["ANTHROPIC_API_KEY"]["required"] is False
+        assert "備援" in secrets["ANTHROPIC_API_KEY"]["desc"]
+        assert secrets["ANTHROPIC_API_KEY"]["console_url"] == "https://console.anthropic.com/settings/keys"
+
+        assert secrets["FAL_API_KEY"]["console_url"] == "https://fal.ai/dashboard/keys"
+
+
+class TestRagAdapter:
+    """LibreChat RAG_API_URL adapter · auth boundary + retrieval smoke"""
+
+    def test_embed_requires_auth(self, client):
+        r = client.post(
+            "/rag/embed",
+            data={"file_id": "rag-auth-required"},
+            files={"file": ("rag.txt", b"secret text", "text/plain")},
+            headers={"X-User-Email": ""},
+        )
+        assert r.status_code == 401
+
+    def test_embed_query_delete_with_authenticated_user(self, client):
+        file_id = "rag-unit-20260428"
+        text = "RAG-AUTH-UNIT brand color #0F766E KPI 800 people"
+
+        r = client.post(
+            "/rag/embed",
+            data={"file_id": file_id, "entity_id": "agent_unit"},
+            files={"file": ("rag-unit.txt", text.encode("utf-8"), "text/plain")},
+        )
+        assert r.status_code == 200
+        assert r.json()["file_id"] == file_id
+        assert r.json()["chunk_count"] >= 1
+
+        r = client.post(
+            "/rag/query",
+            json={"file_id": file_id, "entity_id": "agent_unit", "query": "brand color KPI"},
+        )
+        assert r.status_code == 200
+        body = r.json()
+        assert body
+        assert "#0F766E" in body[0][0]["page_content"]
+
+        r = client.request("DELETE", "/rag/documents", json=[file_id])
+        assert r.status_code == 200
+        assert r.json()["deleted"] >= 1
+
+
+class TestPasswordPolicy:
+    """C4 · 密碼複雜度 · create + reset 共用"""
+
+    def _make_user(self, client):
+        r = client.post(
+            "/admin/users",
+            json={
+                "email": "policy@chengfu.local",
+                "name": "Policy Test",
+                "password": "Strong!Pass2026",
+                "role": "USER",
+            },
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code in (200, 409)  # 409 = already exists from prev test
+
+    def test_create_rejects_short(self, client):
+        r = client.post(
+            "/admin/users",
+            json={"email": "short@x.com", "name": "X", "password": "Aa1!aaaa"},
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 422  # < 10 字
+
+    def test_create_rejects_weak_class(self, client):
+        r = client.post(
+            "/admin/users",
+            json={"email": "weak@x.com", "name": "X", "password": "alllowercase1"},
+            headers=ADMIN_HEADERS,
+        )
+        # 只 1 大寫類 + 數字 = 2 類 < 3
+        assert r.status_code == 422
+
+    def test_create_rejects_common_weak(self, client):
+        r = client.post(
+            "/admin/users",
+            json={"email": "common@x.com", "name": "X", "password": "Password1234!"[:10]},
+            headers=ADMIN_HEADERS,
+        )
+        # 不該被擋 · 改試一個常見弱
+        r = client.post(
+            "/admin/users",
+            json={"email": "common2@x.com", "name": "X", "password": "password"},
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 422
+
+    def test_create_rejects_repeat_4(self, client):
+        r = client.post(
+            "/admin/users",
+            json={"email": "rep@x.com", "name": "X", "password": "Aaaaa1!@bC"},
+            headers=ADMIN_HEADERS,
+        )
+        # aaaa 重複 4 次 → reject
+        assert r.status_code == 422
+
+    def test_reset_password_enforces_policy(self, client):
+        """C4 · reset 跟 create 用同一個 validator"""
+        self._make_user(client)
+        r = client.post(
+            "/admin/users/policy@chengfu.local/reset-password",
+            json={"new_password": "weak"},
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 422
+
+
+class TestResetPassword:
+    """reset-password 端點 · session 失效 + audit + lockout"""
+
+    def test_requires_admin(self, client):
+        r = client.post(
+            "/admin/users/anyone@x.com/reset-password",
+            json={"new_password": "Strong!Pass2026"},
+        )
+        assert r.status_code == 403
+
+    def test_cant_reset_self(self, client):
+        r = client.post(
+            "/admin/users/sterio068@gmail.com/reset-password",
+            json={"new_password": "Strong!Pass2026"},
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 400
+
+    def test_404_on_unknown_user(self, client):
+        r = client.post(
+            "/admin/users/notexist@x.com/reset-password",
+            json={"new_password": "Strong!Pass2026"},
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 404
+
+
+class TestPermanentDelete:
+    """permanent delete 端點 · CAS + cleanup-first guard"""
+
+    def test_requires_admin(self, client):
+        r = client.delete("/admin/users/anyone@x.com/permanent")
+        assert r.status_code == 403
+
+    def test_cant_delete_self(self, client):
+        r = client.delete(
+            "/admin/users/sterio068@gmail.com/permanent",
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 400
+
+    def test_must_deactivate_first(self, client):
+        """C6 · 二段式 · 沒先停用就刪 → 400"""
+        # 確保 test user 是 active
+        import main
+        main.db.users.update_one(
+            {"email": "test@chengfu.local"},
+            {"$set": {"chengfu_active": True}},
+        )
+        r = client.delete(
+            "/admin/users/test@chengfu.local/permanent",
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 400

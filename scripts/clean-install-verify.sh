@@ -34,6 +34,7 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:/Applications/Docker.app/Contents/
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BASE_URL="${BASE_URL:-http://localhost}"
+CLEAN_INSTALL_CONTEXT="${CLEAN_INSTALL_CONTEXT:-current-host-rehearsal}"
 REPORT_DIR="${REPO_ROOT}/reports/clean-install"
 TIMESTAMP="$(date +%Y-%m-%d-%H%M%S)"
 REPORT_FILE="${REPORT_DIR}/clean-install-verify-${TIMESTAMP}.md"
@@ -205,6 +206,7 @@ DATE_DAY="$(date +%Y-%m-%d)"
   echo "**主機**:$HOSTNAME_NOW"
   echo "**macOS 版本**:$MACOS_VER"
   echo "**BASE_URL**:$BASE_URL"
+  echo "**測試情境**:$CLEAN_INSTALL_CONTEXT"
   echo "**結果**:**$RESULT**"
   echo "**總計**:$PASSED / $TOTAL passed · $FAILED failed"
   echo ""
@@ -216,6 +218,8 @@ cat >> "$REPORT_FILE" <<'BODY_EOF'
 ## 對應審計 finding
 
 - **F-08**(External Audit 2026-04-25):乾淨 Mac VM 雙擊 DMG 全流程未在 release-verify 內覆蓋。本報告即為對應 Gate 1 證據。
+
+> 注意:只有在 `CLEAN_INSTALL_CONTEXT=clean-vm`、`clean-mac` 或 `target-mac` 且附上 DMG 安裝錄影/截圖時,本報告才可視為 F-08 完整關閉。若情境為 `current-host-rehearsal`,代表只是開發機複查,不能替代乾淨機器驗收。
 
 ## 涵蓋 Gate
 
@@ -254,7 +258,7 @@ cat >> "$REPORT_FILE" <<'TAIL_EOF'
 
 ---
 
-**這份 manifest 通過 = Phase 1 Gate 1 解鎖 · 可以開始 4 人 pilot。**
+**判定規則**:乾淨機器情境 + 本 manifest 通過 + 安裝錄影/截圖齊全 = Phase 1 Gate 1 解鎖。`current-host-rehearsal` 通過只代表本機複查綠,不能單獨開始 4 人 pilot。
 TAIL_EOF
 
 echo ""

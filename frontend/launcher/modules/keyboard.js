@@ -6,7 +6,9 @@
 export function setupGlobalKeyboard(actions = {}) {
   document.addEventListener("keydown", event => {
     const mod = event.metaKey || event.ctrlKey;
-    const inEditable = event.target.matches("input,textarea,[contenteditable]");
+    const target = event.target;
+    const inEditable = target instanceof Element
+      && target.matches("input,textarea,[contenteditable]");
 
     if (mod && event.key === "k") {
       event.preventDefault();

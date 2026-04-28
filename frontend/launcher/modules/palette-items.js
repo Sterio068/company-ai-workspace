@@ -15,8 +15,9 @@ const VIEW_ITEMS = [
   ["accounting", "💰 會計", "⌘A"],
   ["tenders", "📢 標案", "⌘T"],
   ["crm", "💼 商機", "⌘I"],
-  ["workflows", "⚡ 流程", "⌘W"],
+  ["workflows", "↳ 工作流程", "⌘W"],
   ["knowledge", "📚 知識庫", ""],
+  ["notebooklm", "▣ NotebookLM", ""],
   ["admin", "📊 管理", "⌘M"],
 ];
 

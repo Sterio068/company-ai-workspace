@@ -13,6 +13,7 @@ import { authFetch } from "./auth.js";
 import { escapeHtml, localizeVisibleText } from "./util.js";
 import { toast } from "./toast.js";
 import { modal } from "./modal.js";
+import { sanitizeRenderedHtml } from "./chat-sanitize.js";
 // vNext B + D + G · 教學大幅優化 · 角色 / 進度 / 搜尋
 import { ROLES, getRole, setRole, getRoleProgress, getProgress, resetProgress } from "./help-state.js";
 import { helpTutorial } from "./help-tutorial.js";
@@ -32,10 +33,22 @@ const TASK_LABELS = {
   "tutorial-handoff-copy-line": "複製過 LINE 格式交棒卡",
   "tutorial-tender-go-no-go": "用過招標 Go/No-Go 評估",
   "tutorial-meeting-upload": "用過會議速記上傳",
+  "tutorial-meeting-summary": "複製過會議摘要",
+  "tutorial-crm-create-lead": "建立過第一筆商機",
+  "tutorial-crm-import-tender": "把標案匯入商機漏斗",
+  "tutorial-crm-followup": "更新過商機跟進紀錄",
+  "tutorial-accounting-transaction": "新增過會計交易",
+  "tutorial-accounting-invoice": "開過發票草稿",
+  "tutorial-accounting-quote": "建立過報價草稿",
+  "tutorial-accounting-pnl": "看過本月損益",
+  "tutorial-site-photo": "上傳過場勘照片",
+  "tutorial-site-brief-copy": "複製過場勘 brief",
+  "tutorial-site-push-handoff": "把場勘推到交棒卡",
   "tutorial-design-fal": "用過 Fal.ai 生圖",
   "tutorial-press-release": "寫過新聞稿草稿",
   "tutorial-social-schedule": "排程過社群貼文",
   "tutorial-knowledge-search": "搜過知識庫",
+  "tutorial-notebooklm-pack": "建立過 NotebookLM 資料包",
   "tutorial-vendor-compare": "用過廠商比價表",
   "tutorial-budget-quote": "做過專案報價毛利試算",
   "tutorial-classification": "看懂資料分級 L1/L2/L3",
@@ -56,20 +69,50 @@ function _highlightQuery(text, q) {
 }
 
 // v1.3 · 使用手冊完整列表(對應 frontend/launcher/user-guide/*.md)
+// 使用手冊完整列表(對應 frontend/launcher/user-guide/*.md)
+// 排序原則:入門 → 連線/帳號 → 訓練 → 操作技巧 → 介接資訊 → 管理員專屬
+// keywords 給搜尋索引用 · 不放在 sidebar 顯示
 const USER_GUIDE_DOCS = [
-  { slug: "quickstart-v1.3",      icon: "🚀", title: "v1.3 快速開始(5 分鐘)" },
-  { slug: "training-v1.3",        icon: "🎓", title: "v1.3 教育訓練(15 分鐘)" },
-  { slug: "error-codes",          icon: "🚨", title: "錯誤訊息對照表" },
-  { slug: "troubleshooting-v1.3", icon: "🔧", title: "v1.3 故障排除" },
-  { slug: "mobile-ios",           icon: "📱", title: "iPhone 完整設定指南" },
-  { slug: "slash-commands",       icon: "⌨️", title: "快速命令 + 快捷鍵" },
-  { slug: "handoff-card",         icon: "📋", title: "交棒 4 格卡標準流程" },
-  { slug: "knowledge-search",     icon: "📚", title: "知識庫搜尋 5 範例" },
-  { slug: "dashboard-metrics",    icon: "📊", title: "首頁指標解讀" },
-  { slug: "audio-note-sop",       icon: "🎙", title: "場勘語音備註標準流程" },
-  { slug: "social-oauth-fallback",icon: "🔌", title: "社群授權降級方案" },
-  { slug: "admin-permissions",    icon: "🔐", title: "管理員權限對照表" },
-  { slug: "frontend-endpoints",   icon: "🔌", title: "前端 ↔ 後端介接對照" },
+  { slug: "quickstart-v1.3",      icon: "🚀", title: "快速開始(5 分鐘)",         keywords: "5 分鐘 新人 入門 上手" },
+  { slug: "remote-access",        icon: "🌐", title: "同仁連線方式(內網 + 遠端)", keywords: "LAN IP mDNS Cloudflare Tunnel 教學 設定" },
+  { slug: "account-management",   icon: "📇", title: "同仁帳號管理(老闆 SOP)",   keywords: "新增 編輯 重設密碼 停用 永久刪除 PDPA 老闆" },
+  { slug: "training-v1.3",        icon: "🎓", title: "教育訓練(15 分鐘)",        keywords: "15 分鐘 詳細 教案" },
+  { slug: "troubleshooting-v1.3", icon: "🔧", title: "故障排除",                 keywords: "21 症狀 修法" },
+  { slug: "error-codes",          icon: "🚨", title: "錯誤訊息對照表",            keywords: "30 error code 故障 修復" },
+  { slug: "mobile-ios",           icon: "📱", title: "iPhone 完整設定指南",      keywords: "場勘 PWA 拍照 GPS 麥克風" },
+  { slug: "slash-commands",       icon: "⌨️", title: "快速命令 + 快捷鍵",         keywords: "⌘K /know /meet /vendor 27 快捷鍵" },
+  { slug: "handoff-card",         icon: "📋", title: "交棒 4 格卡標準流程",      keywords: "目標 限制 素材 下一步 LINE Email" },
+  { slug: "knowledge-search",     icon: "📚", title: "知識庫搜尋 5 範例",         keywords: "5 範例 全文搜 引用" },
+  { slug: "notebooklm-sync",       icon: "▣", title: "NotebookLM 知識庫",         keywords: "NotebookLM 資料包 同步 Enterprise 本地資料庫 資料夾 筆記本" },
+  { slug: "daily-ops-modules",      icon: "🧭", title: "五大日常模組 SOP",         keywords: "商機追蹤 會計 會議速記 場勘 使用教學 日常流程" },
+  { slug: "dashboard-metrics",    icon: "📊", title: "首頁指標解讀",              keywords: "用量 預算 ROI 標案漏斗" },
+  { slug: "audio-note-sop",       icon: "🎙", title: "場勘語音備註標準流程",     keywords: "30 秒 語音 STT 設計師" },
+  { slug: "social-oauth-fallback",icon: "🔌", title: "社群授權降級方案",          keywords: "Meta 審核期 mock 排程" },
+  { slug: "admin-permissions",    icon: "🔐", title: "管理員權限對照表",          keywords: "ADMIN USER 匿名 7 preset 28 權限" },
+  { slug: "frontend-endpoints",   icon: "🔌", title: "前端 ↔ 後端介接對照",       keywords: "module API 串接" },
+];
+
+// J1 · 搜尋索引從 USER_GUIDE_DOCS auto-derive(不再雙處同步)+ 內建固定 sections
+// 模組頂層常數 · 不在 _bindSearch() 內每次 render 重建(原本有效能浪費)
+const STATIC_HELP_SECTIONS = [
+  { id: "help-quickstart", title: "🚀 快速開始", body: "5 分鐘新人入門 工作區 對話 交棒" },
+  { id: "help-newfeatures", title: "🆕 新功能", body: "會議速記 媒體名單 社群排程 場勘" },
+  { id: "help-daily-modules", title: "🧭 五大日常模組", body: "商機追蹤 會計 會議速記 場勘 使用教學" },
+  { id: "help-workspaces", title: "🎯 5 個工作區", body: "投標 活動 設計 公關 營運" },
+  { id: "help-agents", title: "🤖 10 個助手", body: "主管家 投標顧問 設計師 公關 會計 會議速記" },
+  { id: "help-shortcuts", title: "⌨️ 快捷鍵", body: "⌘K ⌘1 ⌘2 ⌘3 ⌘4 ⌘5 ⌘P ⌘A ⌘M" },
+  { id: "help-notebooklm", title: "▣ NotebookLM", body: "資料包 本地資料庫 同步 Enterprise 專案筆記本 資料夾" },
+  { id: "help-classification", title: "🔒 資料分級", body: "L1 L2 L3 機敏 PDPA" },
+  { id: "help-secrets", title: "🔐 服務金鑰管理", body: "Anthropic OpenAI Fal.ai Keychain" },
+];
+
+const HELP_INDEX = [
+  ...STATIC_HELP_SECTIONS,
+  ...USER_GUIDE_DOCS.map(d => ({
+    id: `help-doc-${d.slug}`,
+    title: `${d.icon} ${d.title}`,
+    body: d.keywords || d.title,
+  })),
 ];
 
 
@@ -98,13 +141,15 @@ export const help = {
       <div class="help-container">
         <aside class="help-nav">
           <a href="#help-quickstart" class="help-nav-item active" data-section="quickstart">🚀 快速開始</a>
-          <a href="#help-newfeatures" class="help-nav-item" data-section="newfeatures">🆕 v1.2 新功能</a>
+          <a href="#help-newfeatures" class="help-nav-item" data-section="newfeatures">🆕 新功能</a>
+          <a href="#help-daily-modules" class="help-nav-item" data-section="daily-modules">🧭 五大日常模組</a>
           <a href="#help-workspaces" class="help-nav-item" data-section="workspaces">🎯 5 個工作區</a>
           <a href="#help-agents" class="help-nav-item" data-section="agents">🤖 10 個助手</a>
           <a href="#help-shortcuts" class="help-nav-item" data-section="shortcuts">⌨️ 快捷鍵</a>
+          <a href="#help-notebooklm" class="help-nav-item" data-section="notebooklm">▣ NotebookLM</a>
           <a href="#help-classification" class="help-nav-item" data-section="classification">🔒 資料分級</a>
 
-          <div class="help-nav-section">📖 完整使用手冊(v1.3)</div>
+          <div class="help-nav-section">📖 完整使用手冊</div>
           ${USER_GUIDE_DOCS.map(d => `
             <a href="#help-doc-${d.slug}" class="help-nav-item" data-doc="${d.slug}">${d.icon} ${d.title}</a>
           `).join("")}
@@ -116,9 +161,11 @@ export const help = {
         <div class="help-main">
           ${this._renderQuickstart()}
           ${this._renderNewFeatures()}
+          ${this._renderDailyModules()}
           ${this._renderWorkspaces()}
           ${this._renderAgents()}
           ${this._renderShortcuts()}
+          ${this._renderNotebookLM()}
           ${this._renderClassification()}
           ${USER_GUIDE_DOCS.map(d => `
             <section id="help-doc-${d.slug}" class="help-section help-doc-section" data-doc-slug="${d.slug}">
@@ -244,31 +291,7 @@ export const help = {
     const input = document.getElementById("help-search-input");
     const results = document.getElementById("help-search-results");
     if (!input || !results) return;
-
-    // 索引:section + doc + role 標題
-    const HELP_INDEX = [
-      { id: "help-quickstart", title: "🚀 快速開始", body: "5 分鐘新人入門 工作區 對話 交棒" },
-      { id: "help-newfeatures", title: "🆕 v1.2 新功能", body: "會議速記 媒體名單 社群排程 場勘" },
-      { id: "help-workspaces", title: "🎯 5 個工作區", body: "投標 活動 設計 公關 營運" },
-      { id: "help-agents", title: "🤖 10 個助手", body: "主管家 投標顧問 設計師 公關 會計 會議速記" },
-      { id: "help-shortcuts", title: "⌨️ 快捷鍵", body: "⌘K ⌘1 ⌘2 ⌘3 ⌘4 ⌘5 ⌘P ⌘A ⌘M" },
-      { id: "help-classification", title: "🔒 資料分級", body: "L1 L2 L3 機敏 PDPA" },
-      { id: "help-doc-quickstart-v1.3", title: "🚀 v1.3 快速開始", body: "5 分鐘 新人 上手" },
-      { id: "help-doc-training-v1.3", title: "🎓 v1.3 教育訓練", body: "15 分鐘 詳細教案" },
-      { id: "help-doc-error-codes", title: "🚨 錯誤訊息對照表", body: "30+ error code 故障 修復" },
-      { id: "help-doc-troubleshooting-v1.3", title: "🔧 v1.3 故障排除", body: "21 症狀 修法" },
-      { id: "help-doc-mobile-ios", title: "📱 iPhone 完整設定", body: "場勘 PWA 拍照 GPS 麥克風" },
-      { id: "help-doc-slash-commands", title: "⌨️ 快速命令", body: "⌘K /know /meet /vendor 27 快捷鍵" },
-      { id: "help-doc-handoff-card", title: "📋 交棒 4 格卡", body: "目標 限制 素材 下一步 LINE Email" },
-      { id: "help-doc-knowledge-search", title: "📚 知識庫搜尋", body: "5 範例 全文搜 引用" },
-      { id: "help-doc-dashboard-metrics", title: "📊 首頁指標解讀", body: "用量 預算 ROI 標案漏斗" },
-      { id: "help-doc-audio-note-sop", title: "🎙 場勘語音備註", body: "30 秒 語音 STT 設計師" },
-      { id: "help-doc-social-oauth-fallback", title: "🔌 社群授權降級", body: "Meta 審核期 mock 排程" },
-      { id: "help-doc-admin-permissions", title: "🔐 管理員權限對照", body: "ADMIN USER 匿名 7 preset 28 權限" },
-      { id: "help-doc-frontend-endpoints", title: "🔌 前端 ↔ 後端對照", body: "module API 串接" },
-      { id: "help-secrets", title: "🔐 服務金鑰管理", body: "Anthropic OpenAI Fal.ai Keychain" },
-    ];
-
+    // J1 · HELP_INDEX 提到 module top + 從 USER_GUIDE_DOCS auto-derive · 不再 local 重建
     let timer;
     input.addEventListener("input", () => {
       clearTimeout(timer);
@@ -352,12 +375,13 @@ export const help = {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const md = await r.text();
       const { marked } = await import("./vendor-marked.js");
-      const html = marked.parse(md);
-      this._markdownCache[slug] = html;
-      target.innerHTML = `<div class="help-doc-rendered">${html}</div>`;
+      const safeHtml = sanitizeRenderedHtml(marked.parse(md));
+      const rendered = `<div class="help-doc-rendered">${safeHtml}</div>`;
+      this._markdownCache[slug] = rendered;
+      target.innerHTML = rendered;
       localizeVisibleText(target);
     } catch (e) {
-      target.innerHTML = `<div class="help-doc-error">❌ 載入失敗:${e.message}<br>檔案 frontend/launcher/user-guide/${slug}.md 是否存在?</div>`;
+      target.innerHTML = `<div class="help-doc-error">❌ 載入失敗:${escapeHtml(e.message)}<br>檔案 frontend/launcher/user-guide/${escapeHtml(slug)}.md 是否存在?</div>`;
     }
   },
 
@@ -434,13 +458,13 @@ export const help = {
   },
 
   // ============================================================
-  // 1.5 v1.2 新功能(2026-04-23)
+  // 1.5 新功能(會議速記 / 媒體名單 / 社群排程 / 場勘)
   // ============================================================
   _renderNewFeatures() {
     return `
       <section id="help-newfeatures" class="help-section">
-        <h2>🆕 v1.2 新功能 · 4 個</h2>
-        <p>2026-04-23 上線 · 全部在左側側邊欄有入口 · 月省合計 ≥ 120 小時 / 10 人</p>
+        <h2>🆕 新功能 · 4 個</h2>
+        <p>全部在左側側邊欄有入口 · 月省合計 ≥ 120 小時 / 10 人</p>
 
         <div class="help-step">
           <div class="help-step-num">🎤</div>
@@ -489,11 +513,73 @@ export const help = {
             <p>左側「場勘」· iPhone 開瀏覽器到工作台 · 拍 1-5 張照片 + 定位 · 視覺模型自動結構化。</p>
             <ul>
               <li>會由智慧助理描述每張照片 + 彙整成 場地類型 / 入口 / 洗手間 / 停車 / 問題</li>
-              <li><b>iPhone 用戶:</b> 設定 → 相機 → 格式 → 改「最相容」(否則拍出來是 HEIC 會被擋)</li>
+              <li><b>iPhone 用戶:</b> 可以直接上傳 HEIC；若主機缺轉檔套件,再改「最相容」JPEG</li>
               <li>一鍵推到專案交棒卡(獨立場勘問題欄位,不覆寫人工內容)</li>
               <li>2 年後依保存期限自動清除(活動週期 + 復盤)</li>
             </ul>
           </div>
+        </div>
+      </section>
+    `;
+  },
+
+  // ============================================================
+  // 1.6 五大日常模組 · 直接告訴使用者今天怎麼用
+  // ============================================================
+  _renderDailyModules() {
+    const modules = [
+      {
+        icon: "💼",
+        name: "商機追蹤",
+        when: "看到新標案、客戶詢問、朋友介紹案源",
+        output: "商機卡 + 勝率 + 截止日 + 跟進紀錄",
+        steps: ["匯入有興趣標案或新增商機", "打開今日追蹤卡", "補最新紀錄並拖到正確階段"],
+      },
+      {
+        icon: "💰",
+        name: "會計",
+        when: "收到款項、付廠商、要開發票或報價",
+        output: "交易 / 發票 / 報價 / 本月損益",
+        steps: ["先看今日財務接續", "補交易或建立報價", "綁工作包看毛利"],
+      },
+      {
+        icon: "🎤",
+        name: "會議速記",
+        when: "客戶會後、內部會後、電話錄音後",
+        output: "決議、待辦、關鍵數字、下次會議",
+        steps: ["上傳音檔", "等 AI 整理", "複製摘要或推到交棒卡"],
+      },
+      {
+        icon: "📸",
+        name: "場勘",
+        when: "活動現場、場地確認、搭建前檢查",
+        output: "場地 brief、入口/電源/停車/問題清單",
+        steps: ["拍 1-5 張照片", "取定位並補地址提示", "複製 brief 或推到工作包"],
+      },
+      {
+        icon: "📖",
+        name: "使用教學",
+        when: "新人上手、忘記快捷鍵、不知道該去哪個模組",
+        output: "角色化學習清單 + 進度 + 搜尋",
+        steps: ["先選角色", "搜你要做的事", "照五大模組 SOP 做第一輪"],
+      },
+    ];
+    return `
+      <section id="help-daily-modules" class="help-section">
+        <h2>🧭 五大日常模組 · 今天照這樣用</h2>
+        <p>這 5 個頁面不是額外功能,而是把日常工作接起來:商機進來 → 估價與會計 → 開會 → 場勘 → 交棒與教學。</p>
+        <div class="help-module-grid">
+          ${modules.map(m => `
+            <article class="help-module-card">
+              <div class="help-module-icon">${m.icon}</div>
+              <div>
+                <h3>${m.icon} ${m.name}</h3>
+                <p><b>何時用:</b>${m.when}</p>
+                <p><b>產出:</b>${m.output}</p>
+                <ol>${m.steps.map(s => `<li>${s}</li>`).join("")}</ol>
+              </div>
+            </article>
+          `).join("")}
         </div>
       </section>
     `;
@@ -635,6 +721,67 @@ export const help = {
             `).join("")}
           </tbody>
         </table>
+      </section>
+    `;
+  },
+
+  // ============================================================
+  // 4.5 NotebookLM 知識庫
+  // ============================================================
+  _renderNotebookLM() {
+    return `
+      <section id="help-notebooklm" class="help-section">
+        <h2>▣ NotebookLM 知識庫</h2>
+        <p>NotebookLM 是深度閱讀、摘要、比較與教學素材工具。本地 MongoDB / 檔案 / 工作包仍是主資料來源；同步或上傳時會送到 NotebookLM Enterprise 雲端服務。</p>
+
+        <div class="help-step">
+          <div class="help-step-num">1</div>
+          <div>
+            <h3>先產生資料包</h3>
+            <p>左側打開 <b>NotebookLM</b> → 選資料範圍 → 按「先預覽」或「建立資料包」。資料包是一份可審核 Markdown 快照,內容來自本地資料庫。</p>
+            <ul>
+              <li><b>單一工作包:</b>工作包基本資料、交棒卡、會議摘要、場勘摘要、專案財務摘要</li>
+              <li><b>標案 + 商機雷達:</b>每日標案監測、CRM 標案商機</li>
+              <li><b>公司知識:</b>品牌語氣、SOP、禁用詞</li>
+              <li><b>教育訓練:</b>使用手冊與新人教學</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-num">2</div>
+          <div>
+            <h3>再同步或手動貼到 NotebookLM</h3>
+            <p>若管理員已設定 NotebookLM Enterprise API,可按「同步 NotebookLM」送到 NotebookLM。若尚未設定,系統會保留本地資料包、不送出資料,你仍可複製 Markdown 後手動貼到 NotebookLM。</p>
+            <ul>
+              <li>同步不是即時資料庫連線,是一次快照</li>
+              <li>同一份內容會有 hash,避免重複建立</li>
+              <li>同步紀錄會留在本地,方便追查誰同步了什麼</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-num">3</div>
+          <div>
+            <h3>資料等級只作標記</h3>
+            <p>資料等級只幫同仁辨識內容類型,不會阻擋 NotebookLM 建立、同步或上傳。真正限制只來自 NotebookLM 官方格式、檔案大小與 API 是否已設定。</p>
+            <ul>
+              <li>可以同步:公開標案、完整工作包、會議摘要、教育訓練 SOP、帳務明細</li>
+              <li>可以上傳:單檔、多檔、整個專案資料夾</li>
+              <li>系統會保留本地資料包與同步紀錄,方便追蹤來源</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-num">4</div>
+          <div>
+            <h3>什麼時候用 NotebookLM?</h3>
+            <p>用智慧助理做工作流與回寫,用 NotebookLM 做深讀、比較、簡報/播客/學習素材。兩者並行,不要互相取代。</p>
+            <p>完整 SOP 看左側「▣ NotebookLM 知識庫」手冊。</p>
+          </div>
+        </div>
       </section>
     `;
   },
@@ -896,6 +1043,7 @@ function localizeSecretText(value = "") {
     .replace(/SMTP Password/g, "寄信密碼")
     .replace(/JWT Refresh Secret/g, "登入安全密鑰")
     .replace(/ECC Internal Token/g, "內部通行權杖")
+    .replace(/Action Bridge Token/g, "工具橋接通行權杖")
     .replace(/Meilisearch Master Key/g, "全文搜尋主密鑰")
     .replace(/Claude 模型/g, "備援模型")
     .replace(/gpt-image-2/g, "高品質生圖模型")
@@ -932,6 +1080,7 @@ function localizeSecretName(name = "") {
     EMAIL_PASSWORD: "寄信密碼",
     JWT_REFRESH_SECRET: "登入安全密鑰",
     ECC_INTERNAL_TOKEN: "內部通行權杖",
+    ACTION_BRIDGE_TOKEN: "工具橋接通行權杖",
     MEILI_MASTER_KEY: "全文搜尋主密鑰",
   };
   return names[name] || localizeSecretText(name).replace(/_/g, " ");

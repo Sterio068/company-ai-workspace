@@ -9,6 +9,7 @@ import { modal } from "./modal.js";
 import { toast } from "./toast.js";
 import { authFetch } from "./auth.js";
 import { chat } from "./chat.js";
+import { Projects } from "./projects.js";
 
 const BASE = "/api-accounting/orchestrator";
 
@@ -73,25 +74,35 @@ export const workflows = {
       root.innerHTML = `
         <div class="empty-state">
           <div class="empty-state-icon">🧪</div>
-          <div class="empty-state-title">下一步建議暫時無法載入</div>
+          <div class="empty-state-title">工作流程暫時無法載入</div>
           <div class="empty-state-hint">請稍後重試;若持續發生,再請管理員檢查後端服務。</div>
-          <button class="btn-ghost" onclick="window.workflows?.load?.()" style="margin-top:12px">重試</button>
+          <button class="btn-ghost" data-action="workflows.load" style="margin-top:12px">重試</button>
         </div>`;
     }
   },
 
   async prepare(presetId, options = {}) {
-    const r = await modal.prompt([
+    const projectField = await this._projectSelectField(options.projectId);
+    const fields = [
       {
         name: "input",
         label: "初始輸入",
         type: "textarea",
         rows: 5,
         required: true,
+        value: options.initialInput || "",
         placeholder: "例:貼入招標摘要 / 活動主題 / 新聞事實。先不用整理,主管家會幫你拆步驟。",
       },
-    ], { title: `產生下一步草稿 · ${presetId}`, icon: "⚡", primary: "產生草稿" });
+    ];
+    if (projectField) fields.push(projectField);
+
+    const r = await modal.prompt(fields, {
+      title: `產生下一步草稿 · ${presetId}`,
+      icon: "⚡",
+      primary: "產生草稿",
+    });
     if (!r) return;
+    const projectId = r.project_id || options.projectId || null;
 
     try {
       const resp = await authFetch(`${BASE}/workflow/prepare-preset/${encodeURIComponent(presetId)}`, {
@@ -99,7 +110,7 @@ export const workflows = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           initial_input: r.input,
-          project_id: options.projectId || null,
+          project_id: projectId,
         }),
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -115,23 +126,29 @@ export const workflows = {
   },
 
   // v1.54 · 直接執行 · 主管家自動串接所有 Agent · 結果顯示在 modal
-  async execute(presetId) {
-    const r = await modal.prompt([
+  async execute(presetId, options = {}) {
+    const projectField = await this._projectSelectField(options.projectId);
+    const fields = [
       {
         name: "input",
         label: "初始輸入",
         type: "textarea",
         rows: 5,
         required: true,
+        value: options.initialInput || "",
         placeholder: "貼入招標摘要 / 活動主題 / 新聞事實。執行後 AI 會串接多個專家自動跑完。",
       },
-    ], {
+    ];
+    if (projectField) fields.push(projectField);
+
+    const r = await modal.prompt(fields, {
       title: `🚀 直接執行 · ${presetId}`,
       icon: "⚡",
       primary: "確認執行 · 不再回頭",
       cancel: "先用草稿模式",
     });
     if (!r) return;
+    const projectId = r.project_id || options.projectId || null;
 
     const confirmed = await modal.confirm(
       `<div style="display:grid;gap:10px">
@@ -162,7 +179,7 @@ export const workflows = {
       const resp = await authFetch(`${BASE}/workflow/run-preset/${encodeURIComponent(presetId)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initial_input: r.input }),
+        body: JSON.stringify({ initial_input: r.input, project_id: projectId }),
       });
       clearInterval(tick);
       clearInterval(tick); progress.remove();
@@ -179,6 +196,7 @@ export const workflows = {
         throw new Error(`HTTP ${resp.status}`);
       }
       const result = await resp.json();
+      if (result.saved_to_project) toast.success("工作流程結果已寫入專案交棒卡");
       await this.showExecutionResult(result, presetId);
     } catch (e) {
       clearInterval(tick); progress.remove();
@@ -226,7 +244,7 @@ export const workflows = {
           </div>
         </div>
         <div class="dag-steps">${stepHtml}</div>
-        <div style="margin-top:12px;color:var(--text-tertiary);font-size:11px;text-align:center">執行中無法取消 · 失敗會自動標紅 · 可從中控 resume</div>
+        <div style="margin-top:12px;color:var(--text-tertiary);font-size:11px;text-align:center">執行中無法取消 · 若有綁定專案,完成後會寫回交棒卡</div>
       </div>`;
     return overlay;
   },
@@ -241,6 +259,9 @@ export const workflows = {
     const quota = result.quota
       ? `<div style="color:var(--text-secondary);font-size:12px">今日已用 ${result.quota.used}/${result.quota.cap} 個</div>`
       : "";
+    const saved = result.saved_to_project
+      ? `<div style="padding:10px;border-radius:8px;background:color-mix(in srgb,var(--green) 9%,transparent);border:1px solid color-mix(in srgb,var(--green) 28%,var(--border));font-size:13px;color:var(--text-secondary)">已同步到專案交棒卡 · 後續可從專案抽屜接續。</div>`
+      : "";
 
     await modal.show({
       title: `✅ 已執行 · ${result.workflow}`,
@@ -249,12 +270,22 @@ export const workflows = {
         <div style="display:grid;gap:10px">
           <div>${result.steps_executed} 個步驟全部完成</div>
           ${quota}
+          ${saved}
           <div style="max-height:50vh;overflow-y:auto">${steps}</div>
         </div>`,
       cancel: "關閉",
       primary: "帶最終結果到主管家繼續",
       onSubmit: () => {
-        chat.open("00", `工作流「${result.workflow}」已自動執行完畢,以下是最終整合結果,請協助我下一步:\n\n${result.final_output || ""}`);
+        const projectId = result.saved_to_project?.project_id;
+        chat.open("00", `工作流「${result.workflow}」已自動執行完畢,以下是最終整合結果,請協助我下一步:\n\n${result.final_output || ""}`, projectId ? {
+          handoffSave: {
+            projectId,
+            projectName: result.saved_to_project?.project_name || "目前專案",
+            target: "asset_ref",
+            label: `Workflow 接續 · ${result.workflow}`,
+            cta: "存回專案",
+          },
+        } : {});
         return true;
       },
     });
@@ -283,8 +314,17 @@ export const workflows = {
     );
     if (ok) {
       await this.recordAdoption(draft, "adopted");
-      chat.open("00", draft.supervisor_prompt || "");
-      toast.info("下一步草稿已帶入主管家 · 檢查後再送出");
+      const projectId = draft.saved_to_project?.project_id;
+      chat.open("00", draft.supervisor_prompt || "", projectId ? {
+        handoffSave: {
+          projectId,
+          projectName: draft.saved_to_project?.project_name || "目前專案",
+          target: "asset_ref",
+          label: `Workflow 草稿 · ${draft.name || draft.id}`,
+          cta: "存回專案",
+        },
+      } : {});
+      toast.info(projectId ? "下一步草稿已帶入主管家 · 回答後可存回專案" : "下一步草稿已帶入主管家 · 檢查後再送出");
     } else {
       await this.recordAdoption(draft, "rejected", "使用者暫不帶到主管家");
     }
@@ -306,6 +346,32 @@ export const workflows = {
     } catch (e) {
       console.warn("[workflows] adoption record failed", e);
     }
+  },
+
+  async _projectSelectField(selectedProjectId = "") {
+    let projects = Projects.load().filter(p => p.status !== "closed");
+    if (!projects.length) {
+      try {
+        projects = (await Projects.refresh()).filter(p => p.status !== "closed");
+      } catch {}
+    }
+    if (!projects.length) return null;
+    const selected = selectedProjectId && projects.some(p => (p.id || p._id) === selectedProjectId)
+      ? selectedProjectId
+      : "";
+    return {
+      name: "project_id",
+      label: "同步到專案(選填)",
+      type: "select",
+      value: selected,
+      options: [
+        { value: "", label: "不綁定專案" },
+        ...projects.map(p => ({
+          value: p.id || p._id,
+          label: p.client ? `${p.name || "未命名專案"} · ${p.client}` : (p.name || "未命名專案"),
+        })),
+      ],
+    };
   },
 };
 

@@ -14,6 +14,8 @@
 #   2026-04-18 · 依 DESIGN-REVIEW T-2 移除 rag-api / vectordb / whisper 三個容器
 #   2026-04-18 · 依 DESIGN-REVIEW T-5 image 改 pin 具體版本(避免 latest 破壞性更新)
 #   2026-04-18 · 依 Docker Compose v2 移除 obsolete `version` 欄位
+#   2026-04-28 · 依 LibreChat v0.8.5 實測補 RAG_API_URL
+#                指向 accounting 內建 /rag adapter,避免額外 registry / pgvector 交付風險
 #
 # 重要提醒:
 #   API key 與密碼應透過 scripts/start.sh 從 macOS Keychain 注入,
@@ -53,7 +55,7 @@ services:
 
   # ==================== LibreChat 主服務 ====================
   # 原生能力覆蓋:
-  # - file_search(內建 RAG,不需 rag-api 容器)
+  # - file_search(透過 accounting /rag adapter 提供 LibreChat RAG API 相容介面)
   # - code_interpreter(毛利試算、Excel 輸出)
   # - web_search(內建)
   # - speech_to_text(內建,不需 whisper 容器)
@@ -67,6 +69,8 @@ services:
         condition: service_healthy
       meilisearch:
         condition: service_healthy
+      accounting:
+        condition: service_healthy
     # 不再對外 expose 3080,改由 nginx 代理
     expose:
       - "3080"
@@ -75,6 +79,7 @@ services:
       - HOST=0.0.0.0
       - MONGO_URI=mongodb://mongodb:27017/chengfu
       - MEILI_HOST=http://meilisearch:7700
+      - RAG_API_URL=http://accounting:8000/rag
       # Codex R3.1 · start.sh 從 Keychain 注入的 env · 明示傳入 · 否則 env_file 裡 placeholder 會覆蓋
       # env_file 讀檔時 · docker compose 不會把 host env 覆蓋 file 值 · 必須這裡 explicit
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
@@ -166,12 +171,16 @@ services:
       # 沒設 → R8#6 raise · 防誤配 dev mode
       - ECC_ENV=${ECC_ENV:-production}
       - NODE_ENV=${NODE_ENV:-production}
+      # LibreChat RAG API short-lived bearer token 用 JWT_SECRET 簽,accounting /rag adapter 必須同步驗。
+      - JWT_SECRET=${JWT_SECRET:-}
       # JWT_REFRESH_SECRET 從 LibreChat .env 同步 · _verify_librechat_cookie 驗 refreshToken 用
       # 沒設 + prod → 啟動 raise(R7#1)· dev mode 容許 silent fallback
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-}
       # ECC_INTERNAL_TOKEN · cron daily-digest / tender-monitor 用 · prod 強制
       # 用 `openssl rand -hex 32` 產生 · 同步進 launchd plist 環境
       - ECC_INTERNAL_TOKEN=${ECC_INTERNAL_TOKEN:-}
+      # ACTION_BRIDGE_TOKEN · LibreChat Actions 專用低權限 token · 搭配 X-Acting-User + endpoint allowlist
+      - ACTION_BRIDGE_TOKEN=${ACTION_BRIDGE_TOKEN:-}
       # X-User-Email legacy fallback · prod 預設關 · dev 預設開
       # 設 1 → 即使 prod 也允許(過渡期 launcher 還沒切 cookie 時用)
       - ALLOW_LEGACY_AUTH_HEADERS=${ALLOW_LEGACY_AUTH_HEADERS:-0}
@@ -195,6 +204,24 @@ services:
       - SENTRY_TRACES_SAMPLE=${SENTRY_TRACES_SAMPLE:-0.1}
       - SENTRY_PROFILES_SAMPLE=${SENTRY_PROFILES_SAMPLE:-0.0}
       - APP_VERSION=${APP_VERSION:-v1.66}
+      # AI 引擎 key · health endpoint 判存在 + vision/orchestrator 用 · 同 LibreChat
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # NotebookLM Enterprise · 選配並行知識庫(資料包同步)
+      - NOTEBOOKLM_ENTERPRISE_ENABLED=${NOTEBOOKLM_ENTERPRISE_ENABLED:-false}
+      - NOTEBOOKLM_PROJECT_NUMBER=${NOTEBOOKLM_PROJECT_NUMBER:-}
+      - NOTEBOOKLM_LOCATION=${NOTEBOOKLM_LOCATION:-global}
+      - NOTEBOOKLM_ENDPOINT_LOCATION=${NOTEBOOKLM_ENDPOINT_LOCATION:-global}
+      - NOTEBOOKLM_ACCESS_TOKEN=${NOTEBOOKLM_ACCESS_TOKEN:-}
+      - SOURCE_PACK_COMPANY_DIR=/data/source-docs/company
+      - SOURCE_PACK_TRAINING_DIR=/data/source-docs/user-guide
+      # 同仁連線網址(LAN IP / cloudflared)· admin view 顯示用
+      - HOST_NETWORK_FILE=/data/host-network.json
+    volumes:
+      # start.sh 啟動時把偵測結果寫入 .host-network.json · 唯讀掛入容器
+      - ./.host-network.json:/data/host-network.json:ro
+      - ../knowledge-base/company:/data/source-docs/company:ro
+      - ../frontend/launcher/user-guide:/data/source-docs/user-guide:ro
     expose:
       - "8000"
     networks:

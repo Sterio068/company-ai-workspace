@@ -150,6 +150,9 @@ else
         exit 1
     fi
     echo "  · 跑互動式 setup(會問 OpenAI/Anthropic/email 等)"
+    echo "  · OpenAI Key 取得網址: https://platform.openai.com/api-keys"
+    echo "  · Anthropic Key 取得網址: https://console.anthropic.com/settings/keys"
+    echo "  · Fal.ai Key(設計生圖選配,之後可於中控設定): https://fal.ai/dashboard/keys"
     echo ""
     bash ./scripts/setup-keychain.sh
 fi

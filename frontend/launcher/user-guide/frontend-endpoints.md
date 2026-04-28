@@ -15,9 +15,10 @@
 | 📚 技能庫 | (config.js 靜態) | skills | (純前端 · 無 API) |
 | 💰 會計 | accounting.js | accounting | `/accounts` `/transactions` `/invoices` `/quotes` `/reports/pnl` |
 | 📢 標案 | tenders.js | tenders | `/tender-alerts` (g0v PCC cron) |
-| ⚡ 流程 | workflows.js | workflows | (前端 SOP guide · 無 API) |
+| 工作流程 | workflows.js | workflows | (前端 SOP guide · 無 API) |
 | 📊 管理 | admin.js | admin | `/admin/*` 全套(僅 admin) |
 | 📚 知識庫 | knowledge.js | knowledge | `/knowledge/list,read,search` `/admin/sources/*` |
+| ▣ NotebookLM | notebooklm.js | notebooklm | `/notebooklm/status` `/notebooklm/source-packs/*` |
 | ❓ 教學 | help.js | help | (純前端 + 此 user-guide fetch) |
 | 🎤 會議 | meeting.js | meeting | `/memory/transcribe` `/memory/meetings` `/memory/meetings/{id}/push-to-handoff` |
 | 🎬 媒體 | media.js | media | `/media/contacts` `/media/recommend` `/media/pitches` `/media/contacts/export.csv` |
@@ -131,7 +132,30 @@
 | HTTP | path |
 |---|---|
 | GET | /tender-alerts |
-| POST | /tender-alerts/{key}/status |
+| GET | /tender-alerts/settings |
+| PUT | /tender-alerts/settings |
+| POST | /tender-alerts/run-now |
+| PUT | /tender-alerts/{key}?status=... |
+
+### NotebookLM(routers/notebooklm.py)
+| HTTP | path |
+|---|---|
+| GET | /notebooklm/status |
+| GET | /notebooklm/settings(admin) |
+| PUT | /notebooklm/settings(admin) |
+| POST | /notebooklm/source-packs/preview |
+| POST | /notebooklm/source-packs |
+| GET | /notebooklm/source-packs |
+| GET | /notebooklm/source-packs/{id} |
+| POST | /notebooklm/source-packs/{id}/sync(admin) |
+| POST | /notebooklm/projects/{project_id}/notebook |
+| GET | /notebooklm/projects/{project_id}/notebook |
+| POST | /notebooklm/uploads/auto |
+| POST | /notebooklm/projects/{project_id}/upload |
+| POST | /notebooklm/agent/source-packs/preview(internal) |
+| POST | /notebooklm/agent/source-packs(internal) |
+| GET | /notebooklm/agent/source-packs(internal) |
+| POST | /notebooklm/agent/source-packs/{id}/sync(internal) |
 
 ### Design(routers/design.py)
 | HTTP | path |

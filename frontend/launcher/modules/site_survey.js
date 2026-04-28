@@ -16,6 +16,7 @@
 import { authFetch } from "./auth.js";
 import { escapeHtml } from "./util.js";
 import { toast, networkError, operationError } from "./toast.js";
+import { markTaskDone } from "./help-state.js";
 
 const BASE = "/api-accounting";
 const MAX_IMAGES = 5;
@@ -39,11 +40,30 @@ export const siteSurvey = {
     if (!root) return;
 
     const heicWarn = (typeof navigator !== "undefined" && /iPhone|iPad/.test(navigator.userAgent))
-      ? `<div class="site-warn">📱 iPhone 用戶:設定 → 相機 → 格式 → 改「最相容」否則拍出來是 HEIC 會被擋</div>`
+      ? `<div class="site-warn">📱 iPhone 可直接上傳 HEIC；若這台主機未安裝 HEIC 轉檔套件,系統會提示改用「最相容」JPEG。</div>`
       : "";
 
     root.innerHTML = `
       ${heicWarn}
+      <section class="module-command-hero site-command-hero">
+        <div>
+          <span class="ops-command-kicker">場勘工作台</span>
+          <h2>現場拍照、定位、語音備註,回辦公室前就能交棒</h2>
+          <p>適合活動場地、動線、入口、電源、停車、風險問題。完成後可複製場勘 brief 或推到工作包。</p>
+        </div>
+        <div class="module-hero-metrics">
+          <div><strong>${this._images.length}</strong><span>已選照片</span></div>
+          <div><strong>${this._gps ? "已取" : "未取"}</strong><span>定位</span></div>
+          <div><strong>${this._projectId ? "已綁" : "選填"}</strong><span>工作包</span></div>
+        </div>
+      </section>
+
+      <section class="module-flow-grid">
+        <div><b>1. 拍照</b><span>1-5 張,JPEG / PNG / WebP / HEIC</span></div>
+        <div><b>2. 加定位與備註</b><span>地址提示、GPS、完成後可補 30 秒語音</span></div>
+        <div><b>3. 產出 brief</b><span>場地、入口、電源、停車、問題清單</span></div>
+      </section>
+
       <div class="site-toolbar">
         <h2>📸 場勘紀錄</h2>
         <p class="site-desc">拍 1-5 張現場照片 · 定位自動帶入 · 智慧助理產結構化場勘摘要</p>
@@ -61,7 +81,7 @@ export const siteSurvey = {
             `).join("")}
             ${this._images.length < MAX_IMAGES ? `
               <label class="site-photo-add">
-                <input type="file" id="site-camera" accept="image/jpeg,image/png,image/webp" capture="environment" multiple style="display:none">
+                <input type="file" id="site-camera" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" capture="environment" multiple style="display:none">
                 <span>+ 加照片</span>
               </label>
             ` : ""}
@@ -152,14 +172,6 @@ export const siteSurvey = {
         toast.warn(`照片過大已跳過`, { detail: `${f.name}(${(f.size / 1024 / 1024).toFixed(1)}MB > 5MB)` });
         continue;
       }
-      // HEIC mime check(iPhone 預設)
-      if (f.type === "image/heic" || f.type === "image/heif" || f.name.toLowerCase().endsWith(".heic")) {
-        toast.warn(`HEIC 不支援`, {
-          detail: `${f.name} · 到「設定 → 相機 → 格式 → 最相容」`,
-          action: { label: "教學", onClick: () => location.hash = "#help" },
-        });
-        continue;
-      }
       // R24#6 · 用 objectURL 不是 dataURL · 省 33% memory(不 base64 膨脹)
       const dataUrl = URL.createObjectURL(f);
       this._images.push({ file: f, dataUrl, isObjectUrl: true });
@@ -239,8 +251,10 @@ export const siteSurvey = {
         return;
       }
       const body = await r.json();
+      const submittedImageCount = this._images.length;
       this._currentSurveyId = body.survey_id;
       toast.success(`智慧分析中(約 ${this._images.length * 6} 秒)`);
+      markTaskDone("tutorial-site-photo");
       // R24#6 · revoke objectURLs 釋放 memory
       this._revokeObjectUrls();
       this._images = [];
@@ -248,7 +262,7 @@ export const siteSurvey = {
       this._addressHint = "";
       this.render();
       this._startPolling();
-      this._showProcessingBanner(body.survey_id, this._images?.length || 0);
+      this._showProcessingBanner(body.survey_id, submittedImageCount);
     } catch (e) {
       networkError("上傳場勘照片", e, () => this._submit());
       if (submitBtn) {
@@ -393,12 +407,18 @@ export const siteSurvey = {
 
         <div class="modal2-actions">
           <button type="button" data-close>關閉</button>
+          <button type="button" data-copy>複製場勘 brief</button>
           ${body.project_id ? `<button type="button" class="primary" data-push>推到交棒卡</button>` : ""}
         </div>
       </div>
     `;
     root.appendChild(m);
     m.querySelector("[data-close]").addEventListener("click", () => m.remove());
+    m.querySelector("[data-copy]").addEventListener("click", async () => {
+      await copyText(siteBriefText(body));
+      toast.success("場勘 brief 已複製");
+      markTaskDone("tutorial-site-brief-copy");
+    });
     // B4 · 錄音按鈕
     m.querySelector("#site-audio-rec")?.addEventListener("click", async () => {
       await this._recordAudio(m);
@@ -413,6 +433,7 @@ export const siteSurvey = {
         }
         const body = await r.json();
         toast.success(`已推 · ${body.issues_count} 個問題進交棒卡`);
+        markTaskDone("tutorial-site-push-handoff");
         m.remove();
       } catch (e) {
         networkError("推到交棒卡", e);
@@ -437,7 +458,7 @@ export const siteSurvey = {
         return;
       }
       list.innerHTML = items.map(s => `
-        <div class="site-history-item">
+        <div class="site-history-item" data-site-survey-id="${escapeHtml(s.survey_id)}">
           <span>📸 ${s.image_count} 張</span>
           <span>${escapeHtml(s.venue_type || "未分析")}</span>
           <span>${s.issues_count > 0 ? `⚠️ ${s.issues_count} 問題` : "✅ 無問題"}</span>
@@ -445,13 +466,16 @@ export const siteSurvey = {
           <span class="site-history-status status-${s.status}">${this._statusLabel(s.status)}</span>
         </div>
       `).join("");
+      list.querySelectorAll("[data-site-survey-id]").forEach(el => {
+        el.addEventListener("click", () => this._openSurvey(el.getAttribute("data-site-survey-id")));
+      });
     } catch (e) {
       list.innerHTML = `
         <div class="empty-state">
           <div class="empty-state-icon">😓</div>
           <div class="empty-state-title">讀取歷史失敗</div>
           <div class="empty-state-hint">${escapeHtml(e?.message || "網路或伺服器錯")}</div>
-          <button class="btn-ghost" onclick="window.siteSurvey?._loadHistory()" style="margin-top:12px">重試</button>
+          <button class="btn-ghost" data-action="siteSurvey.loadHistory" style="margin-top:12px">重試</button>
         </div>`;
     }
   },
@@ -557,4 +581,64 @@ export const siteSurvey = {
     btn.disabled = false;
     btn.onclick = () => this._recordAudio(modal);  // restore handler
   },
+
+  async _openSurvey(surveyId) {
+    try {
+      const r = await authFetch(`${BASE}/site-survey/${surveyId}`);
+      if (!r.ok) {
+        operationError("讀取場勘", await r.json().catch(() => ({})));
+        return;
+      }
+      const body = await r.json();
+      this._currentSurveyId = surveyId;
+      this._showResult(body);
+    } catch (e) {
+      networkError("讀取場勘", e, () => this._openSurvey(surveyId));
+    }
+  },
 };
+
+function siteBriefText(body = {}) {
+  const s = body.structured || {};
+  const venue = s.venue || {};
+  const lines = [
+    "場勘 brief",
+    `場地:${venue.type || "未判斷"} · ${venue.size_estimate || "未估算"}`,
+    `照片:${body.image_count || (body.media || []).length || 0} 張`,
+  ];
+  const loc = body.location || {};
+  if (loc.address_hint) lines.push(`地址提示:${loc.address_hint}`);
+  if (Array.isArray(s.entrances) && s.entrances.length) {
+    lines.push("", "入口");
+    s.entrances.forEach(x => lines.push(`- ${x}`));
+  }
+  if (s.power_outlets) lines.push(`電源:${s.power_outlets}`);
+  if (s.parking) lines.push(`停車:${s.parking}`);
+  if (s.toilets_count !== undefined && s.toilets_count !== null) lines.push(`洗手間:${s.toilets_count} 處`);
+  if (Array.isArray(s.issues) && s.issues.length) {
+    lines.push("", "風險 / 待確認");
+    s.issues.forEach(x => lines.push(`- ${x}`));
+  }
+  const audio = body.audio_notes || [];
+  const transcripts = audio.filter(a => a.status === "done" && a.transcript);
+  if (transcripts.length) {
+    lines.push("", "現場語音備註");
+    transcripts.forEach((a, idx) => lines.push(`- ${idx + 1}. ${a.transcript}`));
+  }
+  return lines.join("\n").trim();
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.left = "-9999px";
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand("copy");
+  ta.remove();
+}

@@ -1,0 +1,178 @@
+[
+  {
+    "name": "desktop-dashboard",
+    "logged": true,
+    "screenshot": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/v1.69-multi-agent-ui-audit/desktop-dashboard.png",
+    "metrics": {
+      "url": "http://localhost/",
+      "title": "智慧助理",
+      "loggedAppVisible": true,
+      "activeView": "dashboard",
+      "visibleButtons": 71,
+      "visibleLinks": 1,
+      "visibleInputs": 15,
+      "inlineHandlers": 43,
+      "sidebarVisibleItems": [
+        "今日 ⌘0",
+        "◎ 專案 6 ⌘P",
+        "◇ 資料",
+        "▦ 中控 ⌘M",
+        "投標 ⌘1",
+        "活動執行 ⌘2",
+        "設計協作 ⌘3",
+        "公關溝通 ⌘4",
+        "營運後勤 ⌘5",
+        "商機追蹤 —",
+        "會計 —",
+        "🎤 會議速記",
+        "📸 場勘",
+        "同仁管理",
+        "使用教學"
+      ],
+      "primaryCtas": [
+        "📨 插入對話",
+        "儲存"
+      ],
+      "headings": [
+        "—",
+        "新專案",
+        "歡迎來到智慧助理"
+      ],
+      "aiSourceRows": [
+        {
+          "text": "GPT-5.5 主力 使用中 ●",
+          "pressed": "true",
+          "disabled": null,
+          "tab": null,
+          "rect": {
+            "x": 24,
+            "y": 677,
+            "w": 253,
+            "h": 55
+          }
+        },
+        {
+          "text": "備援引擎 Opus 4.7 備援 待機 ●",
+          "pressed": "false",
+          "disabled": null,
+          "tab": null,
+          "rect": {
+            "x": 24,
+            "y": 737,
+            "w": 253,
+            "h": 55
+          }
+        }
+      ],
+      "mainRect": {
+        "x": 56,
+        "y": 28,
+        "w": 1384,
+        "h": 922
+      },
+      "firstScreenText": "跳至主內容 智慧助理 顯示 說明 🤖 OpenAI ▾ $0.00 今日 🔔 S 08:07 智 智慧助理 AI 協作平台 主區 今日 ⌘0 ◎ 專案 6 ⌘P ◇ 資料 ▦ 中控 ⌘M 流程模板 更多 AI 引擎 點擊切換 GPT-5.5 主力 使用中 ● 備援引擎 Opus 4.7 備援 待機 ● GPT-5.5 主力引擎 · 推理 + 多模態 + 工具呼叫全面升級 S Sterio 管理員 ● 系統正常 智 ▾ ↵ ▦ ☰ ⫶ ? 08:07 週二 4/28 早安 Sterio 全部 24 ◐ 今天回過 5 更多 6 ▾ PDF ✏ 3 中秋禮盒 今天 DOC RFP v3 昨天 📧 1 客戶回信 3 天前 IMG ⟳ 設計初稿 上週 IMG 現場照 5/12 DOC 預算表 5/10 DOC 公關稿 5/08 IMG ✏ 2 工地巡查 5/05 DOC 財報 Q1 4/28 MTG 會議紀錄 4/22 IMG LOGO 4/15 💬 下週進度 4/10 +9 顯示全部 21 件 中秋禮盒 3 ✕ — 編輯 基本 客戶 — 預算 — 截止 — 負責 — 下一棒 — 協作者 — 狀態 — 🤝 交棒卡 · 給下一位同事看 新專案 ✕ 專案名稱 (必填) 客戶 預算(NT$) 截止日 描述 / 工作脈絡 協作者電子郵件 (逗號或換行分隔) 下一棒 狀態 進行中 已結案 取消 儲存 ↑↓ 移動 Enter 選擇 Esc 關閉 ✕ ✨ 主管家 高階模型 · 全能助理 ↻ 🕒 ⛶ ✨ 嗨!我是智慧助理 用人話告訴我你要做什麼 · 我會判斷該用哪個專家 🎨 想 3 個主視覺方向 🎯 招標承接評估 🎪 廠商比價信 📣 新聞稿 + 標題 📎 Enter 送出 Shift+Enter 換行 📎 可附檔或拖放 第一級 公開 👋 歡迎來到智慧助理 先告訴我你的角色 · 我會給你最相關的教學 👔 老闆 / 決策者 管全公司 · 看儀表板 · 找標案 · 算帳 🎯 PM / 專案經理 管多案 · 整理客戶需求 · 分派 · 收稿 · 交棒 🎨 設計師 看交棒卡 · 拿 brief · 用 AI 發想 · 多渠道適配 📣 公關 / 媒體 寫新聞稿 · 經營媒體名單 · 發稿追蹤 💰 會計 / 財務 開發票 · 算毛利 · 看月帳 先不選 · 直接開始"
+    },
+    "logs": [
+      {
+        "type": "warning",
+        "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at p (http://localhost/static/dist/chunks/chunk.QCWYPPJA.js:6:6255)\n    at async w (http://localhost/static/dist/chunks/chunk.QCWYPPJA.js:6:5844)\n    at async "
+      },
+      {
+        "type": "error",
+        "text": "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      }
+    ]
+  },
+  {
+    "name": "mobile-dashboard",
+    "logged": true,
+    "screenshot": "/Users/sterio/Workspace/ChengFu/reports/qa-artifacts/v1.69-multi-agent-ui-audit/mobile-dashboard.png",
+    "metrics": {
+      "url": "http://localhost/",
+      "title": "智慧助理",
+      "loggedAppVisible": true,
+      "activeView": "dashboard",
+      "visibleButtons": 66,
+      "visibleLinks": 7,
+      "visibleInputs": 15,
+      "inlineHandlers": 43,
+      "sidebarVisibleItems": [
+        "今日 ⌘0",
+        "◎ 專案 6 ⌘P",
+        "◇ 資料",
+        "▦ 中控 ⌘M",
+        "投標 ⌘1",
+        "活動執行 ⌘2",
+        "設計協作 ⌘3",
+        "公關溝通 ⌘4",
+        "營運後勤 ⌘5",
+        "商機追蹤 —",
+        "會計 —",
+        "🎤 會議速記",
+        "📸 場勘",
+        "同仁管理",
+        "使用教學"
+      ],
+      "primaryCtas": [
+        "📨 插入對話",
+        "儲存"
+      ],
+      "headings": [
+        "—",
+        "新專案",
+        "歡迎來到智慧助理"
+      ],
+      "aiSourceRows": [
+        {
+          "text": "GPT-5.5 主力 使用中 ●",
+          "pressed": "true",
+          "disabled": null,
+          "tab": null,
+          "rect": {
+            "x": -256,
+            "y": 571,
+            "w": 253,
+            "h": 55
+          }
+        },
+        {
+          "text": "備援引擎 Opus 4.7 備援 待機 ●",
+          "pressed": "false",
+          "disabled": null,
+          "tab": null,
+          "rect": {
+            "x": -256,
+            "y": 631,
+            "w": 253,
+            "h": 55
+          }
+        }
+      ],
+      "mainRect": {
+        "x": 0,
+        "y": 28,
+        "w": 390,
+        "h": 816
+      },
+      "firstScreenText": "跳至主內容 智 智慧助理 AI 協作平台 主區 今日 ⌘0 ◎ 專案 6 ⌘P ◇ 資料 ▦ 中控 ⌘M 流程模板 更多 AI 引擎 點擊切換 GPT-5.5 主力 使用中 ● 備援引擎 Opus 4.7 備援 待機 ● GPT-5.5 主力引擎 · 推理 + 多模態 + 工具呼叫全面升級 S Sterio 管理員 ● 系統正常 智 ▾ ↵ ▦ ☰ ⫶ ? 08:07 週二 4/28 早安 Sterio 全部 24 ◐ 今天回過 5 更多 6 ▾ PDF ✏ 3 中秋禮盒 今天 DOC RFP v3 昨天 📧 1 客戶回信 3 天前 IMG ⟳ 設計初稿 上週 IMG 現場照 5/12 DOC 預算表 5/10 DOC 公關稿 5/08 IMG ✏ 2 工地巡查 5/05 DOC 財報 Q1 4/28 MTG 會議紀錄 4/22 IMG LOGO 4/15 💬 下週進度 4/10 +9 顯示全部 21 件 中秋禮盒 3 ✕ — 編輯 基本 客戶 — 預算 — 截止 — 負責 — 下一棒 — 協作者 — 狀態 — 🤝 交棒卡 · 給下一位同事看 新專案 ✕ 專案名稱 (必填) 客戶 預算(NT$) 截止日 描述 / 工作脈絡 協作者電子郵件 (逗號或換行分隔) 下一棒 狀態 進行中 已結案 取消 儲存 ↑↓ 移動 Enter 選擇 Esc 關閉 ✕ ✨ 主管家 高階模型 · 全能助理 ↻ 🕒 ⛶ ✨ 嗨!我是智慧助理 用人話告訴我你要做什麼 · 我會判斷該用哪個專家 🎨 想 3 個主視覺方向 🎯 招標承接評估 🎪 廠商比價信 📣 新聞稿 + 標題 📎 Enter 送出 Shift+Enter 換行 📎 可附檔或拖放 第一級 公開 ☰ 🏠 首頁 🎯 投標 🎪 活動 🎨 設計 📣 公關 📊 營運 👋 歡迎來到智慧助理 先告訴我你的角色 · 我會給你最相關的教學 👔 老闆 / 決策者 管全公司 · 看儀表板 · 找標案 · 算帳 🎯 PM / 專案經理 管多案 · 整理客戶需求 · 分派 · 收稿 · 交棒 🎨 設計師 看交棒卡 · 拿 brief · 用 AI 發想 · 多渠道適配 📣 公關 / 媒體 寫新聞稿 · 經營媒體名單 · 發稿追蹤 💰 會計 / 財務 開發票 · 算毛利 · 看月帳 先不選 · 直接開始"
+    },
+    "logs": [
+      {
+        "type": "warning",
+        "text": "[ChengFu] 認證失敗: Error: refresh invalid response · Refresh token not provided\n    at p (http://localhost/static/dist/chunks/chunk.QCWYPPJA.js:6:6255)\n    at async w (http://localhost/static/dist/chunks/chunk.QCWYPPJA.js:6:5844)\n    at async "
+      },
+      {
+        "type": "error",
+        "text": "Refused to display 'http://localhost/' in a frame because it set 'X-Frame-Options' to 'deny'."
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      }
+    ]
+  }
+]

@@ -1,0 +1,258 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NotebookLM 資料包 Bridge",
+    "description": "讓非財務/投標/活動類專家也能建立 NotebookLM 資料包。資料包由本地資料庫衍生，可同步到 NotebookLM Enterprise 做深讀；正式資料仍以本地資料庫為準。",
+    "version": "1.7.1"
+  },
+  "servers": [
+    {
+      "url": "http://accounting:8000"
+    }
+  ],
+  "security": [
+    {
+      "internalToken": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "internalToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Internal-Token",
+        "description": "ACTION_BRIDGE_TOKEN。此 token 只給 LibreChat Actions 使用,不可填 ECC_INTERNAL_TOKEN。"
+      }
+    },
+    "parameters": {
+      "actingUser": {
+        "name": "X-Acting-User",
+        "in": "header",
+        "required": true,
+        "description": "代表哪一位登入同仁執行。請填目前使用者 email,後端會用此身份套用專案/知識庫權限。",
+        "schema": {
+          "type": "string",
+          "format": "email"
+        }
+      }
+    }
+  },
+  "paths": {
+    "/notebooklm/agent/source-packs/preview": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/actingUser"
+        }
+      ],
+      "post": {
+        "operationId": "previewNotebookLMSourcePack",
+        "summary": "預覽 NotebookLM 資料包，不寫入資料庫",
+        "description": "先產生可審核 Markdown 預覽。資料等級只作標記,不阻擋建立或同步；NotebookLM 是深讀副本，不是主資料庫。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "scope"
+                ],
+                "properties": {
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "project",
+                      "tenders",
+                      "company",
+                      "training"
+                    ],
+                    "description": "project=單一工作包, tenders=商機雷達, company=公司知識, training=使用教學"
+                  },
+                  "project_id": {
+                    "type": "string",
+                    "description": "scope=project 時必填"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "max_items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 20
+                  },
+                  "sensitivity": {
+                    "type": "string",
+	                    "enum": [
+	                      "all",
+	                      "L1",
+	                      "L2",
+	                      "L3"
+	                    ],
+	                    "default": "all"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK · 回傳 preview_md"
+          }
+        }
+      }
+    },
+    "/notebooklm/agent/source-packs": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/actingUser"
+        }
+      ],
+      "post": {
+        "operationId": "createNotebookLMSourcePack",
+        "summary": "建立本地 NotebookLM 資料包",
+        "description": "建立可追溯的資料包快照，供 NotebookLM 深讀。正式資料仍以本地資料庫為準。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "scope"
+                ],
+                "properties": {
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "project",
+                      "tenders",
+                      "company",
+                      "training"
+                    ]
+                  },
+                  "project_id": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "max_items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 20
+                  },
+                  "sensitivity": {
+                    "type": "string",
+	                    "enum": [
+	                      "all",
+	                      "L1",
+	                      "L2",
+	                      "L3"
+	                    ],
+	                    "default": "all"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK · 回傳資料包 id/content_hash/status"
+          }
+        }
+      },
+      "get": {
+        "operationId": "listNotebookLMSourcePacks",
+        "summary": "列出最近 NotebookLM 資料包",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "project",
+                "tenders",
+                "company",
+                "training"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK · 不含 content_md 的清單"
+          }
+        }
+      }
+    },
+    "/notebooklm/agent/source-packs/{pack_id}/sync": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/actingUser"
+        }
+      ],
+      "post": {
+        "operationId": "syncNotebookLMSourcePack",
+        "summary": "同步資料包到 NotebookLM Enterprise",
+        "description": "Enterprise API 未設定時會回傳 local_ready，保留本地資料包供人工貼入；已設定時會把資料包內容送到 NotebookLM Enterprise。",
+        "parameters": [
+          {
+            "name": "pack_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "notebook_id": {
+                    "type": "string"
+                  },
+                  "create_notebook": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "notebook_title": {
+                    "type": "string"
+                  },
+                  "confirm_send_to_notebooklm": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "若資料包為 L3 或由 Agent 建立,必須明確設 true 才會同步到 NotebookLM Enterprise。"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK · 同步結果或 local_ready"
+          }
+        }
+      }
+    }
+  }
+}

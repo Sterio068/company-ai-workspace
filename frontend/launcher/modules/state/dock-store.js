@@ -24,7 +24,7 @@
 
 const STORAGE_KEY = "chengfu_dock_v1";
 
-// Default seed · 7 個核心 agent(對應 sidebar 流程模板)
+// Default seed · 7 個核心 agent(對應 sidebar 工作區捷徑)
 // USER 可右鍵移除 · 動作會 persist · 不會 reset
 const DEFAULT_SEED = {
   version: 1,

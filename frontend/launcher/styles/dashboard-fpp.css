@@ -191,6 +191,7 @@
 }
 
 .fpp-composer {
+  position: relative;
   flex: 1;
   display: flex;
   align-items: center;
@@ -236,6 +237,15 @@
   color: var(--label-tertiary);
 }
 
+.fpp-file-ribbon {
+  position: absolute;
+  left: 10px;
+  right: 74px;
+  top: calc(100% + 6px);
+  z-index: 3;
+  max-width: min(420px, 70vw);
+}
+
 .fpp-composer-hint {
   font-size: var(--text-xs);
   color: var(--label-tertiary);
@@ -244,6 +254,32 @@
   border-radius: 3px;
   padding: 1px 4px;
   font-family: var(--font-mono);
+}
+
+.fpp-composer-btn,
+.fpp-composer-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 24px;
+  padding: 0 6px;
+  border: 0.5px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--label-secondary);
+  font-size: var(--text-sm);
+  line-height: 1;
+}
+
+.fpp-composer-submit {
+  font-family: var(--font-mono);
+}
+
+.fpp-composer-btn:hover,
+.fpp-composer-submit:hover {
+  background: var(--fill-tertiary);
+  color: var(--label-primary);
 }
 
 .fpp-search,
@@ -1740,3 +1776,437 @@
    切到 projects/knowledge/admin 時 · F++ 區塊還可見(menubar 區塊重疊)
    修:強制 inactive 時 hide */
 .view:not(.active).view-dashboard-fpp { display: none !important; }
+
+/* ============================================================
+   v1.70 · Delivery Workdesk
+   首頁從 Finder/Smart Folder 模式收斂成單一工作入口。
+   ============================================================ */
+
+.view-dashboard-fpp {
+  height: 100%;
+  overflow: auto;
+  padding: 0;
+  background:
+    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 34%),
+    radial-gradient(circle at 88% 14%, color-mix(in srgb, var(--green) 10%, transparent), transparent 30%),
+    linear-gradient(135deg, color-mix(in srgb, var(--bg-base) 88%, white), var(--bg-base));
+}
+
+.fpp-workdesk {
+  width: min(1240px, calc(100% - 40px));
+  min-height: 100%;
+  margin: 0 auto;
+  padding: clamp(20px, 3vw, 42px) 0 48px;
+  display: grid;
+  gap: clamp(18px, 2vw, 28px);
+}
+
+.fpp-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(290px, 360px);
+  gap: clamp(18px, 2.4vw, 30px);
+  align-items: stretch;
+}
+
+.fpp-hero-main,
+.fpp-route-preview,
+.fpp-section {
+  border: 1px solid color-mix(in srgb, var(--border) 76%, transparent);
+  background: color-mix(in srgb, var(--bg-content) 86%, transparent);
+  box-shadow: 0 22px 70px color-mix(in srgb, black 8%, transparent);
+  backdrop-filter: blur(22px) saturate(145%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+}
+
+.fpp-hero-main {
+  padding: clamp(22px, 3vw, 36px);
+  border-radius: 32px;
+  display: grid;
+  gap: 18px;
+}
+
+.fpp-kicker {
+  width: fit-content;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+.fpp-hero-main h1 {
+  max-width: 760px;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(34px, 4.8vw, 64px);
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+}
+
+.fpp-hero-main p {
+  max-width: 700px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: clamp(15px, 1.3vw, 18px);
+  line-height: 1.65;
+}
+
+.fpp-intake {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--bg-base) 82%, var(--bg-card));
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.fpp-intake:focus-within,
+.fpp-intake.is-dragover {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--border));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 13%, transparent);
+}
+
+.fpp-intake.is-dragover {
+  transform: translateY(-2px);
+}
+
+.fpp-intake textarea {
+  width: 100%;
+  min-height: 148px;
+  resize: vertical;
+  border: 0;
+  outline: 0;
+  border-radius: 18px;
+  padding: 16px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.fpp-intake textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.fpp-intake .fpp-file-ribbon {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  max-width: 100%;
+  padding: 0 2px;
+}
+
+.fpp-intake-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.fpp-drop-hint {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  padding: 0 4px;
+}
+
+.fpp-route-preview {
+  border-radius: 28px;
+  padding: 22px;
+  display: grid;
+  align-content: center;
+  gap: 14px;
+}
+
+.fpp-route-title {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fpp-route-step {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--bg-card) 72%, transparent);
+}
+
+.fpp-route-step b {
+  width: 34px;
+  height: 34px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.fpp-route-step span {
+  display: grid;
+  gap: 3px;
+}
+
+.fpp-route-step strong {
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.fpp-route-step small {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.fpp-section {
+  border-radius: 28px;
+  padding: clamp(18px, 2vw, 24px);
+  display: grid;
+  gap: 16px;
+}
+
+.fpp-section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.fpp-section h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 20px;
+  letter-spacing: -0.03em;
+}
+
+.fpp-section p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.fpp-workspace-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fpp-workspace-card {
+  min-height: 156px;
+  border: 1px solid color-mix(in srgb, var(--ws-color) 24%, var(--border));
+  border-radius: 22px;
+  padding: 16px;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--ws-color) 12%, transparent), transparent 56%),
+    color-mix(in srgb, var(--bg-card) 78%, transparent);
+  color: var(--text-primary);
+  text-align: left;
+  display: grid;
+  align-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+
+.fpp-workspace-card:hover,
+.fpp-workspace-card:focus-visible {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--ws-color) 48%, var(--border));
+  box-shadow: 0 18px 34px color-mix(in srgb, var(--ws-color) 14%, transparent);
+}
+
+.fpp-workspace-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fpp-workspace-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--ws-color) 16%, transparent);
+}
+
+.fpp-workspace-shortcut {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.fpp-workspace-card strong {
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+.fpp-workspace-card span:last-child {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.fpp-lower-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+  gap: clamp(18px, 2vw, 28px);
+}
+
+.fpp-project-list,
+.fpp-flow-list {
+  display: grid;
+  gap: 10px;
+}
+
+.fpp-project-row,
+.fpp-flow-card,
+.fpp-empty-panel {
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--bg-card) 76%, transparent);
+}
+
+.fpp-project-row,
+.fpp-flow-card {
+  width: 100%;
+  padding: 14px;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.fpp-project-row {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  gap: 12px;
+}
+
+.fpp-project-row:hover,
+.fpp-flow-card:hover,
+.fpp-project-row:focus-visible,
+.fpp-flow-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+}
+
+.fpp-project-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.fpp-project-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.fpp-project-copy strong,
+.fpp-flow-card strong,
+.fpp-empty-panel strong {
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.fpp-project-copy small,
+.fpp-flow-card small,
+.fpp-empty-panel span {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.fpp-project-copy span {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.fpp-flow-card {
+  display: grid;
+  gap: 6px;
+}
+
+.fpp-flow-card > span {
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.fpp-empty-panel {
+  padding: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 1180px) {
+  .fpp-workspace-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 920px) {
+  .fpp-workdesk {
+    width: min(100% - 24px, 720px);
+  }
+
+  .fpp-hero,
+  .fpp-lower-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fpp-workspace-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .fpp-workdesk {
+    width: 100%;
+    padding: 14px 12px 36px;
+  }
+
+  .fpp-hero-main,
+  .fpp-route-preview,
+  .fpp-section {
+    border-radius: 22px;
+  }
+
+  .fpp-hero-main h1 {
+    font-size: 34px;
+  }
+
+  .fpp-intake-actions {
+    justify-content: stretch;
+  }
+
+  .fpp-intake-actions > button {
+    flex: 1 1 140px;
+  }
+
+  .fpp-workspace-strip {
+    grid-template-columns: 1fr;
+  }
+}

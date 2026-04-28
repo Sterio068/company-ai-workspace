@@ -28,6 +28,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 
 from ._deps import get_db, require_admin_dep, require_user_dep
+from auth_deps import _is_prod
 
 
 router = APIRouter(tags=["social-oauth"])
@@ -76,6 +77,13 @@ def _redirect_uri(request: Request) -> str:
                 "OAUTH_REDIRECT_BASE_URL 設定錯 · 必須 https://domain.com 格式",
             )
         return f"{_OAUTH_BASE_URL}/api-accounting/social/oauth/callback"
+
+    if _is_prod():
+        raise HTTPException(
+            500,
+            "OAUTH_REDIRECT_BASE_URL required in production · "
+            "請設定固定 https://domain，避免 OAuth callback host 被 header 偽造",
+        )
 
     # Dev fallback · 容 X-Forwarded-Host(本機 / 測試)
     scheme = request.headers.get("x-forwarded-proto", "http")

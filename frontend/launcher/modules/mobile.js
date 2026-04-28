@@ -18,14 +18,26 @@ const BOTTOM_NAV = [
 export const mobile = {
   overlay: null,
   bottomNav: null,
+  menuButton: null,
+  sidebar: null,
+  _lastFocus: null,
+  _boundKeyHandler: null,
+  _boundResizeHandler: null,
 
   init() {
     const btn = document.createElement("button");
     btn.className = "mobile-menu-btn";
+    btn.type = "button";
     btn.innerHTML = "☰";
     btn.setAttribute("aria-label", "開啟選單");
+    btn.setAttribute("aria-controls", "app-sidebar");
+    btn.setAttribute("aria-expanded", "false");
     btn.onclick = () => this.toggle();
     document.body.appendChild(btn);
+    this.menuButton = btn;
+
+    this.sidebar = document.getElementById("app-sidebar") || document.querySelector(".sidebar");
+    if (this.sidebar && !this.sidebar.id) this.sidebar.id = "app-sidebar";
 
     this.overlay = document.createElement("div");
     this.overlay.className = "mobile-overlay";
@@ -40,6 +52,16 @@ export const mobile = {
     });
 
     this._buildBottomNav();
+    this._boundKeyHandler = e => {
+      if (e.key === "Escape" && document.body.classList.contains("mobile-drawer-open")) {
+        e.preventDefault();
+        this.close({ restoreFocus: true });
+      }
+    };
+    document.addEventListener("keydown", this._boundKeyHandler);
+    this._boundResizeHandler = () => this._syncSidebarA11y(document.body.classList.contains("mobile-drawer-open"));
+    window.addEventListener("resize", this._boundResizeHandler);
+    this._syncSidebarA11y(false);
   },
 
   // v1.3 batch4 · 行動端底部 nav · 拇指區可達
@@ -74,23 +96,61 @@ export const mobile = {
 
     // 監聽 workspace 切換 · sync active state
     document.addEventListener("ws-changed", (e) => {
-      const ws = String(e.detail?.ws || "0");
-      nav.querySelectorAll(".mobile-bottom-item").forEach(el => {
-        const isActive = el.dataset.ws === ws;
-        el.classList.toggle("active", isActive);
-        if (isActive) el.setAttribute("aria-current", "page");
-        else el.removeAttribute("aria-current");
-      });
+      this._syncBottomNav(String(e.detail?.ws || "0"));
     });
+    this._syncBottomNav(this._currentWsFromLocation());
   },
 
   toggle() {
     const open = document.body.classList.toggle("mobile-drawer-open");
+    if (open) this._lastFocus = document.activeElement;
     this.overlay.classList.toggle("open", open);
+    this._syncSidebarA11y(open);
+    if (open) {
+      requestAnimationFrame(() => {
+        this.sidebar?.querySelector(".sidebar-item:not([style*='display:none']), a[href], button")?.focus();
+      });
+    }
   },
 
-  close() {
+  close({ restoreFocus = false } = {}) {
     document.body.classList.remove("mobile-drawer-open");
     this.overlay.classList.remove("open");
+    this._syncSidebarA11y(false);
+    if (restoreFocus) {
+      const target = this._lastFocus instanceof HTMLElement ? this._lastFocus : this.menuButton;
+      requestAnimationFrame(() => target?.focus?.());
+    }
+  },
+
+  _syncSidebarA11y(open) {
+    const isMobile = window.innerWidth <= 768;
+    this.menuButton?.setAttribute("aria-expanded", open ? "true" : "false");
+    this.menuButton?.setAttribute("aria-label", open ? "關閉選單" : "開啟選單");
+    if (!this.sidebar) return;
+    if (isMobile && !open) {
+      this.sidebar.setAttribute("aria-hidden", "true");
+      this.sidebar.inert = true;
+    } else {
+      this.sidebar.removeAttribute("aria-hidden");
+      this.sidebar.inert = false;
+    }
+  },
+
+  _syncBottomNav(ws) {
+    if (!this.bottomNav) return;
+    this.bottomNav.querySelectorAll(".mobile-bottom-item").forEach(el => {
+      const isActive = el.dataset.ws === ws;
+      el.classList.toggle("active", isActive);
+      if (isActive) el.setAttribute("aria-current", "page");
+      else el.removeAttribute("aria-current");
+    });
+  },
+
+  _currentWsFromLocation() {
+    const hash = window.location.hash || "";
+    const match = hash.match(/workspace-(\d)/);
+    if (match) return match[1];
+    return "0";
   },
 };

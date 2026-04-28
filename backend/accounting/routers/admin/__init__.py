@@ -585,80 +585,8 @@ def revert_agent_prompt(agent_num: str, _admin: str = require_admin_dep()):
 # Secrets 管理 · 前端 Admin UI 設 API key(寫 Mongo system_settings)
 # ============================================================
 # 每個 secret 的 metadata(顯示 / 申請連結 / 能否前端寫)
-SECRETS_META = {
-    "ANTHROPIC_API_KEY": {
-        "label": "Anthropic API Key",
-        "desc": "Claude 模型 · 必須 · Tier 2 預存 USD $50",
-        "console_url": "https://console.anthropic.com/settings/keys",
-        "frontend_writable": False,  # LibreChat 讀 .env · 改 Keychain 才生效
-        "source": ".env + macOS Keychain",
-        "required": True,
-    },
-    "OPENAI_API_KEY": {
-        "label": "OpenAI API Key",
-        "desc": "設計助手生圖(gpt-image-2)+ STT 語音轉文字(選配)",
-        "console_url": "https://platform.openai.com/api-keys",
-        "frontend_writable": True,  # v1.2 加 · accounting design router 用 · 不影響 LibreChat .env STT
-        "source": "Mongo system_settings(可前端改)· STT 另走 .env",
-        "required": False,
-    },
-    "FAL_API_KEY": {
-        "label": "Fal.ai API Key",
-        "desc": "設計助手生圖(Recraft v3)· 一次 3 張",
-        "console_url": "https://fal.ai/dashboard/keys",
-        "frontend_writable": True,  # 存 Mongo · design router 讀取
-        "source": "Mongo system_settings(可前端改)",
-        "required": False,
-    },
-    "IMAGE_PROVIDER": {
-        "label": "生圖 Provider",
-        "desc": "選 'fal'(Recraft v3 · NT$ 4 / 3 張)或 'openai'(gpt-image-2 · NT$ 20 / 3 張)",
-        "console_url": "",
-        "frontend_writable": True,  # admin 可切換
-        "source": "Mongo system_settings(可前端改)· 預設 fal",
-        "required": False,
-    },
-    "EMAIL_USERNAME": {
-        "label": "SMTP Username",
-        "desc": "月報自動寄信用(選配)",
-        "console_url": "",
-        "frontend_writable": False,
-        "source": ".env",
-        "required": False,
-    },
-    "EMAIL_PASSWORD": {
-        "label": "SMTP Password",
-        "desc": "SMTP 密碼 · Gmail 用 App Password · 不是本密碼",
-        "console_url": "https://myaccount.google.com/apppasswords",
-        "frontend_writable": False,
-        "source": ".env + macOS Keychain",
-        "required": False,
-    },
-    "JWT_REFRESH_SECRET": {
-        "label": "JWT Refresh Secret",
-        "desc": "認證 cookie 用 · prod 必設 · 跟 LibreChat .env 同步",
-        "console_url": "",
-        "frontend_writable": False,
-        "source": "macOS Keychain(install 時自動產)",
-        "required": True,
-    },
-    "ECC_INTERNAL_TOKEN": {
-        "label": "ECC Internal Token",
-        "desc": "cron → accounting admin endpoint 用 · prod 必設",
-        "console_url": "",
-        "frontend_writable": False,
-        "source": "macOS Keychain(install 時自動產)",
-        "required": True,
-    },
-    "MEILI_MASTER_KEY": {
-        "label": "Meilisearch Master Key",
-        "desc": "全文搜尋 index 管理 · 上線第一天後不該改",
-        "console_url": "",
-        "frontend_writable": False,
-        "source": "macOS Keychain(install 時自動產)",
-        "required": True,
-    },
-}
+from services.secret_registry import SECRET_REGISTRY
+SECRETS_META = SECRET_REGISTRY
 
 
 def _get_secret_value(name: str) -> Optional[str]:
@@ -688,6 +616,9 @@ def secrets_status(_admin: str = require_admin_dep()):
             "frontend_writable": meta["frontend_writable"],
             "source": meta["source"],
             "required": meta["required"],
+            "tier": meta.get("tier", "T2_OPTIONAL"),
+            "reader": meta.get("reader", ""),
+            "writer": meta.get("writer", ""),
             "is_set": is_set,
             "preview": (value[:8] + "..." + value[-4:]) if (is_set and len(value) > 12) else ("(已設)" if is_set else "(未設)"),
         })

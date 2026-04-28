@@ -1,8 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "承富會計 API(內建)",
-    "description": "承富 AI 系統內建會計模組 · Agents 可直接讀寫財務資料",
+    "title": "內建會計 API",
+    "description": "智慧助理內建會計模組 · Agents 可直接讀寫財務資料",
     "version": "1.0.0"
   },
   "servers": [
@@ -17,7 +17,7 @@
         "type": "apiKey",
         "in": "header",
         "name": "X-Internal-Token",
-        "description": "ECC_INTERNAL_TOKEN(後端 cron / 內部服務共用 · 同 admin allowlist)"
+        "description": "ACTION_BRIDGE_TOKEN(LibreChat Actions 專用低權限通行權杖 · 不可填 ECC_INTERNAL_TOKEN)"
       }
     }
   },

@@ -20,7 +20,7 @@ from enum import Enum
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from bson import ObjectId
 from bson.errors import InvalidId
 
@@ -65,7 +65,12 @@ class Lead(BaseModel):
     description: Optional[str] = None
     tender_key: Optional[str] = None  # 若從 tender_alert 來
     probability: float = 0.0  # 0-1
-    notes: list[dict] = []  # 觸點 / 會議紀錄
+    notes: list[dict] = Field(default_factory=list)  # 觸點 / 會議紀錄
+
+
+class LeadNote(BaseModel):
+    note: str
+    by: Optional[str] = None
 
 
 # ============================================================
@@ -179,15 +184,25 @@ def delete_lead(lead_id: str, email: str = require_user_dep()):
 
 
 @router.post("/crm/leads/{lead_id}/notes")
-def add_lead_note(lead_id: str, note: str, by: Optional[str] = None, email: str = require_user_dep()):
+def add_lead_note(
+    lead_id: str,
+    payload: Optional[LeadNote] = None,
+    note: Optional[str] = Query(default=None),
+    by: Optional[str] = None,
+    email: str = require_user_dep(),
+):
     """加觸點 · 電話 / 會議 / Email 紀錄
     R14#2 · 用 _lead_oid · 防 lead 不存在仍回 200(false success)
     """
     from main import db
+    note_text = (payload.note if payload else note or "").strip()
+    note_by = (payload.by if payload and payload.by else by) or email
+    if not note_text:
+        raise HTTPException(400, "note 不可為空")
     r = db.crm_leads.update_one(
         {"_id": _lead_oid(lead_id), **({} if _is_admin_user(email) else {"owner": email})},
         {"$push": {"notes": {
-            "text": note, "at": datetime.now(timezone.utc).isoformat(), "by": email,
+            "text": note_text, "at": datetime.now(timezone.utc).isoformat(), "by": note_by,
         }},
          "$set": {"updated_at": datetime.now(timezone.utc)}}
     )
@@ -199,7 +214,7 @@ def add_lead_note(lead_id: str, note: str, by: Optional[str] = None, email: str 
 
 
 @router.get("/crm/stats")
-def crm_stats():
+def crm_stats(email: str = require_user_dep()):
     """Kanban 儀表統計 · 漏斗價值 · 勝率 · by_stage
 
     R14#2 · 原本 active_leads 全撈 Python for-loop 加總(1000+ leads 會慢)
@@ -209,7 +224,10 @@ def crm_stats():
     from main import db
 
     # 一次 aggregate 拿 by_stage + by_category(active / won / lost)
-    pipeline = [
+    pipeline = []
+    if not _is_admin_user(email):
+        pipeline.append({"$match": {"owner": email}})
+    pipeline.extend([
         {"$group": {
             "_id": "$stage",
             "count": {"$sum": 1},
@@ -234,7 +252,7 @@ def crm_stats():
                 }
             },
         }},
-    ]
+    ])
     by_stage = list(db.crm_leads.aggregate(pipeline))
 
     won = next((s["count"] for s in by_stage if s["_id"] == "won"), 0)
@@ -252,7 +270,7 @@ def crm_stats():
 
 
 @router.post("/crm/import-from-tenders")
-def import_leads_from_tenders():
+def import_leads_from_tenders(email: str = require_user_dep()):
     """把標記為 'interested' 的 tender_alerts 轉成 CRM leads
 
     v1.38 perf F-3 修 · N+1 → 1+1+1=3 query
@@ -290,6 +308,7 @@ def import_leads_from_tenders():
             "tender_key": tk,
             "description": f"來源:政府電子採購網 · 關鍵字「{t.get('keyword')}」",
             "probability": 0.5,
+            "owner": email,
             "notes": [],
             "created_at": now,
             "updated_at": now,

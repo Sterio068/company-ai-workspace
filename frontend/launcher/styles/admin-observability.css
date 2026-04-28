@@ -1,0 +1,45 @@
+/* Admin observability · storage / collection health widgets */
+.storage-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
+}
+.storage-summary > div {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--s-3);
+  background: var(--surface-2);
+}
+.storage-summary strong {
+  display: block;
+  font-size: var(--text-xl);
+  color: var(--text-primary);
+}
+.storage-summary span,
+.storage-reason {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+.storage-summary [data-alert="1"] {
+  border-color: color-mix(in srgb, var(--orange, #D8851E) 45%, var(--border));
+  background: color-mix(in srgb, var(--orange, #D8851E) 10%, var(--surface-2));
+}
+.storage-row {
+  flex-wrap: wrap;
+  cursor: default;
+}
+.storage-row[data-storage-level="warn"],
+.storage-row[data-storage-level="critical"] {
+  border-left: 3px solid var(--orange, #D8851E);
+}
+.storage-row[data-storage-level="critical"] {
+  border-left-color: var(--red, #D14B43);
+}
+.storage-row[data-storage-level="watch"] {
+  border-left: 3px solid var(--blue, #3D7EAE);
+}
+.storage-reason {
+  width: 100%;
+  padding-left: 2px;
+}

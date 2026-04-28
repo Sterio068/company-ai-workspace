@@ -16,6 +16,8 @@ const ALLOWED_TAGS = new Set([
   "del", "ins", "sub", "sup",
 ]);
 const ALLOWED_ATTRS = new Set(["href", "src", "alt", "title", "colspan", "rowspan", "class"]);
+const SAFE_HREF_PROTOCOLS = new Set(["http:", "https:", "mailto:", "tel:"]);
+const SAFE_SRC_PROTOCOLS = new Set(["http:", "https:", "blob:"]);
 
 export function sanitizeRenderedHtml(html) {
   try {
@@ -52,17 +54,32 @@ function _cleanNode(node) {
         continue;
       }
       if ((name === "href" || name === "src")) {
-        const val = attr.value.trim().toLowerCase();
-        if (val.startsWith("javascript:") || val.startsWith("vbscript:")) {
-          child.removeAttribute(attr.name);
-          continue;
-        }
-        if (name === "src" && val.startsWith("data:") && !val.startsWith("data:image/")) {
+        if (!_isSafeUrl(attr.value, name)) {
           child.removeAttribute(attr.name);
           continue;
         }
       }
     }
     _cleanNode(child);
+  }
+}
+
+function _isSafeUrl(value, attrName) {
+  const raw = String(value || "").trim();
+  if (!raw) return false;
+  const lower = raw.toLowerCase();
+  if (lower.startsWith("#") || lower.startsWith("/") || lower.startsWith("./") || lower.startsWith("../")) {
+    return true;
+  }
+  if (attrName === "src" && lower.startsWith("data:image/")) return true;
+  if (lower.startsWith("javascript:") || lower.startsWith("vbscript:") || lower.startsWith("file:")) {
+    return false;
+  }
+  try {
+    const url = new URL(raw, window.location.origin);
+    const allowed = attrName === "src" ? SAFE_SRC_PROTOCOLS : SAFE_HREF_PROTOCOLS;
+    return allowed.has(url.protocol);
+  } catch {
+    return false;
   }
 }

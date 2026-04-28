@@ -51,7 +51,7 @@ export const knowledge = {
           <div class="empty-state-icon">😓</div>
           <div class="empty-state-title">無法載入資料源</div>
           <div class="empty-state-hint">${escapeHtml(e.message || "後端介接可能未啟動")}</div>
-          <button class="btn-ghost" onclick="window.knowledge?.loadAdmin()" style="margin-top:12px">重試</button>
+          <button class="btn-ghost" data-action="knowledge.loadAdmin" style="margin-top:12px">重試</button>
         </div>`;
     }
   },
@@ -129,7 +129,7 @@ export const knowledge = {
         <label>
           <span>絕對路徑 <em>(必填)</em></span>
           <input type="text" name="path"
-                 placeholder="/Volumes/ChengFu-NAS/projects/"
+                 placeholder="/Volumes/Company-NAS/projects/"
                  required
                  style="font-family:var(--font-mono)">
           <small class="hint">必須在允許讀取的資料夾白名單內(預設 /Volumes, /data, /tmp/chengfu-test-sources)</small>
@@ -303,7 +303,7 @@ export const knowledge = {
           <div class="empty-state-icon">😓</div>
           <div class="empty-state-title">無法載入知識庫</div>
           <div class="empty-state-hint">${escapeHtml(e?.message || "網路或後端錯")}</div>
-          <button class="btn-ghost" onclick="window.knowledge?.loadBrowser()" style="margin-top:12px">重試</button>
+          <button class="btn-ghost" data-action="knowledge.loadBrowser" style="margin-top:12px">重試</button>
         </div>`;
     }
   },

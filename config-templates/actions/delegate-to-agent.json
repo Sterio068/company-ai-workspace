@@ -16,7 +16,8 @@
       "internalToken": {
         "type": "apiKey",
         "in": "header",
-        "name": "X-Internal-Token"
+        "name": "X-Internal-Token",
+        "description": "ACTION_BRIDGE_TOKEN。此 token 只給 LibreChat Actions 使用,不可填 ECC_INTERNAL_TOKEN。"
       }
     }
   },

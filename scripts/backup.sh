@@ -25,26 +25,39 @@ WEEKLY_RETENTION_WEEKS=12
 mkdir -p "$DAILY_DIR" "$WEEKLY_DIR"
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+ALLOW_PLAINTEXT_BACKUP="${ALLOW_PLAINTEXT_BACKUP:-0}"
+
+if command -v gpg > /dev/null 2>&1 && gpg --list-keys chengfu > /dev/null 2>&1; then
+    GPG_AVAILABLE=1
+else
+    GPG_AVAILABLE=0
+    if [[ "$ALLOW_PLAINTEXT_BACKUP" != "1" ]]; then
+        echo "❌ 找不到 GPG key 'chengfu' · 正式備份不允許落明文" >&2
+        echo "   先執行:gpg --full-generate-key  (name 設為 chengfu)" >&2
+        echo "   只限本機開發可暫時:ALLOW_PLAINTEXT_BACKUP=1 ./scripts/backup.sh" >&2
+        exit 1
+    fi
+    echo "  ⚠ ALLOW_PLAINTEXT_BACKUP=1 · 本次只允許本機明文備份,絕不上傳異機"
+fi
 
 # ------------------ 備份 MongoDB(對話 + 會計 + 專案 + 回饋)------------------
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] 開始 MongoDB 備份..."
 
 # Codex R2.3 · 若 GPG key 可用 · 直接 pipe 到加密 · 不留明文中間檔
 ARCHIVE="${DAILY_DIR}/chengfu-${DATE}.archive.gz"
-if command -v gpg > /dev/null 2>&1 && gpg --list-keys chengfu > /dev/null 2>&1; then
+if [[ "$GPG_AVAILABLE" == "1" ]]; then
     # GPG 可用 · 一條 pipeline · 磁碟上永遠不落明文
     ARCHIVE="${DAILY_DIR}/chengfu-${DATE}.archive.gz.gpg"
     docker exec chengfu-mongo mongodump --archive --db chengfu --quiet 2>/dev/null \
         | gzip -9 \
         | gpg --batch --yes --encrypt --recipient chengfu --output "$ARCHIVE"
     echo "  🔐 Mongo pipeline 直接加密: $ARCHIVE"
-    GPG_AVAILABLE=1
 else
     # 無 GPG key · 退回明文本機(但異機不會上傳)
     docker exec chengfu-mongo mongodump --archive --db chengfu --quiet 2>/dev/null \
         | gzip -9 > "$ARCHIVE"
     echo "  ⚠ 無 GPG · Mongo 本機明文 $ARCHIVE · 異機傳輸會 skip"
-    GPG_AVAILABLE=0
+    chmod 600 "$ARCHIVE" 2>/dev/null || true
 fi
 
 # ------------------ 備份 Meilisearch 索引(Round 9 暗示 + Codex Round 10.5 紅)----------------
@@ -103,6 +116,7 @@ if [[ -n "$MEILI_KEY" ]]; then
                         MEILI_DUMP="${DAILY_DIR}/chengfu-meili-${DATE}.dump"
                         cp "$DUMP_FILE_PATTERN" "$MEILI_DUMP"
                         echo "  ⚠ Meili 本機明文(無 GPG): $MEILI_DUMP"
+                        chmod 600 "$MEILI_DUMP" 2>/dev/null || true
                     fi
                     MEILI_SIZE=$(du -h "$MEILI_DUMP" 2>/dev/null | cut -f1)
                     echo "     size: $MEILI_SIZE · task_uid=$TASK_UID"
@@ -160,6 +174,7 @@ else
         frontend/nginx/ \
         2>/dev/null
     echo "  ⚠ KB 本機明文: $KB_ARCHIVE(異機不傳)"
+    chmod 600 "$KB_ARCHIVE" 2>/dev/null || true
 fi
 KB_SIZE=$(du -h "$KB_ARCHIVE" 2>/dev/null | cut -f1)
 echo "     size: $KB_SIZE"

@@ -1,5 +1,5 @@
 # ========================================
-# 承富 AI 系統 · LibreChat 核心設定
+# 智慧助理 · LibreChat 核心設定
 # 掛載到容器內 /app/librechat.yaml
 # ========================================
 #
@@ -18,9 +18,9 @@ cache: true
 
 # ==================== 介面客製化 ====================
 interface:
-  customWelcome: "讓 AI 成為承富的第 11 位同事"
+  customWelcome: "讓 AI 成為團隊的專屬工作夥伴"
   # 預設指 GitHub 上 docs · 確保是有效 URL · 不會炸 LibreChat URL 解析
-  # 設好 Cloudflare Tunnel 後改成 https://ai.<承富domain>.com/privacy
+  # 設好 Cloudflare Tunnel 後改成正式對外隱私權頁面
   privacyPolicy:
     externalUrl: "https://github.com/Sterio068/chengfu-ai/blob/main/docs/05-SECURITY.md"
     openNewTab: true
@@ -31,16 +31,16 @@ interface:
   modelSelect: true
   parameters: true
   sidePanel: true
-  presets: false      # Preset 功能 v0.8+ 已退為次要,承富統一用 Agent
+  presets: false      # Preset 功能 v0.8+ 已退為次要,本系統統一用 Agent
   prompts: true       # 個人 prompt 模板(每位同仁可存自己的)
   bookmarks: true
   multiConvo: true
-  agents: true        # 啟用 Agent(承富 10 個專家的主要載體)
+  agents: true        # 啟用 Agent(10 個職能專家的主要載體)
   artifacts: true     # 開啟互動 Artifacts(HTML/SVG/React 即時可視化)
   webSearch: true     # 開啟 web search 工具
 
 # ==================== 註冊設定 ====================
-# 承富為封閉型 10 人環境,註冊完全關閉(ALLOW_REGISTRATION=false in .env)
+# 封閉型團隊環境,註冊完全關閉(ALLOW_REGISTRATION=false in .env)
 # 新同仁由管理員後台建立帳號
 registration:
   socialLogins: []
@@ -69,18 +69,18 @@ fileConfig:
 #   前端 Launcher 會依使用者選擇,打到對應 provider 的 Agent 版本
 #
 # Agent:
-#   承富 10 個職能助手的載體(主管家 + 9 專家 · v4.0 決議精簡)· 見下方 endpoints.agents 設定
+#   10 個職能助手的載體(主管家 + 9 專家 · v4.0 決議精簡)· 見下方 endpoints.agents 設定
 #
 endpoints:
   agents:
     # 允許所有使用者進 Agent Builder(但建 Agent 需 admin 審核,透過 UI 權限控制)
     disableBuilder: false
 
-    # 承富 Agent 深度運用多供應商工具能力
+    # Agent 深度運用多供應商工具能力
     # 注意:vision / thinking 等能力仍由各 provider/model 自身支援決定
     capabilities:
       - "execute_code"      # Code Interpreter(產 Word/PPT/Excel/圖表)
-      - "file_search"       # 原生 RAG(Company Memory + Skills + Claude Skills + 承富知識庫)
+      - "file_search"       # 原生 RAG(Company Memory + Skills + Claude Skills + 公司知識庫)
       - "actions"           # 呼叫外部 API(Fal.ai 生圖、PCC 採購網、會計 API)
       - "tools"             # 內建工具
       - "web_search"        # 即時網路搜尋(競品、時事、法規)
@@ -94,13 +94,13 @@ endpoints:
 # ==================== Agent modelSpecs(設計上的 5 Workspace 入口)====================
 #
 # 🟡 v1.0 真實狀況(ROADMAP §11.7):
-#   modelSpecs 「不啟用」· 5 Workspace 入口**只在承富 Launcher** 呈現
+#   modelSpecs 「不啟用」· 5 Workspace 入口**只在 Launcher** 呈現
 #   (frontend/launcher/index.html 5 個彩色卡 · ⌘1-5 切換)
 #
 #   LibreChat 原生 UI 使用者看到的還是 endpoint 預設選單(agents)· 不分 Workspace
 #   因為:
 #     1. modelSpecs 需先跑 create-agents.py 拿到實際 agent_id 後填入這檔
-#     2. 但承富同仁 99% 從 Launcher 進系統(nginx Route A 302) · LibreChat UI 屬「進階」
+#     2. 但同仁 99% 從 Launcher 進系統(nginx Route A 302) · LibreChat UI 屬「進階」
 #     3. 強制 modelSpecs 反而會限制 Champion / Sterio debug 時的彈性
 #
 # 若 v1.2 要在 LibreChat UI 也呈現 5 Workspace · 步驟:
@@ -127,7 +127,7 @@ endpoints:
 # ==================== 語音雙向(v1.53 · 全用 2026 最新模型)====================
 # STT 用 gpt-4o-transcribe(2025-03 發布 · 取代 whisper-1)
 #   · 中文辨識準確度大幅提升 · word error rate 在中文降 30%+
-#   · 承富會議錄音含口語、品牌名、技術術語 · 表現最佳
+#   · 會議錄音含口語、品牌名、技術術語 · 表現最佳
 # TTS 用 gpt-4o-mini-tts(2025-03 · 取代 tts-1)
 #   · 支援風格指令(prompt steering)· 可指定「親切的客服語氣」
 #

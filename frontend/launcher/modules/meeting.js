@@ -12,6 +12,7 @@
 import { authFetch } from "./auth.js";
 import { escapeHtml, skeletonCards } from "./util.js";
 import { toast, networkError, operationError } from "./toast.js";
+import { markTaskDone } from "./help-state.js";
 
 const BASE = "/api-accounting";
 
@@ -41,7 +42,33 @@ export const meeting = {
   renderView() {
     const root = document.getElementById("view-meeting-content");
     if (!root) return;
+    const done = this._meetings.filter(m => m.status === "done").length;
+    const processing = this._meetings.filter(m => ["transcribing", "structuring"].includes(m.status)).length;
+    const actionCount = this._meetings.reduce((sum, m) => sum + Number(m.action_items_count || 0), 0);
     root.innerHTML = `
+      <section class="module-command-hero meeting-command-hero">
+        <div>
+          <span class="ops-command-kicker">會議速記工作台</span>
+          <h2>錄音丟進來,直接產決議、待辦、關鍵數字</h2>
+          <p>會議後不用再重聽一小時。完成後可複製摘要給 LINE / Email,也可推回工作包交棒卡。</p>
+          <div class="module-hero-actions">
+            <button class="btn-primary" id="meeting-upload-hero-btn">上傳音檔</button>
+            <button class="btn-ghost" type="button" data-action="app.showView" data-action-arg="projects">打開工作包</button>
+          </div>
+        </div>
+        <div class="module-hero-metrics">
+          <div><strong>${done}</strong><span>已完成</span></div>
+          <div><strong>${processing}</strong><span>處理中</span></div>
+          <div><strong>${actionCount}</strong><span>待辦</span></div>
+        </div>
+      </section>
+
+      <section class="module-flow-grid">
+        <div><b>1. 上傳錄音</b><span>m4a / mp3 / wav / mp4,單檔 25MB 內</span></div>
+        <div><b>2. AI 整理</b><span>產標題、決議、待辦、關鍵數字、下次會議</span></div>
+        <div><b>3. 交棒</b><span>複製摘要,或推到工作包 handoff</span></div>
+      </section>
+
       <div class="meeting-toolbar">
         <h2>🎤 會議速記</h2>
         <button class="btn-primary" id="meeting-upload-btn">+ 上傳音檔</button>
@@ -76,6 +103,7 @@ export const meeting = {
       `}
     `;
     document.getElementById("meeting-upload-btn")?.addEventListener("click", () => this.openUpload());
+    document.getElementById("meeting-upload-hero-btn")?.addEventListener("click", () => this.openUpload());
     document.querySelectorAll("[data-id]").forEach(el => {
       el.addEventListener("click", () => this._openDetail(el.dataset.id));
     });
@@ -167,6 +195,7 @@ export const meeting = {
         }
         const body = await r.json();
         toast.success(`已上傳 ${body.size_mb}MB · STT 處理中(約 ${Math.ceil(body.size_mb * 6)}s)`);
+        markTaskDone("tutorial-meeting-upload");
         modal.remove();
         this._currentId = body.meeting_id;
         this._startPolling();
@@ -301,12 +330,18 @@ export const meeting = {
 
         <div class="modal2-actions">
           <button type="button" data-close>關閉</button>
+          <button type="button" data-copy>複製摘要</button>
           ${body.project_id ? `<button type="button" class="primary" data-push>推到交棒卡</button>` : ""}
         </div>
       </div>
     `;
     root.appendChild(modal);
     modal.querySelector("[data-close]").addEventListener("click", () => modal.remove());
+    modal.querySelector("[data-copy]").addEventListener("click", async () => {
+      await copyText(meetingSummaryText(s));
+      toast.success("會議摘要已複製");
+      markTaskDone("tutorial-meeting-summary");
+    });
     modal.querySelector("[data-push]")?.addEventListener("click", async () => {
       try {
         const r = await authFetch(
@@ -320,6 +355,7 @@ export const meeting = {
         }
         const body = await r.json();
         toast.success(`已推 ${body.next_actions_count} 項待辦到交棒卡`);
+        markTaskDone("ftue-03-meeting-summary");
         modal.remove();
       } catch (e) {
         networkError("推到交棒卡", e);
@@ -327,3 +363,44 @@ export const meeting = {
     });
   },
 };
+
+function meetingSummaryText(s = {}) {
+  const lines = [
+    `會議:${s.title || "(未命名會議)"}`,
+    "",
+  ];
+  if (Array.isArray(s.decisions) && s.decisions.length) {
+    lines.push("決議");
+    s.decisions.forEach(d => lines.push(`- ${d}`));
+    lines.push("");
+  }
+  if (Array.isArray(s.action_items) && s.action_items.length) {
+    lines.push("待辦");
+    s.action_items.forEach(a => {
+      lines.push(`- ${a.who || "未指定"}:${a.what || ""}${a.due ? `(${a.due})` : ""}`);
+    });
+    lines.push("");
+  }
+  if (Array.isArray(s.key_numbers) && s.key_numbers.length) {
+    lines.push("關鍵數字");
+    s.key_numbers.forEach(n => lines.push(`- ${n.label || "數字"}:${n.value || ""}`));
+    lines.push("");
+  }
+  if (s.next_meeting) lines.push(`下次會議:${s.next_meeting}`);
+  return lines.join("\n").trim();
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.left = "-9999px";
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand("copy");
+  ta.remove();
+}

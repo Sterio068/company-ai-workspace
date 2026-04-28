@@ -199,7 +199,7 @@ cd ..
 ```
 會啟動 **5 個容器**:
 - `chengfu-nginx`(port 80 · 對外唯一入口)
-- `chengfu-librechat`(v0.8.4 · 內部 3080)
+- `chengfu-librechat`(v0.8.5 · 內部 3080)
 - `chengfu-mongo`(對話 + 會計 + 專案 + 回饋)
 - `chengfu-meili`(全文檢索)
 - `chengfu-accounting`(FastAPI · 會計 / 專案 / 回饋 / 管理 / L3 classifier)

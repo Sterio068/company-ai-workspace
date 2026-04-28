@@ -25,6 +25,7 @@ COPY main.py .
 COPY auth_deps.py .
 COPY config.py .
 COPY orchestrator.py .
+COPY infra/ ./infra/
 COPY services/ ./services/
 COPY routers/ ./routers/
 

@@ -47,6 +47,20 @@ done
 
 mkdir -p "$DIST_DIR"
 
+# ---------- Step 0 · Frontend bundle freshness ----------
+# DMG 直接包 repo snapshot；若只改 source 而忘了 npm run build，安裝後會載入舊 hash bundle。
+LAUNCHER_DIR="${REPO_ROOT}/frontend/launcher"
+if [[ -f "${LAUNCHER_DIR}/package.json" && -f "${LAUNCHER_DIR}/build.config.js" ]]; then
+    echo -e "${BLUE}[0/3]${NC} 確認前端 bundle 是最新"
+    if ! command -v npm > /dev/null 2>&1; then
+        echo -e "${RED}❌ 找不到 npm,無法確保前端 dist/ 是最新${NC}"
+        echo -e "${YELLOW}請先安裝 Node.js / npm,再重新打包。${NC}"
+        exit 1
+    fi
+    (cd "$LAUNCHER_DIR" && { [[ -d node_modules ]] || npm install --silent; } && npm run build)
+    echo -e "  ${GREEN}✓${NC} launcher dist/ 已更新"
+fi
+
 # ---------- Step 1 · osacompile · .applescript → .app ----------
 echo -e "${BLUE}[1/3]${NC} 編譯 .applescript → .app"
 rm -rf "$APP"
@@ -109,6 +123,8 @@ tar \
     --exclude="config-templates/users.json" \
     --exclude="reports" \
     --exclude="reports/qa-artifacts" \
+    --exclude="test-results" \
+    --exclude="playwright-report" \
     --exclude="tests/e2e/test-results" \
     --exclude="tests/e2e/playwright-report" \
     --exclude="installer/dist" \
@@ -143,8 +159,12 @@ cat > "$DMG_STAGING/讀我.txt" << 'EOF'
      • 選「沿用既有」:不重填 API Key / 網域 / admin / NAS
      • 選「重新設定」:走完整 7 步驟,可更換設定
   3. 第一次安裝或重新設定時,跟隨對話框引導 · 輸入:
-     • OpenAI API Key(必填 · 從 platform.openai.com 拿)
+     • OpenAI API Key(必填 · 主力 AI 引擎)
+       取得網址:https://platform.openai.com/api-keys
      • Anthropic API Key(選配 · Claude 備援)
+       取得網址:https://console.anthropic.com/settings/keys
+     • Fal.ai API Key(設計生圖選配 · 裝完可在中控設定)
+       取得網址:https://fal.ai/dashboard/keys
      • 公司域名(可選 · 留空用本機 localhost)
      • 管理員 email(必填 · 請用承富公司管理信箱)
      • NAS 路徑(可選)
@@ -169,7 +189,9 @@ cat > "$DMG_STAGING/讀我.txt" << 'EOF'
   • OpenAI API Key
     https://platform.openai.com/api-keys
   • Anthropic API Key(選配 · Claude 備援)
-    https://console.anthropic.com
+    https://console.anthropic.com/settings/keys
+  • Fal.ai API Key(設計生圖選配)
+    https://fal.ai/dashboard/keys
 
 【完成後 IT 接手做的 6 件】
 

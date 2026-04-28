@@ -25,7 +25,23 @@ echo "  - Anthropic API Key(選配:Claude 備援 / 長文件工作流)"
 echo "  - JWT Secrets × 2(自動產生)"
 echo "  - LibreChat CREDS Key/IV(自動產生)"
 echo "  - Meilisearch Master Key(自動產生)"
+echo "  - Action Bridge Token(自動產生 · Agent 工具低權限通行權杖)"
 echo "  - Email 密碼(選配:密碼重設寄信用)"
+echo "  - NotebookLM Enterprise Access Token(選配:同步資料包 / 上傳檔案)"
+echo ""
+echo "API Key 取得網址:"
+echo "  - OpenAI(主力): https://platform.openai.com/api-keys"
+echo "    macOS 可直接開啟: open 'https://platform.openai.com/api-keys'"
+echo "  - Anthropic(Claude 備援): https://console.anthropic.com/settings/keys"
+echo "    macOS 可直接開啟: open 'https://console.anthropic.com/settings/keys'"
+echo "  - Fal.ai(設計生圖選配,之後可於中控設定): https://fal.ai/dashboard/keys"
+echo "    macOS 可直接開啟: open 'https://fal.ai/dashboard/keys'"
+echo "  - Email · Resend(密碼重設選配): https://resend.com/api-keys"
+echo "    macOS 可直接開啟: open 'https://resend.com/api-keys'"
+echo "  - Email · Gmail App Password(需開兩階段驗證): https://myaccount.google.com/apppasswords"
+echo "    macOS 可直接開啟: open 'https://myaccount.google.com/apppasswords'"
+echo "  - NotebookLM Enterprise(選配): https://docs.cloud.google.com/gemini/enterprise/notebooklm-enterprise/docs/api-notebooks"
+echo "    Access Token 可用 gcloud 產生: gcloud auth print-access-token"
 echo ""
 echo "這些值之後可用以下指令查看:"
 echo "  security find-generic-password -s '${SERVICE_PREFIX}-<name>' -w"
@@ -66,10 +82,12 @@ prompt_secret() {
 }
 
 # ------------------ 1. OpenAI API Key(必要)------------------
-echo "[1/7] OpenAI API Key"
+echo "[1/8] OpenAI API Key"
 if check_existing "openai-key"; then
-    echo "  到 https://platform.openai.com/api-keys 取得 sk-... 開頭的 key"
-    echo "  承富預設用 OpenAI,前端可再切換到 Claude 備援"
+    echo "  取得網址:https://platform.openai.com/api-keys"
+    echo "  想先開瀏覽器可另開 Terminal 執行: open 'https://platform.openai.com/api-keys'"
+    echo "  登入 OpenAI Platform 後建立 sk-... 開頭的 key"
+    echo "  系統預設用 OpenAI · 前端可再切換到 Claude 備援"
     key=$(prompt_secret "貼入 OpenAI API Key")
     [[ -z "$key" ]] && { echo "❌ 不可為空"; exit 1; }
     put_secret "openai-key" "$key"
@@ -77,13 +95,15 @@ fi
 echo ""
 
 # ------------------ 2. Anthropic API Key(選配)------------------
-echo "[2/7] Anthropic API Key(選配 · Claude 備援)"
+echo "[2/8] Anthropic API Key(選配 · Claude 備援)"
 read -p "  略過這個? (Y/n) " skip
 if [[ "$skip" != "n" && "$skip" != "N" ]]; then
     echo "  已略過"
 else
     if check_existing "anthropic-key"; then
-        echo "  到 https://console.anthropic.com 取得 sk-ant-... 開頭的 key"
+        echo "  取得網址:https://console.anthropic.com/settings/keys"
+        echo "  想先開瀏覽器可另開 Terminal 執行: open 'https://console.anthropic.com/settings/keys'"
+        echo "  登入 Anthropic Console 後建立 sk-ant-... 開頭的 key"
         key=$(prompt_secret "貼入 Anthropic API Key")
         [[ -n "$key" ]] && put_secret "anthropic-key" "$key"
     fi
@@ -91,7 +111,7 @@ fi
 echo ""
 
 # ------------------ 3-5. 自動產生的安全金鑰 ------------------
-echo "[3-5/7] 自動產生 JWT / CREDS 金鑰"
+echo "[3-5/8] 自動產生 JWT / CREDS 金鑰"
 if check_existing "jwt-secret"; then
     put_secret "jwt-secret" "$(openssl rand -hex 32)"
 fi
@@ -108,24 +128,50 @@ fi
 if check_existing "internal-token"; then
     put_secret "internal-token" "$(openssl rand -hex 32)"
 fi
+if check_existing "action-bridge-token"; then
+    put_secret "action-bridge-token" "$(openssl rand -hex 32)"
+fi
 echo ""
 
 # ------------------ 6. Meilisearch Master Key ------------------
-echo "[6/7] Meilisearch Master Key"
+echo "[6/8] Meilisearch Master Key"
 if check_existing "meili-master-key"; then
     put_secret "meili-master-key" "$(openssl rand -hex 32)"
 fi
 echo ""
 
 # ------------------ 7. Email 密碼(選配)------------------
-echo "[7/7] Email 服務密碼(選配 · 用於使用者密碼重設)"
+echo "[7/8] Email 服務密碼(選配 · 用於使用者密碼重設 / 系統通知)"
 read -p "  略過這個? (Y/n) " skip
 if [[ "$skip" != "n" && "$skip" != "N" ]]; then
     echo "  已略過"
 else
     if check_existing "email-password"; then
-        key=$(prompt_secret "貼入 Resend API Key 或 Gmail App Password")
+        echo "  二選一(常用):"
+        echo "  1) Resend API Key(推薦 · 月 100 封免費)"
+        echo "     取得網址:https://resend.com/api-keys"
+        echo "     macOS 可直接開啟: open 'https://resend.com/api-keys'"
+        echo "  2) Gmail App Password(需 Google 帳號開啟兩階段驗證)"
+        echo "     取得網址:https://myaccount.google.com/apppasswords"
+        echo "     macOS 可直接開啟: open 'https://myaccount.google.com/apppasswords'"
+        key=$(prompt_secret "貼入 Resend API Key(re_... 開頭)或 Gmail App Password(16 字)")
         [[ -n "$key" ]] && put_secret "email-password" "$key"
+    fi
+fi
+echo ""
+
+# ------------------ 8. NotebookLM Enterprise Access Token(選配)------------------
+echo "[8/8] NotebookLM Enterprise Access Token(選配 · 同步資料包 / 上傳檔案)"
+read -p "  略過這個? (Y/n) " skip
+if [[ "$skip" != "n" && "$skip" != "N" ]]; then
+    echo "  已略過"
+else
+    if check_existing "notebooklm-access-token"; then
+        echo "  官方 API 文件:https://docs.cloud.google.com/gemini/enterprise/notebooklm-enterprise/docs/api-notebooks"
+        echo "  Source API 文件:https://docs.cloud.google.com/gemini/enterprise/notebooklm-enterprise/docs/api-notebooks-sources"
+        echo "  若已安裝 gcloud 並登入,可另開 Terminal 執行:gcloud auth print-access-token"
+        key=$(prompt_secret "貼入 NotebookLM Enterprise Access Token")
+        [[ -n "$key" ]] && put_secret "notebooklm-access-token" "$key"
     fi
 fi
 echo ""

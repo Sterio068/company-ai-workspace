@@ -9,6 +9,73 @@ export async function fetchJSON(url, opts = {}) {
   return r.json();
 }
 
+/**
+ * 共用剪貼簿 utility · 集中所有 navigator.clipboard 呼叫
+ * 用法:
+ *   await copyToClipboard("xxx");                              // 純複製
+ *   await copyToClipboard(text, btnEl, { okText: "✓ 已複製" }) // 複製 + 按鈕飛字反饋
+ *
+ * 雙路徑:
+ *   - 主路徑:navigator.clipboard.writeText(secure context · HTTPS / localhost OK)
+ *   - 降級:document.execCommand('copy')(LAN HTTP / 舊版 Safari · 不需 secure context)
+ *
+ * @param {string} text 要複製的字串
+ * @param {HTMLElement|null} btn 反饋的按鈕(可選)· 會暫改 textContent + .ok class · 1.5s 後還原
+ * @param {{ okText?: string, errorText?: string, durationMs?: number }} [opts]
+ * @returns {Promise<boolean>} 成功 true · 失敗 false(已 toast.error)
+ */
+export async function copyToClipboard(text, btn = null, opts = {}) {
+  const okText = opts.okText || "✓ 已複製";
+  const errorText = opts.errorText || "複製失敗 · 請手動選取";
+  const duration = opts.durationMs ?? 1500;
+  const value = String(text ?? "");
+
+  const flashFeedback = () => {
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = okText;
+    btn.classList.add("ok");
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.classList.remove("ok");
+    }, duration);
+  };
+
+  // 主路徑 · 需 secure context (HTTPS / localhost)
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value);
+      flashFeedback();
+      return true;
+    } catch {
+      // fall through 到 execCommand
+    }
+  }
+
+  // 降級 · LAN HTTP (192.168.x.x) / 舊版 Safari · 用隱藏 textarea + execCommand
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = value;
+    ta.setAttribute("readonly", "");
+    ta.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    if (ok) {
+      flashFeedback();
+      return true;
+    }
+  } catch {
+    // 再失敗就降級到 toast
+  }
+
+  if (typeof window !== "undefined" && window.toast?.error) {
+    window.toast.error(errorText);
+  }
+  return false;
+}
+
 export function formatDate(d) {
   // v1.3 P1#10 · 簡化:2026.04.23 週三
   const wk = ["日", "一", "二", "三", "四", "五", "六"];

@@ -1,0 +1,33 @@
+{
+  "ok": true,
+  "before": {
+    "expanded": "false",
+    "sidebarHidden": "true",
+    "sidebarInert": true
+  },
+  "opened": {
+    "expanded": "true",
+    "sidebarHidden": null,
+    "sidebarInert": false,
+    "drawerOpen": true,
+    "focusInsideSidebar": true
+  },
+  "closed": {
+    "expanded": "false",
+    "sidebarHidden": "true",
+    "sidebarInert": true,
+    "drawerOpen": false,
+    "focusOnMenu": true
+  },
+  "modalOpen": {
+    "role": "dialog",
+    "ariaModal": "true",
+    "hidden": "false",
+    "focusInside": true,
+    "focusedName": "name"
+  },
+  "modalClosed": {
+    "hidden": "true",
+    "open": false
+  }
+}

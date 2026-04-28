@@ -43,7 +43,10 @@ SUPPORTED_EXT = {".pdf", ".docx", ".txt", ".md", ".xlsx", ".pptx"}
 
 def api(method, path, token=None, data=None, multipart=None):
     url = f"{BASE}{path}"
-    headers = {}
+    headers = {
+        # LibreChat rejects generic script clients through ua-parser in some routes.
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0.0.0",
+    }
     if token:
         headers["Authorization"] = f"Bearer {token}"
     if multipart:
@@ -52,8 +55,11 @@ def api(method, path, token=None, data=None, multipart=None):
         body = b""
         for name, (filename, content, ctype) in multipart.items():
             body += f"--{boundary}\r\n".encode()
-            body += f'Content-Disposition: form-data; name="{name}"; filename="{filename}"\r\n'.encode()
-            body += f"Content-Type: {ctype}\r\n\r\n".encode()
+            if filename is None:
+                body += f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode()
+            else:
+                body += f'Content-Disposition: form-data; name="{name}"; filename="{filename}"\r\n'.encode()
+                body += f"Content-Type: {ctype}\r\n\r\n".encode()
             body += content
             body += b"\r\n"
         body += f"--{boundary}--\r\n".encode()
@@ -67,7 +73,10 @@ def api(method, path, token=None, data=None, multipart=None):
     req = urllib.request.Request(url, data=body, method=method, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=120) as resp:
-            return json.loads(resp.read().decode()) if resp.length else {}
+            raw = resp.read()
+            if not raw:
+                return {}
+            return json.loads(raw.decode())
     except urllib.error.HTTPError as e:
         raise RuntimeError(f"HTTP {e.code}: {e.read().decode()[:500]}") from e
 
@@ -84,36 +93,53 @@ def login():
     return resp["token"]
 
 
-def find_kb_agent(token):
-    """Find the 07 公司知識庫查詢 Agent by name."""
+def find_kb_agent(token, expected_name):
+    """Find the production knowledge Agent by exact name.
+
+    Avoid fuzzy matching here: attaching company files to the wrong Agent is a
+    real data-boundary bug. Use --agent-id when the production Agent was renamed.
+    """
     resp = api("GET", "/api/agents", token=token)
-    agents = resp.get("agents", resp) if isinstance(resp, dict) else resp
+    if isinstance(resp, dict):
+        agents = resp.get("agents") or resp.get("data") or resp.get("results") or []
+    else:
+        agents = resp
+    agents = agents or []
     for a in agents:
         name = a.get("name", "")
-        if "知識庫查詢" in name or "知識庫" in name and "查詢" in name:
+        provider = (a.get("provider") or a.get("endpoint") or "").lower()
+        if name == expected_name and ("openai" in provider or "openai" in name.lower()):
             return a.get("id") or a.get("_id")
     return None
 
 
 def gather_files(pattern=None):
     if pattern:
-        files = [pathlib.Path(p) for p in glob.glob(pattern)]
+        files = [pathlib.Path(p).resolve() for p in glob.glob(pattern)]
     else:
         files = []
         for ext in SUPPORTED_EXT:
-            files.extend(KB_DIR.rglob(f"*{ext}"))
+            files.extend(path.resolve() for path in KB_DIR.rglob(f"*{ext}"))
     return sorted(files)
 
 
-def upload_file(token, path):
+def upload_file(token, path, agent_id):
     ctype = mimetypes.guess_type(str(path))[0] or "application/octet-stream"
     with open(path, "rb") as f:
         content = f.read()
-    # LibreChat 的上傳 endpoint(v0.7+)
+    # LibreChat v0.8+ file_search agent resource upload.
+    # The upload route attaches the file to the agent automatically when
+    # agent_id + tool_resource=file_search are present.
+    file_id = str(uuid.uuid4())
     resp = api("POST", "/api/files", token=token, multipart={
+        "endpoint": (None, b"agents", "text/plain"),
+        "endpointType": (None, b"agents", "text/plain"),
+        "agent_id": (None, agent_id.encode(), "text/plain"),
+        "tool_resource": (None, b"file_search", "text/plain"),
+        "file_id": (None, file_id.encode(), "text/plain"),
         "file": (path.name, content, ctype),
     })
-    return resp.get("file_id") or resp.get("id") or resp.get("_id")
+    return resp.get("file_id") or resp.get("id") or resp.get("_id") or file_id
 
 
 def attach_to_agent(token, agent_id, file_ids):
@@ -128,6 +154,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--files", help="glob pattern 指定要上傳的檔案")
     parser.add_argument("--agent-id", help="指定要附加到的 Agent ID")
+    parser.add_argument(
+        "--agent-name",
+        default="📚 知識 · 知識庫查詢 · OpenAI",
+        help="要附加的知識庫 Agent 精確名稱(預設 OpenAI production 知識庫 Agent)",
+    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -139,7 +170,11 @@ def main():
     print(f"📂 找到 {len(files)} 個檔案,總 {total_size:.1f} MB")
     for f in files:
         size_mb = f.stat().st_size / 1024 / 1024
-        print(f"   {f.relative_to(PROJECT_ROOT)}  ({size_mb:.2f} MB)")
+        try:
+            display_path = f.relative_to(PROJECT_ROOT)
+        except ValueError:
+            display_path = f
+        print(f"   {display_path}  ({size_mb:.2f} MB)")
     print()
 
     if args.dry_run:
@@ -150,18 +185,21 @@ def main():
     print("🔐 已登入")
 
     # 找目標 Agent
-    agent_id = args.agent_id or find_kb_agent(token)
+    agent_id = args.agent_id or find_kb_agent(token, args.agent_name)
     if not agent_id:
-        sys.exit("❌ 找不到「公司知識庫查詢」Agent,請先執行 create-agents.py,或用 --agent-id=...")
+        sys.exit(
+            f"❌ 找不到精確名稱為「{args.agent_name}」的 OpenAI 知識庫 Agent。"
+            "請先執行 create-agents.py,或明確使用 --agent-id=agent_xxx,避免檔案掛到錯誤 Agent。"
+        )
     print(f"🎯 目標 Agent: {agent_id}")
     print()
 
-    # 逐檔上傳
+    # 逐檔上傳 · v0.8+ 會自動掛到 Agent tool_resources.file_search
     file_ids = []
     for f in files:
         print(f"📤 上傳 {f.name}...", end=" ", flush=True)
         try:
-            fid = upload_file(token, f)
+            fid = upload_file(token, f, agent_id)
             file_ids.append(fid)
             print(f"✅ file_id={fid}")
         except Exception as e:
@@ -169,16 +207,6 @@ def main():
 
     if not file_ids:
         sys.exit("❌ 沒有檔案成功上傳")
-
-    # 附加到 Agent
-    print()
-    print(f"🔗 附加 {len(file_ids)} 個檔案到 Agent {agent_id}...", end=" ")
-    try:
-        attach_to_agent(token, agent_id, file_ids)
-        print("✅")
-    except Exception as e:
-        print(f"❌ {e}")
-        print("   已上傳但未附加,請到 LibreChat UI 手動關聯")
 
     print()
     print("下一步驗證:")

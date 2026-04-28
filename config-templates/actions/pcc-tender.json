@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "政府電子採購網查詢(g0v 社群 API)",
-    "description": "承富投標顧問透過 g0v Ronny Wang 收集的 PCC 開放 API 查詢標案(CORS 開放 · 非營利使用免費)",
+    "description": "投標顧問透過 g0v Ronny Wang 收集的 PCC 開放 API 查詢標案(CORS 開放 · 非營利使用免費)",
     "version": "1.0.0"
   },
   "servers": [
@@ -13,7 +13,7 @@
       "get": {
         "operationId": "searchByTitle",
         "summary": "以標案名稱關鍵字搜尋",
-        "description": "用標案名稱關鍵字搜尋。建議:環保、文化、觀光、AI、宣導、活動等承富業務領域關鍵字。",
+        "description": "用標案名稱關鍵字搜尋。建議:環保、文化、觀光、AI、宣導、活動等業務領域關鍵字。",
         "parameters": [
           {
             "name": "query",

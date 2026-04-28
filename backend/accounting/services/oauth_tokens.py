@@ -31,6 +31,7 @@ import logging
 import os
 from datetime import datetime, timezone, timedelta
 from typing import Optional
+from auth_deps import _is_prod
 
 logger = logging.getLogger("chengfu")
 
@@ -56,6 +57,8 @@ def encrypt_token(plaintext: str) -> str:
         return ""
     key = _get_creds_key()
     if key is None:
+        if _is_prod():
+            raise RuntimeError("CREDS_KEY required in production · 不允許 OAuth token 明文存庫")
         logger.warning("[oauth] CREDS_KEY 未設 · token 明文存(dev mode · prod 拒絕)")
         return "PLAIN:" + plaintext
     try:
@@ -65,6 +68,8 @@ def encrypt_token(plaintext: str) -> str:
         ct = cipher.encrypt(nonce, plaintext.encode("utf-8"), None)
         return base64.b64encode(nonce + ct).decode("ascii")
     except ImportError:
+        if _is_prod():
+            raise RuntimeError("cryptography required in production · 不允許 OAuth token 明文存庫")
         logger.warning("[oauth] cryptography 未裝 · 退化明文 · pip install cryptography")
         return "PLAIN:" + plaintext
 

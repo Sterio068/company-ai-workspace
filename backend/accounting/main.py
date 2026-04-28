@@ -20,6 +20,8 @@ from datetime import datetime, date, timezone
 from enum import Enum
 import os
 import json
+import re
+import time
 import uuid
 import logging
 import asyncio
@@ -28,6 +30,7 @@ import httpx
 from collections import OrderedDict
 from pymongo import MongoClient
 from bson import ObjectId
+from infra.retention_policy import apply_retention_indexes
 
 # ============================================================
 # v1.66 Q3 · Sentry · 異常自動上報 · 設 SENTRY_DSN env 才啟用 · 沒設 no-op
@@ -205,6 +208,15 @@ async def lifespan(app: FastAPI):
         )
     except Exception as e:
         logger.warning("[index] site_surveys: %s", e)
+    # NotebookLM parallel bridge · local source packs remain authoritative snapshots
+    try:
+        db.notebooklm_source_packs.create_index([("updated_at", -1)])
+        db.notebooklm_source_packs.create_index([("scope", 1), ("updated_at", -1)])
+        db.notebooklm_source_packs.create_index([("content_hash", 1)], unique=True)
+        db.notebooklm_sync_runs.create_index([("created_at", -1)])
+        db.notebooklm_sync_runs.create_index([("pack_id", 1), ("created_at", -1)])
+    except Exception as e:
+        logger.warning("[index] notebooklm: %s", e)
     # Feature #6 · media_contacts email unique(R21#4 · partial 排除空字串)
     # 技術債#9(2026-04-23)· 偵測舊 sparse 索引並 drop · 防 IndexKeySpecsConflict spam log
     try:
@@ -265,6 +277,11 @@ async def lifespan(app: FastAPI):
         )
     except Exception as e:
         logger.warning("[index] frontend_errors: %s", e)
+    try:
+        applied_retention = apply_retention_indexes(db, logger)
+        logger.info("[retention] managed TTL indexes ensured · count=%s", len(applied_retention))
+    except Exception as e:
+        logger.error("[retention] managed TTL index ensure failed · data bloat risk: %s", e)
     logger.info("indexes ensured · app ready")
     # ROADMAP §11.12 + Codex R6#1 / R7#1 · JWT secret 啟動檢查
     # 注意:LibreChat v0.8.4 access token 在 JSON · 不發 token cookie
@@ -289,10 +306,10 @@ async def lifespan(app: FastAPI):
 
     # v1.3 batch6 · CRITICAL C-2 · OAuth token 加密 key 強制檢查
     _creds_key = os.getenv("CREDS_KEY", "")
-    if not _creds_key or len(_creds_key) < 32:
+    if not _creds_key or len(_creds_key) < 64:
         if _is_prod():
             raise RuntimeError(
-                "CREDS_KEY required in production (>= 32 bytes) · "
+                "CREDS_KEY required in production (32 bytes hex / 64 chars) · "
                 "OAuth token 會以 PLAIN: prefix 明文存庫 · 違反 PDPA"
             )
         logger.warning(
@@ -324,6 +341,15 @@ async def lifespan(app: FastAPI):
             )
         logger.warning(
             "[auth] ECC_INTERNAL_TOKEN 未設(dev mode 容許)· cron 跨 service 呼叫會 401"
+        )
+    if not os.getenv("ACTION_BRIDGE_TOKEN", "").strip():
+        if _is_prod():
+            raise RuntimeError(
+                "ACTION_BRIDGE_TOKEN required in production · "
+                "LibreChat Actions 必須用低權限 action token,不可重用 ECC_INTERNAL_TOKEN"
+            )
+        logger.warning(
+            "[auth] ACTION_BRIDGE_TOKEN 未設(dev mode 容許)· LibreChat Actions 接線會被跳過"
         )
     # Codex Round 10.5 · 啟動時主動探 OCR · /healthz 立刻看得到真狀態
     try:
@@ -495,9 +521,28 @@ from auth_deps import make_user_or_ip
 _bound_user_or_ip = make_user_or_ip(_verify_librechat_cookie, get_remote_address)
 
 
+_ACTION_BRIDGE_PATH_PREFIXES = (
+    "/accounts",
+    "/transactions",
+    "/invoices",
+    "/quotes",
+    "/reports/",
+    "/vision/",
+    "/notebooklm/agent/",
+    "/orchestrator/delegate",
+)
+
+
+def _action_bridge_path_allowed(path: str) -> bool:
+    if path.startswith("/projects/") and path.endswith("/finance"):
+        return True
+    return any(path == p.rstrip("/") or path.startswith(p) for p in _ACTION_BRIDGE_PATH_PREFIXES)
+
+
 def current_user_email(
     request: Request,
     x_user_email: Optional[str] = Header(default=None),
+    x_acting_user: Optional[str] = Header(default=None),
 ) -> Optional[str]:
     """取得當前使用者 email · 優先順序(Codex R3.2 / R7#1 / R7#10):
     1. LibreChat refreshToken cookie + JWT_REFRESH_SECRET + 反查 _users_col(R7#1)
@@ -506,6 +551,29 @@ def current_user_email(
     R7#10:prod 若 nginx 沒 strip X-User-Email · 任何人 curl 可偽造 admin。
     所以 prod 預設關 fallback · 只有 dev / 明確 opt-in 才開。
     """
+    expected_internal = os.getenv("ECC_INTERNAL_TOKEN", "").strip()
+    provided_internal = (request.headers.get("X-Internal-Token") or "").strip()
+    raw_acting_user = (
+        x_acting_user
+        if isinstance(x_acting_user, str)
+        else request.headers.get("X-Acting-User")
+    )
+    acting_email = (raw_acting_user or "").strip().lower()
+    if expected_internal and acting_email and _secrets_equal(provided_internal, expected_internal):
+        request.state.email_trusted = True
+        request.state.auth_via = "internal_acting_user"
+        return acting_email
+    expected_action = os.getenv("ACTION_BRIDGE_TOKEN", "").strip()
+    if (
+        expected_action
+        and acting_email
+        and _secrets_equal(provided_internal, expected_action)
+        and _action_bridge_path_allowed(request.url.path)
+    ):
+        request.state.email_trusted = True
+        request.state.auth_via = "action_bridge"
+        return acting_email
+
     trusted_email = _verify_librechat_cookie(request)
     if trusted_email:
         request.state.email_trusted = True
@@ -717,6 +785,20 @@ from routers import knowledge as _knowledge_router
 app.include_router(_knowledge_router.router)
 
 # ============================================================
+# LibreChat RAG adapter · /rag/{health,embed,query,text,documents}
+# v1.70 · 對齊 LibreChat v0.8.5 RAG_API_URL contract,不新增外部容器
+# ============================================================
+from routers import rag_adapter as _rag_adapter_router
+app.include_router(_rag_adapter_router.router)
+
+# ============================================================
+# NotebookLM parallel bridge · /notebooklm/*
+# Local DB stays source-of-truth; NotebookLM receives derived source packs only.
+# ============================================================
+from routers import notebooklm as _notebooklm_router
+app.include_router(_notebooklm_router.router)
+
+# ============================================================
 # System router · 技術債#2(2026-04-23)· /quota/check + /quota/preflight + /healthz
 # preflight 需動態 register · 因 _limiter 在 main 才有
 # ============================================================
@@ -773,3 +855,154 @@ def report_frontend_error(report: FrontendErrorReport, request: Request):
         except Exception:
             pass
     return {"received": True, "rid": report.rid}
+
+
+# X-Forwarded-Host 格式驗證 · 模組頂層 compile 一次 (避免每次請求 re.compile)
+# 註:此處只擋語法錯誤的注入,不擋語法正確但任意的 host 字串
+# 信任邊界靠部署層:nginx 設 `proxy_set_header X-Forwarded-Host $host` 強制覆寫
+# (見 frontend/nginx/nginx.conf · 不接受 client 端傳的 X-Forwarded-Host)
+# 若部署沒過 nginx 直接 expose accounting 8000,此 header 會被 client 完全控制
+_FORWARDED_HOST_RE = re.compile(r"^[a-zA-Z0-9.\-]+(:\d{1,5})?$")
+
+
+# ============================================================
+# AI 引擎主備源 health check · launcher sidebar 主備源面板用
+# - 不揭露 API key · 只判 key 存在 + 長度
+# - 失敗永遠回 200 (避免 sidebar 顯紅嚇到使用者)
+# - 30s cache (避免每分鐘真打 OpenAI/Anthropic · 與 launcher 60s refresh 配 30s buffer)
+# - 多 worker 各自一份 cache(本機 Mac mini 4 worker · 冷啟動最多 4 次 mongo round trip · 可接受)
+#   若改 cluster 部署,改用 Redis / Mongo TTL collection 跨 worker share
+# ============================================================
+_AI_HEALTH_CACHE: dict = {"at": 0.0, "data": None}
+_AI_HEALTH_TTL_SEC = 30.0
+
+
+def _ai_provider_state(api_key: str) -> dict:
+    """純粹從 key 是否存在 + 長度判斷 · 不打網路(避免 latency / quota 浪費)"""
+    if not api_key:
+        return {"state": "down", "reason": "API key 未設定", "configured": False}
+    if len(api_key) < 20:
+        return {"state": "warn", "reason": "API key 長度異常", "configured": True}
+    return {"state": "ok", "reason": "已就緒", "configured": True}
+
+
+@app.get("/admin/access-urls")
+def access_urls(request: Request, _admin: str = Depends(require_admin)) -> dict:
+    """同仁連線網址清單 · admin view 顯示用
+
+    來源:
+      - LAN IP / hostname:start.sh 啟動時偵測 ifconfig 寫入 .host-network.json
+      - tunnel hostname:從 ~/.cloudflared/config.yml 解析(若有)
+      - current_origin:依使用者目前訪問的 URL 動態回(避免顯示無關 IP)
+
+    Response:
+      {
+        "current_origin": "http://192.168.88.133",
+        "lan_urls":  ["http://192.168.88.133", "http://192.168.50.147"],
+        "mdns_url":  "http://steriodemac-mini.local",
+        "tunnel_urls": ["https://ai.example.com"],
+        "guidance": {
+          "account_source": "由老闆統一設置 · 同仁向老闆領取 email + 預設密碼",
+          "first_login": "首次登入後到右上角頭像 → 個人設定 改密碼"
+        }
+      }
+    """
+    path = os.getenv("HOST_NETWORK_FILE", "/data/host-network.json")
+    info: dict = {"lan_ips": [], "hostname": "", "tunnel_hostnames": []}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            info = json.load(f) or info
+    except FileNotFoundError:
+        logger.warning("[access-urls] host network file 不存在 · start.sh 未跑或未掛 volume")
+    except Exception as e:
+        logger.warning(f"[access-urls] 讀檔失敗 {e}")
+
+    lan_urls = [f"http://{ip}" for ip in (info.get("lan_ips") or []) if ip]
+    mdns_url = f"http://{info['hostname']}" if info.get("hostname") else None
+    tunnel_urls = [f"https://{h}" for h in (info.get("tunnel_hostnames") or []) if h]
+
+    # 使用者目前正在用的 URL · 從 X-Forwarded-Host / Host header 推
+    # 嚴格驗格式(防偽造 header 灌任意字串到 admin UI)· 失敗則回 None
+    raw_host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").strip()
+    raw_proto = (request.headers.get("x-forwarded-proto") or "http").strip().lower()
+    current_origin = None
+    if raw_host and _FORWARDED_HOST_RE.match(raw_host) and raw_proto in ("http", "https"):
+        current_origin = f"{raw_proto}://{raw_host}"
+
+    return {
+        "current_origin": current_origin,
+        "lan_urls": lan_urls,
+        "mdns_url": mdns_url,
+        "tunnel_urls": tunnel_urls,
+        "detected_at": info.get("detected_at"),
+        "guidance": {
+            "account_source": "帳號 / 密碼由老闆統一設置 · 同仁向老闆領取",
+            "first_login": "首次登入後請到右上角頭像 → 個人設定 改密碼",
+            "remote_status": (
+                "已啟用 · 在家 / 出差可用上方 tunnel 網址" if tunnel_urls
+                else "尚未啟用遠端 · 請先設定 Cloudflare Tunnel(見 DEPLOY.md Phase 4)"
+            ),
+        },
+    }
+
+
+@app.get("/health/ai-providers")
+def ai_providers_health(
+    request: Request,
+    email: Optional[str] = Depends(current_user_email),
+) -> dict:
+    """主備源連線狀態 · launcher sidebar 每 60s 拉
+
+    C2 · auth gate:
+    - 未登入(無 email) → 401(防匿名探測 key 是否存在)
+    - 一般同仁登入 → 只回 available bool · 不揭露 reason / configured
+    - admin 登入 → 完整狀態(reason / configured / latency)
+    """
+    if not email:
+        raise HTTPException(401, "需登入才能查詢 AI 引擎狀態")
+    is_admin = email in _admin_allowlist
+
+    # cache 存的是 admin full payload · 非 admin 從中 derive redacted view
+    now = time.time()
+    cached = _AI_HEALTH_CACHE.get("data")
+    if not cached or (now - _AI_HEALTH_CACHE["at"]) >= _AI_HEALTH_TTL_SEC:
+        openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+        anthropic_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+        if not openai_key:
+            try:
+                doc = db.system_settings.find_one({"name": "OPENAI_API_KEY"})
+                if doc and doc.get("value"):
+                    openai_key = str(doc["value"]).strip()
+            except Exception:
+                pass
+        if not anthropic_key:
+            try:
+                doc = db.system_settings.find_one({"name": "ANTHROPIC_API_KEY"})
+                if doc and doc.get("value"):
+                    anthropic_key = str(doc["value"]).strip()
+            except Exception:
+                pass
+        cached = {
+            "providers": {
+                "openai": _ai_provider_state(openai_key),
+                "anthropic": _ai_provider_state(anthropic_key),
+            },
+            "primary": "openai",
+            "backup": "anthropic",
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
+        _AI_HEALTH_CACHE["at"] = now
+        _AI_HEALTH_CACHE["data"] = cached
+
+    if is_admin:
+        return cached
+    # 非 admin · 只回 state(綠/橙/紅/灰)· 不揭露 reason / configured / key 細節
+    return {
+        "providers": {
+            k: {"state": v.get("state", "unknown")}
+            for k, v in cached.get("providers", {}).items()
+        },
+        "primary": cached.get("primary"),
+        "backup": cached.get("backup"),
+        "ts": cached.get("ts"),
+    }

@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 /**
- * 承富 AI 關鍵 user journey
+ * 智慧助理關鍵 user journey
  *
  * 執行前提:
  *   1. docker compose up -d
@@ -37,7 +37,7 @@ const authStateSlug = [
   baseURL,
   adminEmail || 'missing-admin',
 ].join('__').replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '').toLowerCase() || 'localhost';
-const authStatePath = path.join(os.tmpdir(), `chengfu-e2e-auth-${authStateSlug}.json`);
+const authStatePath = path.join(os.tmpdir(), `ai-workspace-e2e-auth-${authStateSlug}.json`);
 
 function contextOptionsForProject(testInfo: TestInfo) {
   const projectUse = testInfo.project.use as Record<string, unknown>;
@@ -117,7 +117,27 @@ async function newAuthenticatedContext(browser, testInfo: TestInfo) {
   return { context, page };
 }
 
-test.describe('承富 AI · 關鍵流程', () => {
+async function getWorkspaceEntryCount(page: Page): Promise<number> {
+  const dashboardCards = page.locator('#workspace-cards .workspace-card');
+  const cardCount = await dashboardCards.count();
+  if (cardCount > 0) return cardCount;
+  return page.locator('.sidebar-item.ws-nav[data-ws]').count();
+}
+
+async function openWorkspaceFromCurrentIA(page: Page, workspaceId = 1): Promise<void> {
+  const card = page.locator(`#workspace-cards .workspace-card.ws-${workspaceId}`).first();
+  if (await card.isVisible().catch(() => false)) {
+    await card.click();
+    return;
+  }
+  await page.evaluate((id) => {
+    const app = (window as any).app;
+    if (!app?.openWorkspace) throw new Error('window.app.openWorkspace unavailable');
+    app.openWorkspace(id);
+  }, workspaceId);
+}
+
+test.describe('智慧助理 · 關鍵流程', () => {
 
   test('未登入 · 首頁必須導回登入頁', async ({ page }) => {
     await page.goto('/');
@@ -128,7 +148,7 @@ test.describe('承富 AI · 關鍵流程', () => {
 
 });
 
-test.describe.serial('承富 AI · 登入後關鍵流程', () => {
+test.describe.serial('智慧助理 · 登入後關鍵流程', () => {
   let context: BrowserContext;
   let authPage: Page;
 
@@ -149,12 +169,15 @@ test.describe.serial('承富 AI · 登入後關鍵流程', () => {
     const page = authPage;
     await page.goto('/');
     await expect(page.locator('#app')).toBeVisible({ timeout: 15_000 });
-    await expect(page).toHaveTitle(/承富智慧助理|承富 AI/);
-    await expect(page.locator('.brand-name')).toContainText('承富智慧助理');
+    await expect(page).toHaveTitle(/智慧助理|AI 工作台|AI 協作平台/);
+    await expect(page.locator('.brand-name')).toContainText(/智慧助理|AI 工作台|AI 協作平台/);
     await expect(page.locator('.view-dashboard.active')).toBeVisible();
+    await expect(page.locator('.fpp-workdesk')).toBeVisible();
     await expect(page.locator('#today-composer-input')).toBeVisible();
+    await expect(page.locator('.fpp-route-step')).toHaveCount(3);
+    await expect(page.locator('.fpp-grid')).toHaveCount(0);
     await expect(page.locator('#health-indicator')).toBeVisible();
-    await expect(page.locator('#workspace-cards .workspace-card')).toHaveCount(5);
+    await expect.poll(() => getWorkspaceEntryCount(page)).toBe(5);
     await expect(page.locator('#tour-backdrop')).not.toHaveClass(/open/);
     await expect(page.locator('#tour-bubble')).not.toHaveClass(/open/);
   });
@@ -162,7 +185,7 @@ test.describe.serial('承富 AI · 登入後關鍵流程', () => {
   test('Workspace · 5 個工作區可進入並帶入草稿', async () => {
     const page = authPage;
     await page.goto('/');
-    await page.locator('#workspace-cards .workspace-card').first().click();
+    await openWorkspaceFromCurrentIA(page, 1);
     await expect(page.locator('.view-workspace.active')).toBeVisible();
     await expect(page).toHaveURL(/#workspace-1/);
     await expect(page.locator('#workspace-title')).toContainText('投標工作區');
@@ -185,8 +208,8 @@ test.describe.serial('承富 AI · 登入後關鍵流程', () => {
 
   test('附件 · 選檔後顯示待送出 chip', async () => {
     const page = authPage;
-    const tempFile = path.join(os.tmpdir(), `chengfu-e2e-attachment-${Date.now()}.txt`);
-    fs.writeFileSync(tempFile, '承富附件 E2E 測試', 'utf8');
+    const tempFile = path.join(os.tmpdir(), `ai-workspace-e2e-attachment-${Date.now()}.txt`);
+    fs.writeFileSync(tempFile, '附件 E2E 測試', 'utf8');
     try {
       await page.goto('/');
       await expect(page.locator('#app')).toBeVisible();
@@ -194,6 +217,7 @@ test.describe.serial('承富 AI · 登入後關鍵流程', () => {
       await expect(page.locator('#chat-pane.open')).toBeVisible({ timeout: 10_000 });
       await page.setInputFiles('#chat-file-input', tempFile);
       await expect(page.locator('.chat-attachment-chip')).toContainText('待送出');
+      await expect(page.locator('.chat-attachment-chip')).toContainText('送出後讀取');
       await expect(page.locator('.chat-attachment-chip')).toContainText(path.basename(tempFile));
     } finally {
       fs.rmSync(tempFile, { force: true });
@@ -204,9 +228,9 @@ test.describe.serial('承富 AI · 登入後關鍵流程', () => {
     // F-08 對應 · mobile chat pane SSE render 行為與桌機不同 · 桌機 PM happy-path 已驗附件主路徑
     test.skip(testInfo.project.name === 'mobile', '附件主路徑桌機已覆蓋,手機附件 SSE timing 另案');
     const page = authPage;
-    const filename = `chengfu-e2e-upload-${Date.now()}.txt`;
+    const filename = `ai-workspace-e2e-upload-${Date.now()}.txt`;
     const tempFile = path.join(os.tmpdir(), filename);
-    fs.writeFileSync(tempFile, '承富附件實際上傳測試', 'utf8');
+    fs.writeFileSync(tempFile, '附件實際上傳測試', 'utf8');
 
     let chatPayloadHadFile = false;
     await page.route('**/api/agents/chat', async (route) => {
@@ -222,14 +246,18 @@ test.describe.serial('承富 AI · 登入後關鍵流程', () => {
 
     try {
       await page.goto('/');
-      await page.locator('#workspace-cards .workspace-card').first().click();
+      await openWorkspaceFromCurrentIA(page, 1);
       await page.locator('#workspace-start-btn').click();
       await page.setInputFiles('#chat-file-input', tempFile);
       await expect(page.locator('.chat-attachment-chip')).toContainText('待送出');
+      await expect(page.locator('.chat-attachment-chip')).toContainText('送出後讀取');
       await page.fill('#chat-input', '請閱讀附件並回覆收到');
       await page.locator('#chat-send-btn').click();
-      await expect(page.locator('#chat-messages')).toContainText('已收到附件');
-      expect(chatPayloadHadFile).toBeTruthy();
+      await expect.poll(() => chatPayloadHadFile, {
+        message: 'chat payload should include uploaded file metadata',
+        timeout: 10_000,
+      }).toBeTruthy();
+      await expect(page.locator('#chat-messages')).toContainText(filename);
     } finally {
       fs.rmSync(tempFile, { force: true });
       await page.unroute('**/api/agents/chat').catch(() => {});
@@ -239,7 +267,7 @@ test.describe.serial('承富 AI · 登入後關鍵流程', () => {
   test('PM happy-path · composer 到附件 AI 送出再複製交棒', async ({}, testInfo) => {
     test.skip(testInfo.project.name === 'mobile', 'PM happy-path 已覆蓋桌機主路徑;手機另測導覽與附件基本能力');
     const page = authPage;
-    const filename = `chengfu-e2e-pm-handoff-${Date.now()}.txt`;
+    const filename = `ai-workspace-e2e-pm-handoff-${Date.now()}.txt`;
     const tempFile = path.join(os.tmpdir(), filename);
     const pmPrompt = 'PM 請整理附件內容,產出設計交棒重點';
     fs.writeFileSync(tempFile, '活動主視覺需求: 需有 3 個方向,週五前交第一版。', 'utf8');
@@ -268,6 +296,7 @@ test.describe.serial('承富 AI · 登入後關鍵流程', () => {
       await expect(page.locator('#chat-pane.open')).toBeVisible();
       await expect(page.locator('#chat-input')).toHaveValue(new RegExp(pmPrompt));
       await expect(page.locator('.chat-attachment-chip')).toContainText('待送出');
+      await expect(page.locator('.chat-attachment-chip')).toContainText('送出後讀取');
       await expect(page.locator('.chat-attachment-chip')).toContainText(filename);
       await page.locator('#chat-send-btn').click();
       await expect.poll(() => chatPayloadHadPrompt && chatPayloadHadFile, {
@@ -308,7 +337,7 @@ test.describe.serial('承富 AI · 登入後關鍵流程', () => {
 
       await page.getByRole('button', { name: '複製 LINE' }).click();
       const handoffText = await page.evaluate(() => (window as any).__copiedTexts.at(-1));
-      expect(handoffText).toContain('【工作包交棒】');
+      expect(handoffText).toContain('【專案交棒】');
       expect(handoffText).toContain('完成第一版活動主視覺方向');
       expect(handoffText).toContain(filename);
       expect(handoffText).toContain('設計師產 3 個方向');
@@ -362,15 +391,68 @@ test.describe.serial('承富 AI · 登入後關鍵流程', () => {
 
     await page.getByRole('button', { name: '複製 LINE' }).click();
     const lineText = await page.evaluate(() => (window as any).__copiedTexts.at(-1));
-    expect(lineText).toContain('【工作包交棒】');
+    expect(lineText).toContain('【專案交棒】');
     expect(lineText).toContain('完成第一版活動主視覺方向');
     expect(lineText).toContain('設計師產 3 個方向');
 
     await page.getByRole('button', { name: '複製 Email' }).click();
     const emailText = await page.evaluate(() => (window as any).__copiedTexts.at(-1));
     expect(emailText).toContain('主旨:');
-    expect(emailText).toContain('工作包交棒');
+    expect(emailText).toContain('專案交棒');
     expect(emailText).toContain('需要我補資料的地方請直接回覆');
+  });
+
+  test('工作包 AI 接續 · 回答可一鍵回寫專案', async ({}, testInfo) => {
+    test.skip(testInfo.project.name === 'mobile', '桌機覆蓋抽屜與 chat 交互主路徑;手機另測導覽');
+    const page = authPage;
+    let appendPayload: Record<string, unknown> | null = null;
+
+    await page.route('**/api/agents/chat', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: 'data: {"conversationId":"e2e-project-handoff","text":"AI 已整理專案交棒卡: 目標、限制、素材缺口與明日下一步。"}\n\ndata: [DONE]\n\n',
+      });
+    });
+    await page.route('**/api-accounting/projects/*/handoff/append', async (route) => {
+      appendPayload = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true }),
+      });
+    });
+
+    try {
+      await page.goto('/#projects');
+      await expect(page.locator('.view-projects.active .project-card').first()).toBeVisible({ timeout: 10_000 });
+      await page.evaluate(() => {
+        const projects = (window as any).Projects?.load?.() || [];
+        const first = projects[0];
+        if (!first) throw new Error('missing seeded project');
+        (window as any).app.openProjectDrawer(first.id || first._id);
+      });
+      await expect(page.locator('#project-drawer.open')).toBeVisible();
+      await page.fill('#dr-goal', '讓 AI 整理成可接續工作包');
+      await page.fill('#dr-constraints', '週五前要出第一版');
+      await page.fill('#dr-assets', '客戶 brief / 參考圖');
+      await page.fill('#dr-next', 'PM 先確認素材缺口');
+      await page.getByRole('button', { name: 'AI 整理交棒卡' }).click();
+      await expect(page.locator('#chat-pane.open')).toBeVisible();
+      await expect(page.locator('#chat-input')).toHaveValue(/可以交接的工作包/);
+      await page.locator('#chat-send-btn').click();
+      await expect(page.locator('#chat-messages')).toContainText('AI 已整理專案交棒卡', { timeout: 10_000 });
+      await page.getByRole('button', { name: '存回此專案' }).click();
+      await expect.poll(() => appendPayload?.label, {
+        message: 'AI 專案整理應回寫到目前專案交棒卡',
+        timeout: 10_000,
+      }).toBe('AI 專案整理');
+      expect(appendPayload?.target).toBe('asset_ref');
+      expect(String(appendPayload?.text || '')).toContain('素材缺口');
+    } finally {
+      await page.unroute('**/api/agents/chat').catch(() => {});
+      await page.unroute('**/api-accounting/projects/*/handoff/append').catch(() => {});
+    }
   });
 
   test('CRM Kanban · 8 階段列都在', async () => {
@@ -378,15 +460,18 @@ test.describe.serial('承富 AI · 登入後關鍵流程', () => {
     await page.goto('/#crm');
     await expect(page.locator('.view-crm.active')).toBeVisible();
     await expect(page.locator('.view-crm.active .kanban-col')).toHaveCount(8);
+    await expect(page.locator('.view-crm.active #crm-insights .ops-command-card')).toHaveCount(4);
   });
 
   test('快捷鍵 ? · 開啟清單', async () => {
     const page = authPage;
     await page.goto('/');
     await expect(page.locator('#app')).toBeVisible();
+    await expect(page.locator('#today-composer-input')).toBeVisible();
+    await page.waitForFunction(() => Boolean((window as any).shortcuts?.toggle));
     await page.keyboard.press('Escape');
-    await page.locator('main').click();
-    await page.keyboard.press('Shift+/');
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press('?');
     await expect(page.locator('.shortcuts.open')).toBeVisible();
   });
 
@@ -405,6 +490,22 @@ test.describe.serial('承富 AI · 登入後關鍵流程', () => {
     await expect(page.locator('.view-accounting.active')).toBeVisible();
     // 應顯示 4 個 stat-card(月收入/月支出/月淨利/逾 90 天)
     await expect(page.locator('.view-accounting.active .stat-card')).toHaveCount(4);
+    await expect(page.locator('.view-accounting.active #accounting-command-center .ops-command-card')).toHaveCount(4);
+    await expect(page.getByRole('button', { name: '+ 建報價' }).first()).toBeVisible();
+  });
+
+  test('會議 / 場勘 / 教學 · 工作台提示可見', async () => {
+    const page = authPage;
+    await page.goto('/#meeting');
+    await expect(page.locator('.view-meeting.active .module-command-hero')).toBeVisible();
+    await expect(page.getByRole('button', { name: '上傳音檔' }).first()).toBeVisible();
+
+    await page.goto('/#site');
+    await expect(page.locator('.view-site.active .module-command-hero')).toBeVisible();
+    await expect(page.locator('#site-camera')).toHaveAttribute('accept', /heic/);
+
+    await page.goto('/#help');
+    await expect(page.locator('#help-daily-modules')).toContainText('五大日常模組');
   });
 
   test('Mobile · 漢堡選單能打開', async ({ viewport }) => {

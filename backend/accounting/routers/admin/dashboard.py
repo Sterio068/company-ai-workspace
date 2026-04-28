@@ -18,6 +18,7 @@ v1.3 A1 · admin 拆檔(第一批)· 純讀儀表 + ROI 指標 endpoints
 """
 import logging
 from datetime import datetime, date, timezone
+from typing import Any
 
 from fastapi import APIRouter, Query
 
@@ -26,6 +27,33 @@ from .._deps import require_admin_dep
 
 router = APIRouter(tags=["admin"])
 logger = logging.getLogger("chengfu")
+
+
+MONITORED_COLLECTIONS = (
+    "users",
+    "conversations",
+    "messages",
+    "projects",
+    "feedback",
+    "knowledge_sources",
+    "knowledge_audit",
+    "notebooklm_source_packs",
+    "notebooklm_file_uploads",
+    "notebooklm_sync_runs",
+    "crm_leads",
+    "tender_alerts",
+    "accounting_transactions",
+    "accounting_invoices",
+    "accounting_quotes",
+    "accounting_projects_finance",
+    "meetings",
+    "site_surveys",
+    "design_jobs",
+    "workflow_runs",
+    "frontend_errors",
+)
+
+_ONE_GB = 1024 * 1024 * 1024
 
 
 @router.get("/admin/dashboard")
@@ -176,3 +204,92 @@ def tender_funnel(_admin: str = require_admin_dep()):
     from main import db
     from services import admin_metrics
     return admin_metrics.tender_funnel(db)
+
+
+@router.get("/admin/storage-stats")
+def storage_stats(_admin: str = require_admin_dep()):
+    """MongoDB collection/storage dashboard · P2 技術債可觀測性
+
+    給管理面板一眼看出:
+    - 哪些 collection 文件數快速膨脹
+    - 哪些 collection 缺索引或索引過多
+    - 哪些 collection storage 已接近需要清理/歸檔
+
+    在 mongomock / 權限不足環境下,collStats 可能不可用;此時仍回 count + index_count,
+    不讓整個 admin dashboard 因維運指標失敗而壞掉。
+    """
+    from main import db
+
+    items = [_collection_health(db, name) for name in MONITORED_COLLECTIONS]
+    totals = {
+        "documents": sum(i["count"] for i in items),
+        "size_bytes": sum(i["size_bytes"] for i in items),
+        "storage_bytes": sum(i["storage_bytes"] for i in items),
+        "index_bytes": sum(i["index_bytes"] for i in items),
+        "alerts": sum(1 for i in items if i["alert_level"] != "ok"),
+    }
+    return {
+        "as_of": datetime.now(timezone.utc).isoformat(),
+        "items": sorted(items, key=lambda i: (i["alert_rank"], i["storage_bytes"], i["count"]), reverse=True),
+        "totals": totals,
+    }
+
+
+def _collection_health(db: Any, name: str) -> dict:
+    col = db[name]
+    try:
+        count = int(col.estimated_document_count())
+    except Exception:
+        try:
+            count = int(col.count_documents({}))
+        except Exception:
+            count = 0
+
+    try:
+        indexes = col.index_information()
+        index_count = max(len(indexes), 0)
+    except Exception:
+        index_count = 0
+
+    size_bytes = 0
+    storage_bytes = 0
+    index_bytes = 0
+    stats_available = False
+    try:
+        stats = db.command("collStats", name)
+        size_bytes = int(stats.get("size") or 0)
+        storage_bytes = int(stats.get("storageSize") or 0)
+        index_bytes = int(stats.get("totalIndexSize") or 0)
+        stats_available = True
+    except Exception:
+        # collStats 在測試替身或低權限帳號可能不可用;前端仍可用 count/index 判斷趨勢。
+        pass
+
+    alert_level = "ok"
+    alert_reason = ""
+    alert_rank = 0
+    if storage_bytes >= _ONE_GB:
+        alert_level = "critical"
+        alert_reason = "儲存量已超過 1GB,建議安排歸檔或 TTL 檢查"
+        alert_rank = 3
+    elif count >= 100_000:
+        alert_level = "warn"
+        alert_reason = "文件數超過 100,000,建議檢查查詢索引與保留期限"
+        alert_rank = 2
+    elif count > 0 and index_count <= 1 and name not in {"frontend_errors"}:
+        alert_level = "watch"
+        alert_reason = "已有資料但索引偏少,若查詢變慢需補索引"
+        alert_rank = 1
+
+    return {
+        "collection": name,
+        "count": count,
+        "index_count": index_count,
+        "size_bytes": size_bytes,
+        "storage_bytes": storage_bytes,
+        "index_bytes": index_bytes,
+        "stats_available": stats_available,
+        "alert_level": alert_level,
+        "alert_reason": alert_reason,
+        "alert_rank": alert_rank,
+    }

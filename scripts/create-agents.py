@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-承富 AI 系統 · Agent 批次建立(主管家 + 9 專家,可選延伸)
+智慧助理 · Agent 批次建立(主管家 + 9 專家,可選延伸)
 
 讀取 config-templates/presets/*.json,透過 LibreChat API 建立對應 Agent。
 Agent 名稱會自動加上 Workspace emoji prefix 與 AI 引擎尾綴(OpenAI / Claude)。
@@ -35,7 +35,7 @@ Agent 分層:
 
 注意:
   - 重複執行會依 Agent name PATCH 更新,不會重複建立同名 Agent
-  - OpenAI 是承富新版主力;Claude 是備援 / 長文件既有工作流
+  - OpenAI 是新版主力;Claude 是備援 / 長文件既有工作流
   - Prompt Caching 透過 .env 的 ANTHROPIC_ENABLE_PROMPT_CACHE=true 啟用(Claude 版)
 """
 from __future__ import annotations  # Python 3.9 以下相容
@@ -183,10 +183,27 @@ def provider_instructions(provider: str, instructions: str) -> str:
         return instructions
     note = (
         "【AI 引擎說明】\n"
-        "你目前在承富 AI 內使用 OpenAI 模型。若下方舊版 prompt 提到 Claude、Claude Skills 或 Anthropic,請理解為承富平台技能庫與既有工作流名稱,不要自稱 Claude。"
-        "回答一律使用繁體中文、台灣用語與承富品牌語氣。\n\n"
+        "你目前在智慧助理內使用 OpenAI 模型。若下方舊版 prompt 提到 Claude、Claude Skills 或 Anthropic,請理解為平台技能庫與既有工作流名稱,不要自稱 Claude。"
+        "回答一律使用繁體中文、台灣用語與公司品牌語氣。\n\n"
     )
     return note + instructions
+
+
+NOTEBOOKLM_AGENT_POLICY = """
+
+## NotebookLM 深讀副知識庫(v1.7.1)
+- 本地資料庫 / 工作包 / 檔案索引永遠是主資料來源；NotebookLM 只讀 Source Pack 快照,不得視為正式資料庫。
+- 需要長文件深讀、跨來源比較、教學素材、簡報/播客草稿時,可使用 NotebookLM Source Pack 工具。
+- 操作順序:previewNotebookLMSourcePack → 確認內容範圍正確 → createNotebookLMSourcePack → 由管理員或主管家 syncNotebookLMSourcePack。
+- 資料等級只作標記,不阻擋 NotebookLM 建立或同步；功能最大化優先,但仍要回報官方格式/大小/API 限制。
+- NotebookLM 產出的洞察若要成為正式紀錄,必須回寫到本地工作包、會議、商機、會計或知識庫模組。
+"""
+
+
+def append_notebooklm_policy(instructions: str) -> str:
+    if "## NotebookLM 深讀副知識庫" in instructions:
+        return instructions
+    return instructions.rstrip() + NOTEBOOKLM_AGENT_POLICY
 
 
 def preset_json_to_agent(data: dict, provider: str = "openai") -> dict:
@@ -199,8 +216,9 @@ def preset_json_to_agent(data: dict, provider: str = "openai") -> dict:
     provider_cfg = PROVIDER_CONFIG[provider]
     model = select_model(num, provider, data)
 
-    # 移除 "承富 · " 前綴,因為 workspace emoji 已替代
-    bare_title = data["title"].replace("承富 · ", "").strip()
+    # 移除舊品牌前綴,因為 workspace emoji 已替代
+    legacy_brand_prefix = "\u627f\u5bcc · "
+    bare_title = data["title"].replace(legacy_brand_prefix, "").strip()
     if bare_title in ws:
         agent_name = f"{ws} · {provider_cfg['label']}"
     else:
@@ -231,7 +249,7 @@ def preset_json_to_agent(data: dict, provider: str = "openai") -> dict:
         "model": model,
         "name": agent_name,
         "description": desc_with_meta,
-        "instructions": provider_instructions(provider, data["promptPrefix"]),
+        "instructions": provider_instructions(provider, append_notebooklm_policy(data["promptPrefix"])),
         "model_parameters": {
             "temperature": data.get("temperature", 0.7),
             "maxOutputTokens": data.get("max_tokens", 4096),
@@ -367,7 +385,7 @@ def main() -> int:
         print()
 
         # Codex R3.9 · idempotent · 先取現有 agents · 存在就 skip 或 PATCH
-        # 原行為:每次跑都 POST · 跑 2 次會建 2 組 · 承富老闆會看到 20 個助手
+        # 原行為:每次跑都 POST · 跑 2 次會建 2 組 · 管理員會看到 20 個助手
         print("🔍 取現有 agents 清單...")
         try:
             existing = api("GET", "/api/agents", token=token)
@@ -444,7 +462,7 @@ def main() -> int:
         print("  1. 登入 LibreChat,到「Agents」頁面確認 10 個職能 Agent 版本都在")
         print("  2. 編輯 config-templates/librechat.yaml 的 modelSpecs.list")
         print("     把 agent_id 填入,讓 5 Workspace 分組入口生效")
-        print("  3. 上傳承富知識庫:./scripts/upload-knowledge-base.py")
+        print("  3. 上傳公司知識庫:./scripts/upload-knowledge-base.py")
 
     return 0 if fail == 0 else 1
 

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Fal.ai Image Generation",
-    "description": "承富設計夥伴呼叫 Fal.ai 生圖 API · 繁中文字場景用 Recraft v3,設計感用 Ideogram v2,寫實用 Flux Pro",
+    "description": "設計夥伴呼叫 Fal.ai 生圖 API · 繁中文字場景用 Recraft v3,設計感用 Ideogram v2,寫實用 Flux Pro",
     "version": "1.0.0"
   },
   "servers": [

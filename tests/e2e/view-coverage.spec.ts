@@ -15,6 +15,7 @@
  *   E2E_ADMIN_EMAIL=... E2E_ADMIN_PASSWORD=... npx playwright test view-coverage
  */
 import { test, expect, Page, BrowserContext } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -22,8 +23,9 @@ const ALL_VIEWS = [
   { id: 'dashboard',  needsAdmin: false, label: '今日' },
   { id: 'projects',   needsAdmin: false, label: '專案' },
   { id: 'knowledge',  needsAdmin: false, label: '資料' },
+  { id: 'notebooklm', needsAdmin: false, label: 'NotebookLM' },
   { id: 'admin',      needsAdmin: true,  label: '中控' },
-  { id: 'workflows',  needsAdmin: false, label: '下一步建議' },
+  { id: 'workflows',  needsAdmin: false, label: '工作流程' },
   { id: 'crm',        needsAdmin: true,  label: '商機追蹤' },
   { id: 'accounting', needsAdmin: true,  label: '會計' },
   { id: 'tenders',    needsAdmin: false, label: '標案' },
@@ -35,8 +37,24 @@ const ALL_VIEWS = [
   { id: 'help',       needsAdmin: false, label: '使用教學' },
 ];
 
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'sterio068@gmail.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'Aa035612949';
+function readKeychainSecret(service: string): string {
+  if (process.platform !== 'darwin') return '';
+  try {
+    return execFileSync('security', ['find-generic-password', '-s', service, '-w'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return '';
+  }
+}
+
+const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL
+  || process.env.LIBRECHAT_ADMIN_EMAIL
+  || readKeychainSecret('chengfu-ai-admin-install-email');
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD
+  || process.env.LIBRECHAT_ADMIN_PASSWORD
+  || readKeychainSecret('chengfu-ai-admin-install-password');
 
 // 既知 noise · 不算 fail
 const NOISE_PATTERNS = [
@@ -51,6 +69,9 @@ function isNoise(text: string): boolean {
 }
 
 async function loginAsAdmin(page: Page): Promise<void> {
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+    throw new Error('缺 E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD 或 Keychain E2E 憑證,不可跳過登入後 view 覆蓋');
+  }
   await page.goto('/login');
   await page.locator('#email').waitFor({ state: 'visible', timeout: 10_000 });
   await page.fill('#email', ADMIN_EMAIL);

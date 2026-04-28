@@ -22,7 +22,9 @@ STAMP="$(date +%Y-%m-%d-%H%M%S)"
 REPORT_DIR="${ROOT_DIR}/reports/pre-pilot"
 MANIFEST="${REPORT_DIR}/pre-pilot-readiness-${STAMP}.md"
 DMG="${ROOT_DIR}/installer/dist/ChengFu-AI-Installer.dmg"
-EXPECTED_DMG_SHA="d85f5194b104d9f2ca4872c391350a762d8dc6bdf30f8efd1bf4a51056135ffa"
+# 留空代表以最新 release manifest 追溯 DMG SHA。
+# 不硬編當前 SHA:此腳本會被包進 DMG source snapshot,硬編會造成「改 SHA → DMG 又變」循環。
+EXPECTED_DMG_SHA=""
 
 PASS=0
 FAIL=0
@@ -75,7 +77,7 @@ check_dmg_exists_and_sha() {
   CURRENT_DMG_SHA="$(shasum -a 256 "$DMG" | awk '{print $1}')"
   echo "DMG SHA-256:$CURRENT_DMG_SHA"
 
-  if [[ "$CURRENT_DMG_SHA" == "$EXPECTED_DMG_SHA" ]]; then
+  if [[ -n "$EXPECTED_DMG_SHA" && "$CURRENT_DMG_SHA" == "$EXPECTED_DMG_SHA" ]]; then
     return 0
   fi
 
@@ -123,10 +125,19 @@ check_final_delivery_audit() {
     return 1
   }
 
-  [[ -z "$CURRENT_DMG_SHA" ]] || grep -q "$CURRENT_DMG_SHA" "$audit" || {
-    echo "final delivery audit 未記錄目前 DMG SHA"
+  # 不要求 audit 寫死當前 SHA:
+  # audit / this script 會被打進 DMG source snapshot,硬編當前 SHA 會造成
+  # 「更新 SHA → DMG 內容改變 → SHA 又改」的自我引用循環。
+  if [[ -n "$CURRENT_DMG_SHA" ]] && grep -q "$CURRENT_DMG_SHA" "$audit"; then
+    return 0
+  fi
+
+  grep -Eq "release-manifest-\\*\\.md|最新.*release manifest|以最新.*DMG SHA" "$audit" || {
+    echo "final delivery audit 未記錄 release manifest 追溯方式"
     return 1
   }
+
+  echo "final delivery audit 以最新 release manifest 追溯 DMG SHA。"
 }
 
 check_required_docs() {
@@ -136,7 +147,8 @@ check_required_docs() {
     "$ROOT_DIR/docs/PHASE1-PILOT-VALIDATION-PACK-2026-04-25.md" \
     "$ROOT_DIR/docs/DAY0-DRY-RUN.md" \
     "$ROOT_DIR/docs/CHAMPION-WEEK1-LOG.md" \
-    "$ROOT_DIR/docs/09-RAG-LAYERED-INDEX.md"
+    "$ROOT_DIR/docs/09-RAG-LAYERED-INDEX.md" \
+    "$ROOT_DIR/reports/rag-verify/rag-verify-2026-04-28-100959.md"
   do
     if [[ ! -f "$path" ]]; then
       echo "缺文件:${path#$ROOT_DIR/}"
@@ -170,6 +182,35 @@ check_gatekeeper_readme_in_dmg() {
   hdiutil detach -quiet "$mount_dir" >/dev/null 2>&1 || true
   rmdir "$mount_dir" >/dev/null 2>&1 || true
   return "$result"
+}
+
+check_installer_api_key_links() {
+  local missing=0
+  local openai_url="https://platform.openai.com/api-keys"
+  local anthropic_url="https://console.anthropic.com/settings/keys"
+  local fal_url="https://fal.ai/dashboard/keys"
+
+  for path in \
+    "$ROOT_DIR/installer/ChengFu-AI-Installer.applescript" \
+    "$ROOT_DIR/installer/install.sh" \
+    "$ROOT_DIR/installer/build.sh" \
+    "$ROOT_DIR/installer/README.md" \
+    "$ROOT_DIR/scripts/setup-keychain.sh"
+  do
+    if [[ ! -f "$path" ]]; then
+      echo "缺安裝檔:${path#$ROOT_DIR/}"
+      missing=1
+      continue
+    fi
+    for url in "$openai_url" "$anthropic_url" "$fal_url"; do
+      if ! grep -q "$url" "$path"; then
+        echo "${path#$ROOT_DIR/} 缺 API key 取得網址:$url"
+        missing=1
+      fi
+    done
+  done
+
+  return "$missing"
 }
 
 check_sensitive_temp_files_absent() {
@@ -225,7 +266,7 @@ write_footer() {
     echo "## 仍需人工完成"
     echo ""
     echo "- 乾淨 Mac/VM DMG 安裝驗收"
-    echo "- LibreChat 原生 RAG/file_search 上傳與引用實測"
+    echo "- 乾淨機器上以去識別真實樣本複跑 LibreChat RAG/file_search 驗證"
     echo "- 老闆 + Champion + 2 PM 的 4 人 Phase 1 pilot"
     echo ""
     if [[ ${#FAILED_STEPS[@]} -gt 0 ]]; then
@@ -242,9 +283,10 @@ write_header
 
 run_check "DMG 存在且 SHA 可追溯" check_dmg_exists_and_sha
 run_check "最新 release manifest 通過且記錄 SHA" check_latest_release_manifest
-run_check "final delivery audit 記錄 release gate 與 SHA" check_final_delivery_audit
+run_check "final delivery audit 記錄 release gate 與 manifest 追溯" check_final_delivery_audit
 run_check "必要交付/驗收文件存在" check_required_docs
 run_check "DMG 讀我含 Gatekeeper 右鍵開啟說明" check_gatekeeper_readme_in_dmg
+run_check "安裝時 API Key 輸入畫面含取得網址" check_installer_api_key_links
 run_check "敏感暫存檔不存在" check_sensitive_temp_files_absent
 run_check "測試暫存 artifact 不存在" check_test_artifacts_absent
 run_check "本次驗收包 diff 無 whitespace error" check_diff_whitespace

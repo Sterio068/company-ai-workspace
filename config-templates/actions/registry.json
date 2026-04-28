@@ -1,0 +1,68 @@
+{
+  "version": "2026-04-28.p1",
+  "policy": {
+    "source_of_truth": "此檔是 LibreChat Actions 的唯一接線清單; scripts/wire-actions.py 只讀 wire=true 的項目。",
+    "domain_rule": "同一個 agent 在同一個 domain 只掛一個 action spec,避免 LibreChat validateActionDomain / action merge 衝突。",
+    "legacy_rule": "wire=false 的 spec 只作備援與歷史對照,不可直接掛到 agent。"
+  },
+  "actions": [
+    {
+      "file": "pcc-tender.json",
+      "status": "canonical",
+      "wire": true,
+      "purpose": "政府電子採購網查詢",
+      "agent_patterns": ["✨ 主管家", "🎯 投標"]
+    },
+    {
+      "file": "internal-services.json",
+      "status": "canonical",
+      "wire": true,
+      "purpose": "公司內部服務:會計 / Vision OCR / Agent 派工",
+      "agent_patterns": ["✨ 主管家", "💰 財務", "🎯 投標", "🎪 活動"],
+      "replaces": ["accounting-internal.json", "vision-ocr.json", "delegate-to-agent.json"]
+    },
+    {
+      "file": "notebooklm-bridge.json",
+      "status": "canonical",
+      "wire": true,
+      "purpose": "NotebookLM source pack preview / create / sync",
+      "agent_patterns": ["🎨 設計", "📣 公關", "🎙️ 會議", "📚 知識", "⚖️ 法務", "📊 營運"]
+    },
+    {
+      "file": "openai-image-gen.json",
+      "status": "canonical",
+      "wire": true,
+      "purpose": "OpenAI 圖像生成與編輯",
+      "agent_patterns": ["✨ 主管家", "🎨 設計"],
+      "preferred_over": ["fal-ai-image-gen.json"]
+    },
+    {
+      "file": "fal-ai-image-gen.json",
+      "status": "optional",
+      "wire": false,
+      "purpose": "Fal.ai Recraft / Ideogram / Flux 備援",
+      "reason": "預設以 OpenAI 圖像生成為主;業主指定 Recraft v3 時才手動接線。"
+    },
+    {
+      "file": "accounting-internal.json",
+      "status": "legacy",
+      "wire": false,
+      "purpose": "舊版會計單獨 schema",
+      "superseded_by": "internal-services.json"
+    },
+    {
+      "file": "vision-ocr.json",
+      "status": "legacy",
+      "wire": false,
+      "purpose": "舊版 Vision OCR 單獨 schema",
+      "superseded_by": "internal-services.json"
+    },
+    {
+      "file": "delegate-to-agent.json",
+      "status": "legacy",
+      "wire": false,
+      "purpose": "舊版主管家派工單獨 schema",
+      "superseded_by": "internal-services.json"
+    }
+  ]
+}

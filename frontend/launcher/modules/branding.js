@@ -4,9 +4,9 @@
  * 用法:
  *   import { brand } from "./modules/branding.js";
  *   await brand.load();      // app init 時呼叫
- *   brand.appName            // "智慧助理" 或 "智慧助理"(default)
- *   brand.companyShort       // "承"(logo 用 1-2 字)
- *   brand.tagline            // "10 人協作平台"
+ *   brand.appName            // "智慧助理"(default)
+ *   brand.companyShort       // "AI"(logo 用 1-2 字)
+ *   brand.tagline            // "AI 協作平台"
  *   brand.accent             // "#3F86C9"
  *   brand.subscribe(cb)      // 訂閱變動(設定改 → re-render UI)
  */
@@ -14,8 +14,8 @@
 const STORAGE_KEY = "chengfu_branding_v1";
 
 const DEFAULT = {
-  company_name: "",
-  company_short: "",
+  company_name: "公司名稱",
+  company_short: "AI",
   app_name: "智慧助理",
   tagline: "AI 協作平台",
   accent_color: "#3F86C9",
@@ -38,6 +38,19 @@ function _persist() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(_state)); } catch {}
 }
 
+function _normalizeBranding(data = {}) {
+  const next = { ...DEFAULT, ...data };
+  for (const key of Object.keys(DEFAULT)) {
+    if (typeof next[key] === "string") next[key] = next[key].trim();
+  }
+  if (!next.app_name) next.app_name = DEFAULT.app_name;
+  if (!next.company_short) next.company_short = DEFAULT.company_short;
+  if (!next.company_name) next.company_name = DEFAULT.company_name;
+  if (!next.tagline) next.tagline = DEFAULT.tagline;
+  if (!next.accent_color) next.accent_color = DEFAULT.accent_color;
+  return next;
+}
+
 function _emit() {
   _listeners.forEach(cb => { try { cb(_state); } catch (e) { console.warn("[brand] listener fail", e); } });
   // 同步 CSS var(讓 accent 全域生效)
@@ -56,7 +69,7 @@ export const brand = {
       });
       if (r.ok) {
         const data = await r.json();
-        _state = { ...DEFAULT, ...data };
+        _state = _normalizeBranding(data);
         _persist();
         _emit();
       }
@@ -68,19 +81,23 @@ export const brand = {
 
   /** admin 改設定 · PUT(用 window.authFetch 帶 X-User-Email · 避免 plain fetch 403) */
   async update(patch) {
+    const cleanPatch = {};
+    for (const [key, value] of Object.entries(patch || {})) {
+      cleanPatch[key] = typeof value === "string" ? value.trim() : value;
+    }
     const fetcher = window.authFetch || fetch;
     const r = await fetcher("/api-accounting/admin/branding", {
       method: "PUT",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
+      body: JSON.stringify(cleanPatch),
     });
     if (!r.ok) {
       const err = await r.text().catch(() => "");
       throw new Error(`Branding update failed (${r.status}): ${err.slice(0, 100)}`);
     }
     const data = await r.json();
-    _state = { ...DEFAULT, ...data.branding };
+    _state = _normalizeBranding(data.branding);
     _persist();
     _emit();
     return _state;
@@ -93,9 +110,9 @@ export const brand = {
   },
 
   // shortcut accessors
-  get companyName() { return _state.company_name || ""; },
-  get companyShort() { return _state.company_short || _state.app_name?.charAt(0) || "智"; },
-  get appName() { return _state.app_name || "智慧助理"; },
+  get companyName() { return _state.company_name || DEFAULT.company_name; },
+  get companyShort() { return _state.company_short || DEFAULT.company_short; },
+  get appName() { return _state.app_name || DEFAULT.app_name; },
   get tagline() { return _state.tagline || "AI 協作平台"; },
   get accent() { return _state.accent_color || "#3F86C9"; },
   get locale() { return _state.locale || "zh-TW"; },

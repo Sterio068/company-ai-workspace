@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "承富 Vision OCR(招標 / 表格 / 評分結構化)",
+    "title": "Vision OCR(招標 / 表格 / 評分結構化)",
     "description": "把圖片(招標公告 / 評分表 / 場地圖 / 報價表)一鍵變結構化 JSON。\n\n後端用 GPT-5.5 vision + structured output · Agent 不用煩惱 prompt 怎麼寫。\n\n適用情境:\n  · 投標顧問 看到招標 PDF 首頁圖 → extractTenderSummary → 9 欄結構\n  · 投標顧問 看到評分標準表 → extractScoringCriteria → 算勝率\n  · 任何 Agent 看到表格 → extractTable → 結構化 rows[]\n\n效能:同一張圖 1 小時內重複呼叫直接走 cache · 不重複付費。",
     "version": "1.0.0"
   },
@@ -16,7 +16,8 @@
       "internalToken": {
         "type": "apiKey",
         "in": "header",
-        "name": "X-Internal-Token"
+        "name": "X-Internal-Token",
+        "description": "ACTION_BRIDGE_TOKEN。此 token 只給 LibreChat Actions 使用,不可填 ECC_INTERNAL_TOKEN。"
       }
     }
   },

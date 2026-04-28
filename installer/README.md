@@ -18,13 +18,15 @@
 
 | 對話框 | 輸入什麼 |
 |---|---|
-| 1/7 · OpenAI API Key | 從 <https://platform.openai.com/api-keys> 拿 · `sk-...` 格式(隱藏輸入) |
-| 2/7 · Anthropic API Key | Claude 備援用 · 可留空,前端仍可先用 OpenAI |
+| 1/7 · OpenAI API Key | 主力 AI 引擎 · 從 <https://platform.openai.com/api-keys> 拿 · `sk-...` 格式(隱藏輸入) |
+| 2/7 · Anthropic API Key | Claude 備援用 · 從 <https://console.anthropic.com/settings/keys> 拿 · 可留空,前端仍可先用 OpenAI |
 | 3/7 · 公司域名 | 例 `ai.chengfu.com.tw` · 留空用本機 `localhost`，仍維持 production 安全模式 |
 | 4/7 · 管理員 email | 必填 · 請輸入承富公司管理信箱 |
 | 5/7 · 管理員密碼 | 至少 8 字 · 用於第一個 admin 登入 |
 | 6/7 · 顯示名稱 | LibreChat 左上角顯示名稱 |
 | 7/7 · NAS 路徑 | 例 `/Volumes/chengfu-nas/projects` · 留空用本機測試 |
+
+設計生圖若要啟用 Fal.ai,裝完後可在中控「使用教學 → 服務金鑰管理」設定；Key 取得網址:<https://fal.ai/dashboard/keys>。
 
 之後自動完成:
 0. 若本機沒有 ChengFu repo,先從 `.dmg` 內建的 `ChengFu-source.tar.gz` 展開新版程式碼

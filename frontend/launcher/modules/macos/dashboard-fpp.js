@@ -26,6 +26,7 @@
 import { escapeHtml } from "../util.js";
 import { authFetch } from "../auth.js";
 import { brand } from "../branding.js";
+import { WORKSPACES } from "../config.js";
 import { trap as trapFocus } from "./modal-trap.js";
 
 // v1.32 a11y · A4 修 · trap focus release handles
@@ -119,6 +120,178 @@ let _state = {
 let _root = null;
 let _items = MOCK_ITEMS;
 
+const QUICK_WORKFLOWS = [
+  { id: "tender-full", title: "投標流程", desc: "招標須知、承接評估、建議書與送件風險。", tag: "投標" },
+  { id: "client-proposal", title: "客戶提案", desc: "把需求整理成提案架構、素材清單與待確認事項。", tag: "提案" },
+  { id: "closing-full", title: "結案整理", desc: "彙整成果、照片、數字與下次可改進事項。", tag: "結案" },
+];
+
+function _activeProjects() {
+  try {
+    const projects = window.Projects?.load?.() || [];
+    return projects
+      .filter(project => project && project.status !== "closed")
+      .slice(0, 3);
+  } catch {
+    return [];
+  }
+}
+
+function _formatProjectMeta(project) {
+  const client = project.client ? `${project.client} · ` : "";
+  const due = project.due_date || project.deadline || project.dueDate;
+  const dueText = due ? `截止 ${String(due).slice(0, 10)}` : "尚未設定截止日";
+  return `${client}${dueText}`;
+}
+
+function _projectId(project) {
+  return project.id || project._id || "";
+}
+
+function _projectNext(project) {
+  return project.next_step || project.nextStep || project.summary || "打開專案後補齊下一步、附件與交棒內容。";
+}
+
+function _renderWorkspaceCard(ws) {
+  return `
+    <button type="button"
+            class="workspace-card fpp-workspace-card ws-${ws.id}"
+            data-ws="${ws.id}"
+            style="--ws-color:${escapeHtml(ws.color)}"
+            aria-label="開啟${escapeHtml(ws.fullName)}">
+      <span class="fpp-workspace-top">
+        <span class="fpp-workspace-icon" aria-hidden="true">${escapeHtml(ws.icon)}</span>
+        <span class="fpp-workspace-shortcut">${escapeHtml(ws.shortcut)}</span>
+      </span>
+      <strong>${escapeHtml(ws.name)}</strong>
+      <span>${escapeHtml(ws.flow)}</span>
+    </button>
+  `;
+}
+
+function _renderProjectRows() {
+  const projects = _activeProjects();
+  if (!projects.length) {
+    return `
+      <div class="fpp-empty-panel">
+        <strong>還沒有可接續的專案</strong>
+        <span>建立專案後,客戶背景、附件、對話與下一步會集中保存。</span>
+        <button type="button" class="btn-primary btn-sm" data-today-new-project>建立專案</button>
+      </div>
+    `;
+  }
+  return projects.map(project => {
+    const id = _projectId(project);
+    return `
+      <button type="button" class="fpp-project-row" data-open-project="${escapeHtml(id)}">
+        <span class="fpp-project-dot" aria-hidden="true"></span>
+        <span class="fpp-project-copy">
+          <strong>${escapeHtml(project.name || "未命名專案")}</strong>
+          <small>${escapeHtml(_formatProjectMeta(project))}</small>
+          <span>${escapeHtml(_projectNext(project))}</span>
+        </span>
+      </button>
+    `;
+  }).join("");
+}
+
+function _renderWorkdesk() {
+  const userName = window.app?.user?.name || window.app?.user?.email?.split("@")[0] || "你";
+  const now = new Date();
+  const day = ["日", "一", "二", "三", "四", "五", "六"][now.getDay()];
+  const dateText = `${now.getMonth() + 1}/${now.getDate()} 週${day}`;
+
+  return `
+    <section class="fpp-workdesk" aria-labelledby="fpp-home-title">
+      <div class="fpp-hero">
+        <div class="fpp-hero-main">
+          <div class="fpp-kicker">今日工作台 · ${escapeHtml(dateText)}</div>
+          <h1 id="fpp-home-title">${escapeHtml(userName)},今天要先處理哪件事?</h1>
+          <p>輸入需求、貼上客戶訊息,或加入 PDF / Word / Excel / 圖片。系統會先判斷任務類型,再帶你進入正確工作區。</p>
+
+          <form class="fpp-intake" id="today-composer-form">
+            <label class="sr-only" for="today-composer-input">今天要做什麼</label>
+            <textarea id="today-composer-input" rows="5"
+              placeholder="例:幫我整理客戶會議紀錄,列出下一步、待補資料,並存成專案交棒內容"></textarea>
+            <div class="today-file-ribbon fpp-file-ribbon" id="today-file-ribbon" aria-live="polite" hidden></div>
+            <input type="file" id="today-file-input" hidden multiple
+              accept=".pdf,.txt,.md,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.json,.png,.jpg,.jpeg,.webp,.gif">
+            <div class="fpp-intake-actions">
+              <button type="button" class="btn-ghost" data-today-pick-file>加入附件</button>
+              <button type="button" class="btn-ghost" data-today-new-project>建立專案</button>
+              <button type="button" class="btn-ghost" data-today-show-projects>看專案</button>
+              <button type="submit" class="btn-primary">交給主管家</button>
+            </div>
+            <div class="fpp-drop-hint">可拖放檔案到這裡。送出前都能移除附件。</div>
+          </form>
+        </div>
+
+        <aside class="fpp-route-preview" aria-label="送出後會怎麼處理">
+          <div class="fpp-route-title">送出後</div>
+          <div class="fpp-route-step">
+            <b>1</b>
+            <span><strong>判斷任務</strong><small>投標、活動、設計、公關或營運。</small></span>
+          </div>
+          <div class="fpp-route-step">
+            <b>2</b>
+            <span><strong>整理素材</strong><small>讀文字與附件,標出缺漏與風險。</small></span>
+          </div>
+          <div class="fpp-route-step">
+            <b>3</b>
+            <span><strong>產出草稿</strong><small>可接著存專案、交棒或複製給客戶。</small></span>
+          </div>
+        </aside>
+      </div>
+
+      <section class="fpp-section" aria-labelledby="fpp-workspace-title">
+        <div class="fpp-section-head">
+          <div>
+            <h2 id="fpp-workspace-title">5 個工作區</h2>
+            <p>已經知道工作類型時,直接進工作區。</p>
+          </div>
+        </div>
+        <div class="workspaces fpp-workspace-strip" id="workspace-cards">
+          ${WORKSPACES.map(_renderWorkspaceCard).join("")}
+        </div>
+      </section>
+
+      <div class="fpp-lower-grid">
+        <section class="fpp-section fpp-continuity" aria-labelledby="fpp-projects-title">
+          <div class="fpp-section-head">
+            <div>
+              <h2 id="fpp-projects-title">最近專案</h2>
+              <p>接續中的工作,不用重新交代背景。</p>
+            </div>
+            <button type="button" class="btn-ghost btn-sm" data-today-show-projects>全部</button>
+          </div>
+          <div class="fpp-project-list">
+            ${_renderProjectRows()}
+          </div>
+        </section>
+
+        <section class="fpp-section fpp-flow-quickstart" aria-labelledby="fpp-flow-title">
+          <div class="fpp-section-head">
+            <div>
+              <h2 id="fpp-flow-title">常用流程</h2>
+              <p>固定任務可直接開草稿,再確認是否執行。</p>
+            </div>
+            <button type="button" class="btn-ghost btn-sm" data-open-workflows>更多</button>
+          </div>
+          <div class="fpp-flow-list">
+            ${QUICK_WORKFLOWS.map(flow => `
+              <button type="button" class="fpp-flow-card" data-workflow-shortcut="${escapeHtml(flow.id)}">
+                <span>${escapeHtml(flow.tag)}</span>
+                <strong>${escapeHtml(flow.title)}</strong>
+                <small>${escapeHtml(flow.desc)}</small>
+              </button>
+            `).join("")}
+          </div>
+        </section>
+      </div>
+    </section>
+  `;
+}
+
 // 啟動時 fetch AI 建議(後端 ready 才回真資料 · 否則 fallback mock)
 async function _fetchSuggestions() {
   try {
@@ -139,24 +312,76 @@ async function _fetchSuggestions() {
 // ============================================================
 function _render() {
   if (!_root) return;
-  // v1.45 calm mode · 移除 PathBar(只有「主畫面」沒意義)
-  // 保留 _renderPathBar 函式 · 之後若用 router 再 wire 回來
-  _root.innerHTML = `
-    ${_renderToolbar()}
-    ${_renderAiBanner()}
-    ${_renderMiniToday()}
-    ${_renderSegments()}
-    <div class="fpp-main" id="fpp-main">
-      ${_renderGrid()}
-    </div>
-    ${_renderStatusBar()}
-  `;
-  _bindToolbar();
-  _bindGrid();
-  _bindWidgets();
-  _bindHints();
-  _bindSegments();
-  _bindAiBanner();
+  // v1.70 · 交付版首頁收斂:
+  // 移除 Finder/Smart Folder/假資料格狀清單,改成新手可理解的單一工作入口。
+  // 舊函式保留在檔內,供後續若要做進階工作台時復用。
+  _root.innerHTML = _renderWorkdesk();
+  _bindWorkdesk();
+}
+
+function _bindWorkdesk() {
+  if (!_root) return;
+  const form = _root.querySelector("#today-composer-form");
+  form?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    window.app?.submitTodayComposer?.(e);
+  });
+  form?.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    form.classList.add("is-dragover");
+  });
+  form?.addEventListener("dragleave", (e) => {
+    if (!form.contains(e.relatedTarget)) form.classList.remove("is-dragover");
+  });
+  form?.addEventListener("drop", (e) => {
+    e.preventDefault();
+    form.classList.remove("is-dragover");
+    window.app?.addTodayFiles?.(Array.from(e.dataTransfer?.files || []));
+  });
+  _root.querySelector("[data-today-pick-file]")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    window.app?.pickTodayFiles?.();
+  });
+  _root.querySelector("#today-file-input")?.addEventListener("change", (e) => {
+    window.app?.addTodayFiles?.(Array.from(e.target.files || []));
+    e.target.value = "";
+  });
+  _root.querySelectorAll("[data-today-new-project]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.app?.newProject?.();
+    });
+  });
+  _root.querySelectorAll("[data-today-show-projects]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.app?.showView?.("projects");
+    });
+  });
+  _root.querySelectorAll("[data-ws]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = Number(btn.dataset.ws);
+      if (Number.isFinite(id)) window.app?.openWorkspace?.(id);
+    });
+  });
+  _root.querySelectorAll("[data-open-project]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.openProject;
+      if (id) window.app?.openProjectDrawer?.(id);
+      else window.app?.showView?.("projects");
+    });
+  });
+  _root.querySelector("[data-open-workflows]")?.addEventListener("click", () => {
+    window.app?.showView?.("workflows");
+    window.workflows?.load?.();
+  });
+  _root.querySelectorAll("[data-workflow-shortcut]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.workflowShortcut;
+      window.app?.showView?.("workflows");
+      window.workflows?.load?.().then(() => window.workflows?.prepare?.(id));
+    });
+  });
 }
 
 // v1.6 · AI Banner · 只顯示信心 > 80% 的最高優先建議
@@ -208,13 +433,18 @@ function _renderToolbar() {
         <span class="fpp-logo-text">${escapeHtml(brand.companyShort)}</span>
         <span class="fpp-logo-arrow">▾</span>
       </button>
-      <div class="fpp-composer fpp-composer-primary">
+      <form class="fpp-composer fpp-composer-primary" id="today-composer-form">
         <span class="fpp-composer-dot" aria-hidden="true"></span>
-        <input type="text" class="fpp-composer-input"
+        <label class="sr-only" for="today-composer-input">今天要做什麼</label>
+        <input type="text" class="fpp-composer-input" id="today-composer-input"
                placeholder="交給 AI 小幫手…按 ↵ 送出"
                aria-label="AI 小幫手對話">
-        <kbd class="fpp-composer-hint">↵</kbd>
-      </div>
+        <div class="today-file-ribbon fpp-file-ribbon" id="today-file-ribbon" hidden></div>
+        <input type="file" id="today-file-input" hidden multiple
+               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv,.jpg,.jpeg,.png,.webp,.gif">
+        <button type="button" class="fpp-composer-btn" data-today-pick-file aria-label="加入附件">📎</button>
+        <button type="submit" class="fpp-composer-submit" aria-label="送出">↵</button>
+      </form>
       <div class="fpp-toolbar-secondary">
         <div class="fpp-view-switch" role="tablist" aria-label="顯示模式">
           ${["grid", "list", "column"].map(v => `
@@ -413,15 +643,24 @@ function _bindToolbar() {
   _root.querySelector("[data-fpp-search]")?.addEventListener("click", () => {
     if (window.app?.openPalette) window.app.openPalette();
   });
-  // composer enter → 開新對話
-  const composer = _root.querySelector(".fpp-composer-input");
-  composer?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && composer.value.trim()) {
-      const text = composer.value.trim();
-      window.app?.openAgent?.("00");
-      window.toast?.info?.(`已交給AI 小幫手:${text.slice(0, 30)}${text.length > 30 ? "…" : ""}`);
-      composer.value = "";
-    }
+  const form = _root.querySelector("#today-composer-form");
+  form?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    window.app?.submitTodayComposer?.(e);
+  });
+  _root.querySelector(".fpp-composer-submit")?.addEventListener("click", (e) => {
+    // Dynamic toolbar renderers can bypass the legacy app-level submit listener.
+    // Keep the visible send button explicit while Enter still uses the form submit path.
+    e.preventDefault();
+    window.app?.submitTodayComposer?.(e);
+  });
+  _root.querySelector("[data-today-pick-file]")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    window.app?.pickTodayFiles?.();
+  });
+  _root.querySelector("#today-file-input")?.addEventListener("change", (e) => {
+    window.app?.addTodayFiles?.(Array.from(e.target.files || []));
+    e.target.value = "";
   });
 }
 
@@ -1145,9 +1384,9 @@ export const dashboardFpp = {
   /** 把 view-dashboard innerHTML 接管 */
   async init(viewEl) {
     if (_state.initialized && _root === viewEl) {
-      // 重新訪問 · 重 fetch 看有沒新建議 · v1.19 只 banner 變 不需整頁
+      // 重新訪問時重畫一次,讓最近專案與附件狀態保持同步。
+      _render();
       await _fetchSuggestions();
-      _renderBannerOnly();
       return;
     }
     _root = viewEl;

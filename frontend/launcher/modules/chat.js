@@ -10,6 +10,7 @@ import { AI_PROVIDERS, AI_PROVIDER_KEY, DEFAULT_AI_PROVIDER, CORE_AGENTS, agentR
 import { Projects } from "./projects.js";
 import { sanitizeRenderedHtml as _sanitizeRenderedHtml } from "./chat-sanitize.js";
 import { validateAttachment as _validateAttachmentFn, composeUserMessageSummary as _composeSummaryFn, isSameFile as _isSameFile } from "./chat-attachments.js";
+import { apiGet, apiPost } from "../lib/api-client.js";
 
 // v1.50 · 從 config.js 拉共享常數 · 與 app.js today 附件規格一致
 const { MAX_COUNT: MAX_ATTACHMENT_COUNT, MAX_BYTES: MAX_ATTACHMENT_BYTES, SUPPORTED_EXT: SUPPORTED_ATTACHMENT_EXT } = ATTACHMENT;
@@ -162,7 +163,7 @@ export const chat = {
       const input = this._$("chat-input");
       if (!input) return;
       input.value = prompt;
-      input.dispatchEvent(new Event("input"));  // 觸發 L1/L2/L3 classifier
+      input.dispatchEvent(new Event("input", { bubbles: true }));  // 觸發 delegated L1/L2/L3 classifier
       // 自動送?先填入讓用戶看 · 按 Enter 再送
       input.focus();
     });
@@ -334,7 +335,7 @@ export const chat = {
       const input = this._$("chat-input");
       if (input) {
         input.value = initialInput;
-        input.dispatchEvent(new Event("input"));
+        input.dispatchEvent(new Event("input", { bubbles: true }));
         if (options.autoSend === true) {
           setTimeout(() => this.send(), 100);
         }
@@ -436,23 +437,12 @@ export const chat = {
     //   · 網路錯 / quota service 完全掛 → hard_stop 擋 · soft_warn 放(後端決定)
     // 注意:真正的 quota enforcement 應在後端 /api/agents/chat gateway · 這裡只是第一道
     try {
-      const qr = await authFetch("/api-accounting/quota/check");
-      if (qr.ok) {
-        const q = await qr.json();
-        if (q.allowed === false) {
-          toast.error(`❌ ${q.reason || "本月用量已達上限 · 請找內部負責窗口放行"}`);
-          return;
-        }
-        if (q.warning) {
-          toast.warn(q.warning);
-        }
-      } else {
-        // HTTP 500/503 · 後端明確告訴我們擋 · 就擋
-        // (後端 hard_stop 模式會回 allowed=false + 200 · 走上面路徑;
-        //  這裡只剩 endpoint 本身掛掉的情況)
-        toast.error("⚠ 預算服務暫時無回應 · 為安全先暫停送出 · 請找內部負責窗口或稍後重試");
+      const q = await apiGet("/quota/check");
+      if (q?.allowed === false) {
+        toast.error(`❌ ${q.reason || "本月用量已達上限 · 請找內部負責窗口放行"}`);
         return;
       }
+      if (q?.warning) toast.warn(q.warning);
     } catch (e) {
       // 網路錯(fetch 直接 throw)· 保守擋 · 老闆 Q1 選 C
       toast.error("⚠ 預算服務連不上 · 為安全暫停送出 · 請找內部負責窗口");
@@ -935,18 +925,14 @@ export const chat = {
           if (r) note = r.note;
         }
         // R8#5 · 改 authFetch · 帶 cookie + X-User-Email · prod 嚴格 mode 才能成功
-        await authFetch("/api-accounting/feedback", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message_id: crypto.randomUUID?.() || String(Date.now()),
-            conversation_id: this.currentConvoId,
-            agent_name: CORE_AGENTS.find(a => a.num === this.currentAgentNum)?.name,
-            verdict,
-            note,
-            // R7#4 · server 只認 trusted_email · 這欄位送了也會被覆蓋
-            user_email: this._userStore?.()?.email,
-          }),
+        await apiPost("/feedback", {
+          message_id: crypto.randomUUID?.() || String(Date.now()),
+          conversation_id: this.currentConvoId,
+          agent_name: CORE_AGENTS.find(a => a.num === this.currentAgentNum)?.name,
+          verdict,
+          note,
+          // R7#4 · server 只認 trusted_email · 這欄位送了也會被覆蓋
+          user_email: this._userStore?.()?.email,
         });
         toast.success(verdict === "up" ? "感謝👍" : "感謝回饋 · 月底會列入優化分析");
       });
@@ -1241,10 +1227,17 @@ export const chat = {
     for (const item of this.attachments) {
       const chip = document.createElement("div");
       chip.className = `chat-attachment-chip ${item.status}`;
-      const status = item.status === "uploading" ? "上傳中" : item.status === "error" ? "失敗" : "待送出";
+      const status = item.status === "uploading"
+        ? "上傳中"
+        : item.status === "uploaded"
+          ? "已上傳"
+          : item.status === "error"
+            ? "失敗"
+            : "待送出";
       chip.innerHTML = `
         <span class="chat-attachment-name">📎 ${escapeHtml(item.file.name)}</span>
         <span class="chat-attachment-status">${status}</span>
+        <span class="chat-attachment-trust">${item.status === "ready" ? "送出後讀取" : item.status === "uploaded" ? "本次對話可引用" : ""}</span>
         <button type="button" aria-label="移除 ${escapeHtml(item.file.name)}">✕</button>
       `;
       chip.querySelector("button")?.addEventListener("click", () => {

@@ -416,3 +416,36 @@ def aging_report(_user: str = require_permission_dep("accounting.view")):
         else:            buckets["90+"]   += inv["total"]
     return {"today": today.isoformat(), "buckets": {k: round(v, 2) for k, v in buckets.items()},
             "total": round(sum(buckets.values()), 2)}
+
+
+@router.get("/reports/overview")
+def accounting_overview(_user: str = require_permission_dep("accounting.view")):
+    """會計工作台摘要 · 前端一支 API 拿到本月、應收、報價與待處理提醒"""
+    from main import invoices_col, quotes_col, transactions_col
+    today = date.today()
+    date_from = today.replace(day=1).isoformat()
+    date_to = today.isoformat()
+    pnl = pnl_report(date_from=date_from, date_to=date_to, _user=_user)
+    aging = aging_report(_user=_user)
+    unpaid = list(invoices_col.find({"status": {"$in": ["draft", "issued"]}}).sort("date", 1).limit(20))
+    active_quotes = list(quotes_col.find({"status": {"$in": ["draft", "sent"]}}).sort("valid_until", 1).limit(20))
+    recent_transactions = list(transactions_col.find({}).sort("date", -1).limit(5))
+    unpaid_total = sum(inv.get("total", 0) or 0 for inv in unpaid)
+    quote_total = sum(q.get("total", 0) or 0 for q in active_quotes)
+    return {
+        "period": {"from": date_from, "to": date_to},
+        "pnl": pnl,
+        "aging": aging,
+        "unpaid": {
+            "count": len(unpaid),
+            "total": round(unpaid_total, 2),
+            "oldest_date": unpaid[0].get("date") if unpaid else None,
+        },
+        "quotes": {
+            "active_count": len(active_quotes),
+            "active_total": round(quote_total, 2),
+            "next_expiring": active_quotes[0].get("valid_until") if active_quotes else None,
+        },
+        "recent_transactions_count": len(recent_transactions),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }

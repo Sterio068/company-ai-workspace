@@ -6,9 +6,11 @@
   "type": "module",
   "scripts": {
     "build": "node build.config.js",
-    "build:watch": "node build.config.js --watch"
+    "build:watch": "node build.config.js --watch",
+    "generate:api-types": "openapi-typescript http://localhost/api-accounting/openapi.json -o lib/api-types.ts"
   },
   "devDependencies": {
-    "esbuild": "^0.20.0"
+    "esbuild": "^0.20.0",
+    "openapi-typescript": "^7.13.0"
   }
 }

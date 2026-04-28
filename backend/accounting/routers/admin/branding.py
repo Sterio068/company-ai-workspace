@@ -9,10 +9,10 @@ Endpoints:
 
 Schema(branding collection · 單一 doc · _id="default"):
   {
-    company_name: str,       # "承富創意整合行銷"(完整公司名 · 可選)
-    company_short: str,      # "承富"(短名 · brand logo 用)
-    app_name: str,           # "承富智慧助理"(完整 app 名 · menubar / title)
-    tagline: str,            # "10 人協作平台"(brand-sub)
+    company_name: str,       # "公司名稱"(完整公司名 · 可選)
+    company_short: str,      # "AI"(短名 · brand logo 用)
+    app_name: str,           # "智慧助理"(完整 app 名 · menubar / title)
+    tagline: str,            # "AI 協作平台"(brand-sub)
     accent_color: str,       # 預設 "#007AFF" · admin 可改品牌色
     locale: str,             # "zh-TW"
     updated_at: datetime,
@@ -21,7 +21,7 @@ Schema(branding collection · 單一 doc · _id="default"):
 
 預設值(未設定時):
   app_name = "智慧助理"
-  company_short = ""
+  company_short = "AI"
   tagline = "AI 協作平台"
 """
 from datetime import datetime, timezone
@@ -36,13 +36,27 @@ from .._deps import require_admin_dep
 router = APIRouter(tags=["admin"])
 
 DEFAULT_BRANDING = {
-    "company_name": "",
-    "company_short": "",
+    "company_name": "公司名稱",
+    "company_short": "AI",
     "app_name": "智慧助理",
     "tagline": "AI 協作平台",
     "accent_color": "#007AFF",
     "locale": "zh-TW",
 }
+
+
+def _normalize_branding(doc: dict) -> dict:
+    """補齊空欄位；允許不同公司自行設定任何品牌名稱。"""
+    normalized = dict(doc)
+    if not (normalized.get("app_name") or "").strip():
+        normalized["app_name"] = DEFAULT_BRANDING["app_name"]
+    if not (normalized.get("company_short") or "").strip():
+        normalized["company_short"] = DEFAULT_BRANDING["company_short"]
+    if not (normalized.get("company_name") or "").strip():
+        normalized["company_name"] = DEFAULT_BRANDING["company_name"]
+    if not (normalized.get("tagline") or "").strip():
+        normalized["tagline"] = DEFAULT_BRANDING["tagline"]
+    return normalized
 
 
 class BrandingUpdate(BaseModel):
@@ -68,7 +82,10 @@ def get_branding_doc(db, include_admin_metadata: bool = False) -> dict:
         include_admin_metadata: True 時才回 updated_at / updated_by(admin only)
     """
     doc = db.branding.find_one({"_id": "default"}) or {}
-    merged = {**DEFAULT_BRANDING, **{k: v for k, v in doc.items() if k != "_id" and v}}
+    merged = _normalize_branding({
+        **DEFAULT_BRANDING,
+        **{k: v for k, v in doc.items() if k != "_id" and v},
+    })
     if include_admin_metadata:
         if "updated_at" in doc:
             merged["updated_at"] = (doc["updated_at"].isoformat()
@@ -100,7 +117,11 @@ def get_branding_full(_admin: str = require_admin_dep()):
 def update_branding(payload: BrandingUpdate, _admin: str = require_admin_dep()):
     """admin 改品牌設定 · 回 admin-full doc(含 updated_at)"""
     from main import db
-    update = {k: v for k, v in payload.dict().items() if v is not None}
+    update = {}
+    for k, v in payload.model_dump().items():
+        if v is None:
+            continue
+        update[k] = v.strip() if isinstance(v, str) else v
     if not update:
         return {"updated": False, "branding": get_branding_doc(db, include_admin_metadata=True)}
     update["updated_at"] = datetime.now(timezone.utc)

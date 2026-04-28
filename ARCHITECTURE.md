@@ -247,9 +247,9 @@ LibreChat 原生 Speech-to-Text
 | 指標 | 預估值 |
 |---|---|
 | 同時併發使用者 | 10(24GB 充裕) |
-| 對話回應延遲(GPT-5.4 nano / Haiku) | < 2 秒 |
-| 對話回應延遲(GPT-5.4 mini / Sonnet) | 3-6 秒 |
-| 60 頁 PDF 解析(GPT-5.4 mini / Sonnet) | 10-15 分鐘 |
+| 對話回應延遲(GPT-5.5 nano / Haiku) | < 2 秒 |
+| 對話回應延遲(GPT-5.5 mini / Sonnet) | 3-6 秒 |
+| 60 頁 PDF 解析(GPT-5.5 mini / Sonnet) | 10-15 分鐘 |
 | 會議 60 分鐘錄音轉稿(OpenAI Whisper API) | 3-5 分鐘 |
 | 知識庫查詢(原生 file_search) | < 3 秒 |
 | Mac mini CPU 平均佔用 | 5-15% |

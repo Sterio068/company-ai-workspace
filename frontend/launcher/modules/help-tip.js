@@ -39,8 +39,8 @@ const TIPS = {
     cta_action: () => location.hash = "#help-doc-quickstart-v1.3",
   },
   workflows: {
-    title: "下一步建議 · 兩種用法",
-    body: "「拆下一步草稿」= AI 產步驟給你檢查再送出(穩);「🚀 直接執行」= 主管家自動串接所有 Agent 一次跑完(每日 5 次)。涉敏感事項仍會標「需人工確認」。",
+    title: "工作流程 · 兩種用法",
+    body: "「拆草稿」= 先產出步驟給你檢查;「直接執行」= 主管家串接需要的角色一次跑完(每日 5 次)。涉敏感事項仍會標「需人工確認」。",
     cta: "了解兩種模式",
     cta_action: () => location.hash = "#help",
   },

@@ -878,12 +878,17 @@ async def run_preset_workflow(
     if preset_id not in PRESET_WORKFLOWS:
         raise HTTPException(404, f"Unknown preset: {preset_id}")
     if not _workflow_execution_enabled():
-        raise HTTPException(403, "workflow 執行目前停用 · admin 可從中控解除 kill switch")
+        raise HTTPException(
+            403,
+            "workflow 執行目前停用 · 請使用 /workflow/prepare-preset 產生人審草稿，或由 admin 從中控解除 kill switch",
+        )
     if not authorization:
         raise HTTPException(401, "需 Authorization header")
     # v1.57 安全 · 防 internal:cron 用無人 quota 跑爆 · workflow 必須是真實使用者
     if user_email.startswith("internal:"):
         raise HTTPException(403, "workflow 不接受 internal token 觸發 · 必須真實使用者")
+    if payload.project_id:
+        _ensure_project_access(payload.project_id, user_email)
 
     allowed, used, cap = _daily_quota_check(user_email)
     if not allowed:
@@ -899,6 +904,7 @@ async def run_preset_workflow(
         status="running",
         preset_name=preset["name"],
         step_count=len(preset["steps"]),
+        project_id=payload.project_id,
         initial_input=payload.initial_input,  # v1.63 #4 · 完整存 · resume 重建用
         initial_input_preview=(payload.initial_input or "")[:200],
     )
@@ -920,6 +926,15 @@ async def run_preset_workflow(
         )
         result["run_id"] = run_id
         result["quota"] = {"used": used + 1, "cap": cap}
+        if payload.project_id:
+            result["saved_to_project"] = _save_workflow_result_to_project(
+                payload.project_id,
+                user_email,
+                preset_id,
+                preset,
+                result,
+                run_id,
+            )
         return result
     except HTTPException as e:
         _audit_update(run_id, status="failed", error=str(e.detail)[:300])
@@ -1090,7 +1105,90 @@ def _save_workflow_draft_to_project(
     except Exception:
         pass
 
-    return {"project_id": project_id, "handoff_field": "workflow_draft"}
+    project = db.projects.find_one({"_id": q["_id"]}, {"name": 1})
+    return {
+        "project_id": project_id,
+        "project_name": (project or {}).get("name"),
+        "handoff_field": "workflow_draft",
+    }
+
+
+def _save_workflow_result_to_project(
+    project_id: str,
+    user_email: str,
+    preset_id: str,
+    preset: dict,
+    result: dict,
+    run_id: str = "",
+) -> dict:
+    """Persist completed workflow output into project.handoff as an AI work asset."""
+    from main import db
+    now = datetime.now(timezone.utc)
+    final_output = (result.get("final_output") or "").strip()
+    if not final_output:
+        final_output = "\n\n".join(
+            (step.get("output_preview") or "").strip()
+            for step in result.get("results", [])
+            if (step.get("output_preview") or "").strip()
+        )
+    final_output = final_output[:4000] if final_output else "Workflow 已完成,但未回傳可摘要的最終內容。"
+    handoff_result = {
+        "preset_id": preset_id,
+        "name": preset["name"],
+        "mode": "executed",
+        "run_id": run_id,
+        "steps_executed": result.get("steps_executed", 0),
+        "rounds": result.get("rounds", 0),
+        "final_output": final_output,
+        "created_by": user_email,
+        "created_at": now,
+    }
+    asset_ref = {
+        "type": "ai",
+        "label": f"Workflow 結果 · {preset['name']}",
+        "ref": final_output,
+    }
+    q = _project_access_query(project_id, user_email)
+    r = db.projects.update_one(
+        q,
+        {
+            "$set": {
+                "handoff.workflow_result": handoff_result,
+                "handoff.updated_by": user_email,
+                "handoff.updated_at": now,
+                "updated_at": now,
+            },
+            "$addToSet": {"handoff.asset_refs": asset_ref},
+        },
+    )
+    if r.matched_count == 0:
+        if db.projects.find_one({"_id": q["_id"]}, {"_id": 1}):
+            raise HTTPException(403, "只能把 workflow 結果寫入自己負責或協作中的專案")
+        raise HTTPException(404, "project 不存在")
+
+    try:
+        db.audit_log.insert_one({
+            "action": "workflow_run_saved_to_project",
+            "user": user_email,
+            "resource": project_id,
+            "details": {
+                "preset_id": preset_id,
+                "preset_name": preset["name"],
+                "run_id": run_id,
+                "steps_executed": result.get("steps_executed", 0),
+            },
+            "created_at": now,
+        })
+    except Exception:
+        pass
+
+    project = db.projects.find_one({"_id": q["_id"]}, {"name": 1})
+    return {
+        "project_id": project_id,
+        "project_name": (project or {}).get("name"),
+        "handoff_field": "workflow_result",
+        "asset_label": asset_ref["label"],
+    }
 
 
 # ============================================================

@@ -21,7 +21,7 @@
 | `⌘A` | 跳 💰 會計 |
 | `⌘T` | 跳 📢 標案 |
 | `⌘I` | 跳 💼 商機 Pipeline(CRM) |
-| `⌘W` | 跳 ⚡ 流程(workflows) |
+| `⌘W` | 跳工作流程(workflows) |
 | `⌘M` | 跳 📊 管理面板(admin only) |
 | `⌘⇧L` | 切深淺色(auto → light → dark) |
 | `?` | 顯示鍵盤快捷 overlay |

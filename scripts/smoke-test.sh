@@ -35,6 +35,16 @@ check() {
     fi
 }
 
+check_launcher_shell() {
+    local tmp
+    tmp="$(mktemp)"
+    curl -sf "${BASE_URL}/" -o "$tmp" &&
+        grep -Eq 'id="app"|data-brand-app-name|跳至主內容' "$tmp"
+    local result=$?
+    rm -f "$tmp"
+    return "$result"
+}
+
 echo "============================================"
 echo "  承富 AI 系統 · Smoke Test"
 echo "  Target: $BASE_URL"
@@ -53,10 +63,12 @@ check "Uptime Kuma 容器運行中" "docker ps --filter name=chengfu-uptime --fi
 echo ""
 echo "[網路連線]"
 check "nginx /healthz"           "curl -sf ${BASE_URL}/healthz"
-check "承富 Launcher /"          "[[ \$(curl -sf ${BASE_URL}/) == *承富* ]]"
+check "Launcher / app shell"     "check_launcher_shell"
 check "LibreChat API /api/config" "curl -sf ${BASE_URL}/api/config"
 check "Accounting /api-accounting/healthz" "curl -sf ${BASE_URL}/api-accounting/healthz"
 check "Route A /c/new redirects" "curl -sI ${BASE_URL}/c/new -o /dev/null -w '%{http_code}' | grep -q '^302$'"
+check "偽造 X-User-Email 不可通過 admin API" "curl -s -o /dev/null -w '%{http_code}' -H 'X-User-Email: ${LIBRECHAT_ADMIN_EMAIL:-admin@chengfu.local}' '${BASE_URL}/api-accounting/admin/users' | grep -Eq '^(401|403)$'"
+check "RAG adapter 不對外暴露" "curl -s -o /dev/null -w '%{http_code}' '${BASE_URL}/api-accounting/rag/health' | grep -Eq '^(403|404)$'"
 
 echo ""
 echo "[資源佔用]"

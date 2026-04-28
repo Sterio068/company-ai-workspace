@@ -28,8 +28,11 @@ on run
 		"  📚 13 份 user-guide · 🔒 30+ hardening · ♿ WCAG 2.2" & return & return & ¬
 		"請預先準備:" & return & ¬
 		"  • OpenAI API Key(必須 · 主力 AI 引擎)" & return & ¬
+		"    取得網址:https://platform.openai.com/api-keys" & return & ¬
 		"  • Anthropic API Key(選配 · Claude 備援)" & return & ¬
-		"  • Fal.ai API Key(設計助手生圖 · 選配)" & return & ¬
+		"    取得網址:https://console.anthropic.com/settings/keys" & return & ¬
+		"  • Fal.ai API Key(設計助手生圖 · 選配 · 裝完可在中控設定)" & return & ¬
+		"    取得網址:https://fal.ai/dashboard/keys" & return & ¬
 		"  • 公司域名(計畫對外用 · 可先留白)" & return & ¬
 		"  • admin email + 密碼(你想用哪個登入 · 將自動註冊第一個 admin)" & return & ¬
 		"  • Docker Desktop 已安裝且啟動" & return & return & ¬
@@ -180,27 +183,47 @@ fi
 	-- ============ 步驟 2 · 收集 .env 機密 ============
 	if reuseExisting is false then
 	-- 2a · OpenAI API Key(主力)
-	set apiKeyDialog to display dialog ¬
-		"請貼上 OpenAI API Key" & return & return & ¬
-		"格式 sk-... · 從 https://platform.openai.com/api-keys 拿" & return & ¬
-		"承富 AI 預設會使用 OpenAI,前端可再切換 Claude 備援" & return & return & ¬
-		"⚠️ 此值會存進 macOS Keychain · 不會明文寫進 .env" ¬
-		default answer "" with title "承富 AI 安裝 · 1/7" with hidden answer buttons {"取消", "下一步"} default button "下一步"
-	if button returned of apiKeyDialog is "取消" then return
-	set openaiKey to text returned of apiKeyDialog
+	repeat
+		set apiKeyDialog to display dialog ¬
+			"請貼上 OpenAI API Key" & return & return & ¬
+			"用途:主力 AI 引擎(GPT-5.5)" & return & ¬
+			"格式:sk-..." & return & return & ¬
+			"取得網址:" & return & ¬
+			"https://platform.openai.com/api-keys" & return & return & ¬
+			"若還沒有 key,請按「打開取得網址」,登入 OpenAI Platform 後建立 API key。" & return & return & ¬
+			"⚠️ 此值會存進 macOS Keychain · 不會明文寫進 .env" ¬
+			default answer openaiKey with title "承富 AI 安裝 · 1/7 · OpenAI API Key" with hidden answer buttons {"取消", "打開取得網址", "下一步"} default button "下一步"
+		if button returned of apiKeyDialog is "取消" then return
+		set openaiKey to text returned of apiKeyDialog
+		if button returned of apiKeyDialog is "打開取得網址" then
+			open location "https://platform.openai.com/api-keys"
+		else
+			exit repeat
+		end if
+	end repeat
 	if length of openaiKey is less than 20 then
 		display dialog "❌ API Key 太短 · 請確認是完整 sk-... 格式" buttons {"關閉"} with icon stop
 		return
 	end if
 
 	-- 2a-2 · Anthropic API Key(選配備援)
-	set anthropicKeyDialog to display dialog ¬
-		"請貼上 Anthropic API Key(選配 · Claude 備援)" & return & return & ¬
-		"格式 sk-ant-xxx... · 從 https://console.anthropic.com 拿" & return & ¬
-		"留空可跳過 · 之後仍可在 Keychain 補設" ¬
-		default answer "" with title "承富 AI 安裝 · 2/7" with hidden answer buttons {"取消", "下一步"} default button "下一步"
-	if button returned of anthropicKeyDialog is "取消" then return
-	set anthropicKey to text returned of anthropicKeyDialog
+	repeat
+		set anthropicKeyDialog to display dialog ¬
+			"請貼上 Anthropic API Key(選配 · Claude 備援)" & return & return & ¬
+			"用途:Claude 備援 / 長文件工作流" & return & ¬
+			"格式:sk-ant-..." & return & return & ¬
+			"取得網址:" & return & ¬
+			"https://console.anthropic.com/settings/keys" & return & return & ¬
+			"留空可跳過 · 之後仍可在 Keychain 補設" ¬
+			default answer anthropicKey with title "承富 AI 安裝 · 2/7 · Anthropic API Key" with hidden answer buttons {"取消", "打開取得網址", "下一步"} default button "下一步"
+		if button returned of anthropicKeyDialog is "取消" then return
+		set anthropicKey to text returned of anthropicKeyDialog
+		if button returned of anthropicKeyDialog is "打開取得網址" then
+			open location "https://console.anthropic.com/settings/keys"
+		else
+			exit repeat
+		end if
+	end repeat
 
 	-- 2b · 公司域名(對外)· 暫時可空
 	set domainDialog to display dialog ¬

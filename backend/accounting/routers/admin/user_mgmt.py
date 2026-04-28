@@ -18,15 +18,18 @@ Endpoints:
 Permissions 目前 UI 可勾選 + 存庫 · backend 硬 enforce 逐步展開(先 admin.*)
 完整 enforcement 留 v1.4
 """
+import logging
+import re
 from datetime import datetime, timezone
 from typing import List, Optional
 
 import bcrypt
-import re
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, field_validator
 
 from .._deps import require_admin_dep, get_db
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/admin", tags=["admin-users"])
@@ -206,7 +209,7 @@ _EMAIL_RE = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
 class UserCreate(BaseModel):
     email: str = Field(..., min_length=5, max_length=254)
     name: str = Field(..., min_length=1, max_length=50)
-    password: str = Field(..., min_length=8, max_length=128)
+    password: str = Field(..., min_length=10, max_length=128)
     title: Optional[str] = Field(None, max_length=50)  # 自訂頭銜(會計 / 企劃 / 設計)
     permissions: List[str] = Field(default_factory=list)
     role: str = Field(default="USER", pattern="^(USER|ADMIN)$")
@@ -219,6 +222,12 @@ class UserCreate(BaseModel):
             raise ValueError("email 格式不對")
         return v
 
+    @field_validator("password")
+    @classmethod
+    def _check_strength(cls, v: str) -> str:
+        # 套用統一密碼複雜度規則(create + reset 一致)
+        return _validate_password_strength(v)
+
 
 class UserUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=50)
@@ -226,6 +235,58 @@ class UserUpdate(BaseModel):
     permissions: Optional[List[str]] = None
     role: Optional[str] = Field(None, pattern="^(USER|ADMIN)$")
     active: Optional[bool] = None
+
+
+def _validate_password_strength(pw: str) -> str:
+    """共用密碼複雜度檢查 · admin create + reset 都用這個
+
+    規則(平衡安全 + 老闆好記)·:
+    - 長度 ≥ 10
+    - 至少含 3 類:大寫字母 / 小寫字母 / 數字 / 符號
+    - 禁常見弱密碼(password / 12345678 / qwerty 等 top 12)
+    - 不能重複 4 次以上同字元(aaaa / 1111)
+
+    raise ValueError on fail · pydantic field_validator 會轉成 422
+    """
+    if not pw or len(pw) < 10:
+        raise ValueError("密碼至少 10 字 · 防字典攻擊")
+    if len(pw) > 128:
+        raise ValueError("密碼不可超過 128 字")
+    classes = sum([
+        any(c.isupper() for c in pw),
+        any(c.islower() for c in pw),
+        any(c.isdigit() for c in pw),
+        any(not c.isalnum() for c in pw),
+    ])
+    if classes < 3:
+        raise ValueError("密碼需含 3 類以上(大寫 / 小寫 / 數字 / 符號)")
+    common_weak = {
+        "password", "password1", "12345678", "123456789", "qwerty123",
+        "letmein123", "admin1234", "iloveyou1", "monkey1234",
+        "dragon1234", "111111111", "abcdefgh1",
+    }
+    if pw.lower() in common_weak:
+        raise ValueError("此為常見弱密碼 · 請改")
+    # 同字元重複 ≥ 4 次(aaaa / 1111)
+    for i in range(len(pw) - 3):
+        if pw[i] == pw[i + 1] == pw[i + 2] == pw[i + 3]:
+            raise ValueError("密碼不可同字元重複 4 次以上")
+    return pw
+
+
+class PasswordReset(BaseModel):
+    """admin 替同仁重設密碼
+
+    - 同仁忘記密碼 / 老闆要硬覆蓋時用
+    - 後端 bcrypt re-hash · 不存明文
+    - 回傳明文一次給 admin 轉達同仁(同仁登入後可自己改)
+    """
+    new_password: str = Field(..., min_length=10, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def _check_strength(cls, v: str) -> str:
+        return _validate_password_strength(v)
 
 
 # ============================================================
@@ -432,3 +493,207 @@ def deactivate_user(email: str, _admin: str = require_admin_dep()):
         pass
 
     return {"ok": True, "email": email_norm, "active": False}
+
+
+# ============================================================
+# POST /admin/users/{email}/reset-password · admin 替同仁重設密碼
+# ============================================================
+@router.post("/users/{email}/reset-password")
+def reset_user_password(
+    email: str, payload: PasswordReset, _admin: str = require_admin_dep()
+) -> dict:
+    """admin 替同仁重設密碼
+
+    流程:
+    1. bcrypt re-hash 新密碼(LibreChat 同 10 rounds)
+    2. update users.password · 檢查 matched_count 防 race
+    3. 清掉所有 sessions / refreshTokens 強制踢登入(防舊 token 仍可用)
+    4. audit log(只記操作 · 不記密碼)
+    5. 回 ok(明文密碼留 frontend closure · 不回傳)
+
+    安全:
+    - require_admin
+    - 不能改自己(走右上角頭像)
+    - 新密碼 Pydantic 驗 ≥ 8 字 · 密碼明文僅 in-flight · server 不留
+    """
+    db = get_db()
+    email_norm = email.strip().lower()
+
+    if email_norm == _admin:
+        raise HTTPException(400, "改自己密碼請走右上角頭像 → 個人設定 · 不從這個介面")
+
+    u = db.users.find_one({"email": email_norm})
+    if not u:
+        raise HTTPException(404, f"user {email_norm} 不存在")
+
+    pw_hash = bcrypt.hashpw(payload.new_password.encode("utf-8"), bcrypt.gensalt(10))
+    user_id_str = str(u["_id"])
+    r = db.users.update_one(
+        {"_id": u["_id"]},
+        {"$set": {
+            "password": pw_hash,
+            "updatedAt": datetime.now(timezone.utc),
+        }},
+    )
+    if r.matched_count == 0:
+        # find_one 跟 update_one 之間 user 被刪
+        raise HTTPException(404, f"user {email_norm} 已不存在(并發被刪?)")
+
+    # 強制登出所有現有 session · 雙試 ObjectId / str(LibreChat 不同版本 user 欄位型別不一)
+    # 防舊 token 在 TTL 內仍可用 + C3 修
+    user_id_obj = u["_id"]
+    sessions_invalidated = (
+        _try_delete_many(db.sessions, [{"user": user_id_str}, {"user": user_id_obj}])
+    )
+    refresh_invalidated = (
+        _try_delete_many(db.refreshtokens, [{"userId": user_id_str}, {"userId": user_id_obj}])
+    )
+
+    # C5 · audit fail-loud:destructive admin op 的 audit 失敗 → 503
+    # 稽核鏈不能斷 · 業務再成功也要回錯讓 admin 重試
+    try:
+        db.audit_log.insert_one({
+            "action": "admin_reset_password",
+            "user": _admin,
+            "details": {
+                "target_email": email_norm,
+                "sessions_invalidated": sessions_invalidated,
+                "refresh_invalidated": refresh_invalidated,
+            },
+            "created_at": datetime.now(timezone.utc),
+        })
+    except Exception as e:
+        logger.error(f"[reset_password] audit_log INSERT failed: {e}")
+        raise HTTPException(503, "稽核紀錄寫入失敗 · 操作已執行 · 請通知 IT 補登紀錄")
+
+    return {
+        "ok": True,
+        "email": email_norm,
+        "sessions_invalidated": sessions_invalidated,
+        "refresh_invalidated": refresh_invalidated,
+    }
+
+
+def _try_delete_many(collection, filters: list) -> int:
+    """嘗試多種 filter 都試一遍 · 用 $or 一次刪 · 取最大 deleted_count
+
+    用途:LibreChat 不同版本 sessions.user 可能存 ObjectId 或 str
+         (此處不確定型別 · 用 $or 一次刪兩種 · 不浪費 round trip)
+    """
+    if not filters:
+        return 0
+    try:
+        return collection.delete_many({"$or": filters}).deleted_count
+    except Exception as e:
+        logger.warning(f"[cleanup] delete_many($or) failed: {e}")
+        return 0
+
+
+# ============================================================
+# DELETE /admin/users/{email}/permanent · 硬刪除(PDPA)
+# ============================================================
+@router.delete("/users/{email}/permanent")
+def delete_user_permanent(email: str, _admin: str = require_admin_dep()) -> dict:
+    """硬刪除同仁帳號 · PDPA 個資請求 · 永久不可復原
+
+    要求:
+    - target user 必須先 deactivate(active=false)· 二段式防誤刪
+    - 不能刪自己
+    - 連帶清:sessions / refreshTokens / feedback
+    - 對話紀錄(conversations)留存:法律抗辯 + 商業機密追溯
+      若客戶要求清對話請走 PDPA 完整流程(docs/05-SECURITY.md)
+
+    回:已刪 + 連帶清除集合計數 + 連帶清失敗的集合
+    """
+    db = get_db()
+    email_norm = email.strip().lower()
+
+    if email_norm == _admin:
+        raise HTTPException(400, "不能刪自己 · 防 admin lockout")
+
+    u = db.users.find_one({"email": email_norm})
+    if not u:
+        raise HTTPException(404, f"user {email_norm} 不存在")
+
+    if u.get("chengfu_active") is not False:
+        raise HTTPException(
+            400,
+            "請先 deactivate(停用)後再硬刪 · 二段式防誤操作",
+        )
+
+    user_id = u["_id"]
+    user_id_str = str(user_id)
+
+    # C6 · cleanup-first guard:任一 sessions/refreshTokens 清失敗 → 中止 · 不留 orphan token
+    # 用 $or 雙型別(ObjectId / str)防 LibreChat schema 變動
+    related: dict = {}
+    failed: list = []
+    cleanup_targets = [
+        ("sessions", db.sessions, [{"user": user_id_str}, {"user": user_id}]),
+        ("refreshTokens", db.refreshtokens, [{"userId": user_id_str}, {"userId": user_id}]),
+        ("feedback", db.feedback, [{"user_email": email_norm}]),
+    ]
+    for key, coll, filters in cleanup_targets:
+        try:
+            related[key] = coll.delete_many({"$or": filters}).deleted_count
+        except Exception as e:
+            related[key] = -1
+            failed.append(key)
+            logger.error(f"[permanent_delete] {key} cleanup failed: {e}")
+
+    # 任一 token 集合清失敗 → fail closed · 不留 session orphan(防離職員工 token 仍可用)
+    if any(k in failed for k in ("sessions", "refreshTokens")):
+        # audit 記下未刪情況 · 讓 IT 看
+        try:
+            db.audit_log.insert_one({
+                "action": "admin_delete_user_permanent_aborted",
+                "user": _admin,
+                "details": {
+                    "target_email": email_norm,
+                    "target_user_id": user_id_str,
+                    "related_cleaned": related,
+                    "cleanup_failures": failed,
+                    "reason": "token_cleanup_failed",
+                },
+                "created_at": datetime.now(timezone.utc),
+            })
+        except Exception as e:
+            logger.error(f"[permanent_delete] audit_log abort failed: {e}")
+        raise HTTPException(
+            503,
+            f"無法清除登入 token({', '.join(failed)})· 為防止帳號殘留可登入,已中止刪除 · 請聯絡 IT",
+        )
+
+    # C7 · CAS guard:filter 強制 chengfu_active=False · 防 admin race(B 在你刪前 reactivate)
+    r = db.users.delete_one({"_id": user_id, "chengfu_active": False})
+    if r.deleted_count == 0:
+        # 兩種狀況:1) 並發被刪  2) 並發被 reactivate
+        latest = db.users.find_one({"_id": user_id})
+        if not latest:
+            raise HTTPException(409, f"user {email_norm} 已被其他流程刪除")
+        raise HTTPException(409, f"user {email_norm} 已被其他管理員復用 · 請重新確認後再刪")
+
+    # C5 · audit fail-loud:destructive 操作 audit 失敗 → 503
+    try:
+        db.audit_log.insert_one({
+            "action": "admin_delete_user_permanent",
+            "user": _admin,
+            "details": {
+                "target_email": email_norm,
+                "target_user_id": user_id_str,
+                "related_cleaned": related,
+                "cleanup_failures": failed,
+            },
+            "created_at": datetime.now(timezone.utc),
+        })
+    except Exception as e:
+        logger.error(f"[permanent_delete] audit_log INSERT failed: {e}")
+        raise HTTPException(503, "稽核紀錄寫入失敗 · 同仁已刪除 · 請通知 IT 補登紀錄")
+
+    return {
+        "ok": True,
+        "email": email_norm,
+        "deleted": True,
+        "related_cleaned": related,
+        "cleanup_failures": failed,
+    }

@@ -66,3 +66,6 @@ build/
 .claude/
 installer-run.command
 tests/rag-fixtures/
+
+# 由 start.sh 偵測寫入 · 每台機器 LAN IP 不同
+config-templates/.host-network.json

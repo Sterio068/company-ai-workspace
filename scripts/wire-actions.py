@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-承富 AI · 把 config-templates/actions/*.json 掛到指定 Agent (v1.51)
+智慧助理 · 把 config-templates/actions/*.json 掛到指定 Agent (v1.51)
 
 LibreChat v0.8.4 Action API:
   POST /api/agents/actions/:agent_id
@@ -17,7 +17,8 @@ Idempotency:
 
 前置:
   LIBRECHAT_ADMIN_EMAIL / LIBRECHAT_ADMIN_PASSWORD(或 LIBRECHAT_JWT)
-  FAL_KEY(若要掛 fal.ai · 沒設則 skip 該 action 並 warn)
+  ACTION_BRIDGE_TOKEN(內部 Actions 專用 · 不可用 ECC_INTERNAL_TOKEN 代替)
+  ALLOW_LIBRECHAT_ACTION_SECRET_PERSISTENCE=1(才允許把外部 vendor key 寫進 LibreChat metadata)
 
 用法:
   python3 scripts/wire-actions.py                  # 全部 mapping
@@ -40,26 +41,31 @@ from urllib.parse import urlparse
 BASE = os.environ.get("LIBRECHAT_URL", "http://localhost:3080")
 PROJECT_ROOT = pathlib.Path(__file__).parent.parent
 ACTIONS_DIR = PROJECT_ROOT / "config-templates" / "actions"
+ACTION_REGISTRY_PATH = ACTIONS_DIR / "registry.json"
 
 _BROWSER_UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 )
 
-# (action 檔名, 鎖定 agent name 子字串列表 · 用 OR 邏輯)
-# 注意:openai-image-gen 是首選(用既有 OPENAI_API_KEY · 不用新 vendor)
-# fal-ai-image-gen 為備案 · 預設不啟用 · 若業主特別要 Recraft v3 才掛
-ACTION_AGENT_MAP = [
-    ("pcc-tender.json",          ["✨ 主管家", "🎯 投標"]),
-    # v1.7.0 · 合併內部 spec(LibreChat 限制同 domain 只能一個 action)
-    # accounting-internal + vision-ocr + delegate-to-agent → internal-services
-    ("internal-services.json",   ["✨ 主管家", "💰 財務", "🎯 投標", "🎪 活動"]),
-    ("openai-image-gen.json",    ["✨ 主管家", "🎨 設計"]),
-    # 舊個別 spec 已合 · 留檔不再 wire
-    # ("accounting-internal.json",  ["..."])
-    # ("vision-ocr.json",           ["..."])
-    # ("delegate-to-agent.json",    ["..."])
-]
+
+def load_action_agent_map() -> list[tuple[str, list[str]]]:
+    """從 registry.json 讀取唯一接線清單,避免 legacy spec 被誤掛。"""
+    if not ACTION_REGISTRY_PATH.exists():
+        sys.exit(f"❌ 找不到 action registry:{ACTION_REGISTRY_PATH}")
+    registry = json.loads(ACTION_REGISTRY_PATH.read_text())
+    selected: list[tuple[str, list[str]]] = []
+    for item in registry.get("actions", []):
+        if not item.get("wire"):
+            continue
+        patterns = item.get("agent_patterns") or []
+        if not patterns:
+            sys.exit(f"❌ action registry 缺 agent_patterns:{item.get('file')}")
+        selected.append((item["file"], patterns))
+    return selected
+
+
+ACTION_AGENT_MAP = load_action_agent_map()
 
 
 def api(method: str, path: str, token: str | None = None, data: dict | None = None) -> dict:
@@ -172,23 +178,54 @@ def needs_api_key(spec: dict) -> bool:
     return bool(spec.get("security"))
 
 
+INTERNAL_ACTION_SPECS = ("accounting", "vision", "delegate", "internal-services", "notebooklm-bridge")
+
+
+def is_internal_action_spec(spec_filename: str) -> bool:
+    return any(k in spec_filename for k in INTERNAL_ACTION_SPECS)
+
+
+def allow_vendor_secret_persistence() -> bool:
+    """LibreChat 目前會把 action api_key 放進 action metadata。
+
+    內部服務改用低權限 ACTION_BRIDGE_TOKEN；外部供應商 key(OpenAI/Fal)
+    預設不寫入 LibreChat DB,除非部署者明確 opt-in。
+    """
+    return os.getenv("ALLOW_LIBRECHAT_ACTION_SECRET_PERSISTENCE", "").strip() == "1"
+
+
 def get_api_key_for(spec_filename: str) -> str | None:
+    if is_internal_action_spec(spec_filename):
+        # 不再把全域 ECC_INTERNAL_TOKEN 寫入 LibreChat action metadata。
+        # 這顆 token 只可走 action allowlist endpoint,且必須搭配 X-Acting-User。
+        return os.environ.get("ACTION_BRIDGE_TOKEN")
     if "fal-ai" in spec_filename:
+        if not allow_vendor_secret_persistence():
+            return None
         return os.environ.get("FAL_KEY")
     if "openai-image" in spec_filename:
+        if not allow_vendor_secret_persistence():
+            return None
         # 用既有 OPENAI_API_KEY · 不用業主再開新帳戶
         return os.environ.get("OPENAI_API_KEY")
-    if any(k in spec_filename for k in ("accounting", "vision", "delegate", "internal-services")):
-        # 內部服務 · 都走 ECC_INTERNAL_TOKEN
-        return os.environ.get("ECC_INTERNAL_TOKEN")
     return None
 
 
 def needs_api_key_strict(spec: dict, spec_filename: str) -> bool:
     """spec 沒宣告 security 但內部服務要 X-Internal-Token"""
     if spec.get("security"): return True
-    if any(k in spec_filename for k in ("accounting", "vision", "delegate", "internal-services")): return True
+    if is_internal_action_spec(spec_filename): return True
     return False
+
+
+def required_env_for(spec_filename: str) -> str:
+    if "fal-ai" in spec_filename:
+        return "FAL_KEY + ALLOW_LIBRECHAT_ACTION_SECRET_PERSISTENCE=1"
+    if "openai-image" in spec_filename:
+        return "OPENAI_API_KEY + ALLOW_LIBRECHAT_ACTION_SECRET_PERSISTENCE=1"
+    if is_internal_action_spec(spec_filename):
+        return "ACTION_BRIDGE_TOKEN"
+    return "API_KEY"
 
 
 def wire_action(
@@ -208,12 +245,7 @@ def wire_action(
     if needs_api_key_strict(spec, spec_path.name):
         api_key = get_api_key_for(spec_path.name)
         if not api_key:
-            envname = (
-                "FAL_KEY" if "fal-ai" in spec_path.name
-                else "OPENAI_API_KEY" if "openai-image" in spec_path.name
-                else "ECC_INTERNAL_TOKEN" if any(k in spec_path.name for k in ("accounting","vision","delegate","internal-services"))
-                else "API_KEY"
-            )
+            envname = required_env_for(spec_path.name)
             return ("skip", f"需要 api_key 但 ${envname} 沒設 · 跳過 {spec_path.name}")
 
     agent_id = agent.get("id")
@@ -224,7 +256,10 @@ def wire_action(
     metadata: dict = {
         "raw_spec": json.dumps(spec),  # LibreChat 接 JSON 或 YAML 字串
         "domain": domain,
-        "api_key_id": api_key and "user-provided",
+        "api_key_id": (
+            "action-bridge-token" if is_internal_action_spec(spec_path.name)
+            else "vendor-secret-explicit-opt-in" if api_key else None
+        ),
     }
     if api_key:
         metadata["api_key"] = api_key

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "OpenAI Image Generation (ChatGPT Images 2.0)",
-    "description": "承富設計夥伴呼叫 OpenAI 圖像 API 生圖。\n優勢:\n  · 用既有 OPENAI_API_KEY · 不用新 vendor 帳戶\n  · ChatGPT Images 2.0 繁中文字渲染顯著提升 · 取代 Recraft v3 需求\n  · 支援 image-to-image 編輯 + 區域重繪(inpainting)\n  · 同一個對話可一鍵改稿,不用切平台\n\n模型版本:\n  · 預設用 OpenAI 當前最新 image 模型(2026 推出 gpt-image-1 後續版 · 又稱 ChatGPT Images 2.0)\n  · 若要釘版本可顯式傳 model 參數",
+    "description": "設計夥伴呼叫 OpenAI 圖像 API 生圖。\n優勢:\n  · 用既有 OPENAI_API_KEY · 不用新 vendor 帳戶\n  · ChatGPT Images 2.0 繁中文字渲染顯著提升 · 取代 Recraft v3 需求\n  · 支援 image-to-image 編輯 + 區域重繪(inpainting)\n  · 同一個對話可一鍵改稿,不用切平台\n\n模型版本:\n  · 預設用 OpenAI 當前最新 image 模型(2026 推出 gpt-image-1 後續版 · 又稱 ChatGPT Images 2.0)\n  · 若要釘版本可顯式傳 model 參數",
     "version": "1.0.0"
   },
   "servers": [
@@ -37,7 +37,7 @@
                   "model": {
                     "type": "string",
                     "default": "gpt-image-1",
-                    "description": "預設 gpt-image-1(穩定版)· 若 ChatGPT Images 2.0 / 後續版本 ID 已知,可在這裡指定。承富設定:env CHENGFU_OPENAI_IMAGE_MODEL 可全域覆寫預設"
+                    "description": "預設 gpt-image-1(穩定版)· 若 ChatGPT Images 2.0 / 後續版本 ID 已知,可在這裡指定。可用 env CHENGFU_OPENAI_IMAGE_MODEL 全域覆寫預設"
                   },
                   "prompt": {
                     "type": "string",
@@ -53,7 +53,7 @@
                     "type": "string",
                     "enum": ["low", "medium", "high", "auto"],
                     "default": "high",
-                    "description": "low/medium/high · 承富用 high · 標案 / 客戶交付不要省"
+                    "description": "low/medium/high · 正式標案 / 客戶交付建議用 high"
                   },
                   "n": {
                     "type": "integer",

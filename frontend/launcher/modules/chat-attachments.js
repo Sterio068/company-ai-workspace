@@ -31,8 +31,20 @@ export function validateAttachment(file) {
  */
 export function composeUserMessageSummary(text, uploadedAttachments) {
   if (!uploadedAttachments?.length) return text;
-  const list = uploadedAttachments.map(file => `• ${file.filename || file.file_id}`).join("\n");
-  return [text || "請閱讀附件並整理重點。", "", "附件:", list].join("\n");
+  const list = uploadedAttachments
+    .map(file => {
+      const size = file.bytes ? ` · ${Math.ceil(file.bytes / 1024)} KB` : "";
+      return `• ${file.filename || file.file_id}${size}`;
+    })
+    .join("\n");
+  return [
+    text || "請閱讀附件並整理重點。",
+    "",
+    "附件(已上傳到本次對話,可供 AI 回答引用):",
+    list,
+    "",
+    "回答若引用附件內容,請標明檔名;若附件無法判讀,請明確說明。",
+  ].join("\n");
 }
 
 /**

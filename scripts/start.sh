@@ -77,6 +77,19 @@ read_kc() {
     security find-generic-password -s "${SERVICE_PREFIX}-${key}" -a "$USER" -w 2>/dev/null || echo ""
 }
 
+ensure_generated_kc() {
+    local key="$1"
+    local value
+    value="$(read_kc "$key")"
+    if [[ -n "$value" ]]; then
+        return 0
+    fi
+    value="$(openssl rand -hex 32)"
+    security add-generic-password -s "${SERVICE_PREFIX}-${key}" -a "$USER" -w "$value" \
+        -l "ChengFu AI · ${key}" -j "承富 AI 系統機密 · start.sh 自動產生" >/dev/null
+    echo "  ✅ 已自動產生 Keychain: ${SERVICE_PREFIX}-${key}"
+}
+
 echo "[1/3] 從 Keychain 讀取機密..."
 
 OPENAI_API_KEY="$(read_kc "openai-key")"
@@ -97,13 +110,17 @@ export ANTHROPIC_API_KEY
 
 # 選配機密(空值不出錯)
 export EMAIL_PASSWORD="$(read_kc "email-password")"
+export NOTEBOOKLM_ACCESS_TOKEN="$(read_kc "notebooklm-access-token")"
 
 # 必要金鑰(產生過才有)
 # R26#1 · 加 internal-token · 沒它 prod startup raise · social-scheduler cron 跑不動
+# v1.70 · action-bridge-token · LibreChat Actions 只拿低權限 action token,不再持有 cron/admin token
+ensure_generated_kc "action-bridge-token"
 for pair in "jwt-secret:JWT_SECRET" "jwt-refresh-secret:JWT_REFRESH_SECRET" \
             "creds-key:CREDS_KEY" "creds-iv:CREDS_IV" \
             "meili-master-key:MEILI_MASTER_KEY" \
-            "internal-token:ECC_INTERNAL_TOKEN"; do
+            "internal-token:ECC_INTERNAL_TOKEN" \
+            "action-bridge-token:ACTION_BRIDGE_TOKEN"; do
     key="${pair%%:*}"
     var="${pair##*:}"
     val="$(read_kc "$key")"
@@ -132,6 +149,46 @@ if [[ -n "$DIST_APP" ]] && [[ ! -f "${LAUNCHER_DIR}/${DIST_APP}" ]]; then
         echo "     請 brew install node 或手動 cd frontend/launcher && npm install && npm run build"
     fi
 fi
+
+# ------------------ 偵測網路資訊 ------------------
+# 把 LAN IP / hostname / cloudflared tunnel 寫成 JSON · 給 backend
+# /admin/access-urls 讀 · 同仁連線網址在 admin view 顯示
+NET_FILE="${PROJECT_DIR}/config-templates/.host-network.json"
+LAN_IPS_JSON=$(ifconfig 2>/dev/null \
+    | awk '/^[a-z]/{iface=$1} /inet / && !/127\.0\.0\.1/ && !/inet6/ {print $2}' \
+    | jq -R . | jq -s . 2>/dev/null || echo "[]")
+RAW_HOST=$(hostname | tr '[:upper:]' '[:lower:]')
+HOSTNAME_LOWER="${RAW_HOST%.local}.local"
+TUNNEL_HOSTS_JSON="[]"
+if command -v cloudflared > /dev/null 2>&1; then
+    # 有裝就試讀 ~/.cloudflared/config.yml 抓 hostname(失敗就空)
+    if [[ -f "$HOME/.cloudflared/config.yml" ]]; then
+        TUNNEL_HOSTS_JSON=$(grep -E "^\s*-?\s*hostname:" "$HOME/.cloudflared/config.yml" 2>/dev/null \
+            | awk '{print $NF}' | jq -R . | jq -s . 2>/dev/null || echo "[]")
+    fi
+fi
+DETECTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+# 全用 jq 組 JSON 防 hostname / 時間字串含特殊字元壞掉
+if command -v jq > /dev/null 2>&1; then
+    jq -n \
+        --argjson lan_ips "${LAN_IPS_JSON}" \
+        --arg hostname "${HOSTNAME_LOWER}" \
+        --argjson tunnel_hostnames "${TUNNEL_HOSTS_JSON}" \
+        --arg detected_at "${DETECTED_AT}" \
+        '{lan_ips: $lan_ips, hostname: $hostname, tunnel_hostnames: $tunnel_hostnames, detected_at: $detected_at}' \
+        > "$NET_FILE"
+else
+    # fallback · 沒 jq 時 best-effort(macOS 預設無 jq · 但專案 brew install jq 必備)
+    cat > "$NET_FILE" <<EOF
+{
+  "lan_ips": ${LAN_IPS_JSON},
+  "hostname": "${HOSTNAME_LOWER}",
+  "tunnel_hostnames": ${TUNNEL_HOSTS_JSON},
+  "detected_at": "${DETECTED_AT}"
+}
+EOF
+fi
+echo "  ✅ 網路資訊已寫入 .host-network.json"
 
 # ------------------ 啟動容器 ------------------
 echo "[2/3] 啟動 docker compose..."

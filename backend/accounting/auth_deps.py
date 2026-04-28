@@ -251,6 +251,16 @@ def make_require_admin(users_col, admin_allowlist, logger=None):
             provided = (request.headers.get("X-Internal-Token") or "").strip()
             if _secrets_equal(provided, internal_token_expected):
                 return "internal:cron"
+        action_token_expected = os.getenv("ACTION_BRIDGE_TOKEN", "").strip()
+        if action_token_expected:
+            provided = (request.headers.get("X-Internal-Token") or "").strip()
+            acting = (request.headers.get("X-Acting-User") or "").strip()
+            if (
+                acting
+                and _secrets_equal(provided, action_token_expected)
+                and _action_bridge_path_allowed(request.url.path)
+            ):
+                return "internal:action"
 
         if not email:
             raise HTTPException(403, "未識別使用者 · 請從 launcher 進入登入")
@@ -300,6 +310,24 @@ def make_require_admin(users_col, admin_allowlist, logger=None):
         raise HTTPException(403, f"需要管理員權限 · {email} 不在白名單內")
 
     return require_admin
+
+
+_ACTION_BRIDGE_PATH_PREFIXES = (
+    "/accounts",
+    "/transactions",
+    "/invoices",
+    "/quotes",
+    "/reports/",
+    "/vision/",
+    "/notebooklm/agent/",
+    "/orchestrator/delegate",
+)
+
+
+def _action_bridge_path_allowed(path: str) -> bool:
+    if path.startswith("/projects/") and path.endswith("/finance"):
+        return True
+    return any(path == p.rstrip("/") or path.startswith(p) for p in _ACTION_BRIDGE_PATH_PREFIXES)
 
 
 # ============================================================

@@ -15,6 +15,7 @@ export const ROUTED_VIEWS = [
   "workflows",
   "crm",
   "knowledge",
+  "notebooklm",
   "help",
   "meeting",
   "media",

@@ -19,7 +19,7 @@ export async function withErrorBoundary(fn, { fallback, message = "載入失敗 
             <div class="error-icon">😓</div>
             <div class="error-msg">${escapeHtml(message)}</div>
             <div class="error-detail">${escapeHtml(e.message || "")}</div>
-            <button onclick="location.reload()" class="btn-ghost" style="margin-top:12px">重新整理</button>
+            <button data-action="window.reload" class="btn-ghost" style="margin-top:12px">重新整理</button>
           </div>
         `;
       }

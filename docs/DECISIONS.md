@@ -2,19 +2,19 @@
 
 > 本檔是專案最高優先級的事實來源。
 > 若 `AGENTS.md`、`AI-HANDOFF.md`、`SYSTEM-DESIGN.md`、`ARCHITECTURE.md` 或其他文件互相衝突,以本檔最新條目為準。
-> 最後更新:2026-04-24 · vNext Round 2 權限 / workflow 推進
+> 最後更新:2026-04-28 · v1.69+ / NotebookLM 功能最大化 / 全系統多代理深度審計 / release gate 13/13
 
 ---
 
 ## 一、目前產品基準
 
-- **版本狀態**:v1.3.0 已 ship,接續進入 vNext Phase A-E 優化線。
-- **部署型態**:Mac mini 本地部署 · Docker Compose · nginx 單一入口 · LibreChat v0.8.4 · FastAPI accounting backend · MongoDB 7 · Meilisearch v1.12 · Uptime Kuma。
+- **版本狀態**:v1.69+ 本機正式交付 gate 已通過；工程面可交付新版 DMG,仍需乾淨 Mac/VM 首裝、真 NotebookLM Enterprise token 與 4 人 pilot 做現場驗收。
+- **部署型態**:Mac mini 本地部署 · Docker Compose · nginx 單一入口 · LibreChat v0.8.5 · FastAPI accounting backend · MongoDB 7 · Meilisearch v1.12 · Uptime Kuma。
 - **AI 引擎策略**:OpenAI 為預設主力；Claude/Anthropic 保留為前端可切換備援與長文件工作流。
-- **前端策略**:承富 Launcher 使用 vanilla ES modules,不改成 React / Next.js / Tailwind；LibreChat 保持上游可升級。
+- **前端策略**:Launcher 使用 vanilla ES modules,不改成 React / Next.js / Tailwind；正式前端可見文字不綁定「承富」,以多公司可用白標化為方向；LibreChat 保持上游可升級。
 - **Agent 策略**:現行 production surface 是 10 核心 Agent,legacy 29 Agent 保留為能力拆解與 prompt 來源。
 - **工作入口**:5 Workspace 是情境封裝,不是 tag 或單純分類。
-- **安全策略**:Keychain 管 secrets,Level 01/02/03 資料分級,Level 03 不送雲端 API。
+- **資料策略**:Keychain 管 secrets；Level 01/02/03 資料分級預設用於提醒與治理。NotebookLM 依 D-015 採功能最大化例外:資料等級只標記、不阻擋同步/上傳,但 UI/文件必須清楚揭露會送到 NotebookLM Enterprise。
 - **後續方向**:先補可靠性、工作閉環、權限與回饋學習,再推半自動 workflow。
 
 ---
@@ -58,11 +58,12 @@
 - **理由**:降低未來承富 IT 維護門檻,並避免為客製首頁承擔重 build chain。
 - **例外**:可使用 esbuild 做 production bundle,但 source 保持原生 ES module。
 
-### D-007 · LibreChat pin v0.8.4
+### D-007-v2 · LibreChat pin v0.8.5
 
-- **決策**:正式部署鎖 LibreChat v0.8.4。
-- **理由**:v0.8 Agent API 是目前整合基準；升級需跑 sandbox checklist 與 SSE contract。
-- **驗收**:`scripts/smoke-librechat.sh` 與 `docs/LIBRECHAT-UPGRADE-CHECKLIST.md` 必須跟 v0.8 endpoint 對齊。
+- **決策**:正式部署鎖 LibreChat v0.8.5。
+- **取代**:D-007 初版「正式部署鎖 LibreChat v0.8.4」。
+- **理由**:v1.69 已完成 v0.8.5 容器升級與 route/smoke 驗收；Agent API 與 `/api/agents/chat` contract 維持相容。
+- **驗收**:`config-templates/docker-compose.yml` image 必須為 `ghcr.io/danny-avila/librechat:v0.8.5@sha256:...`;`scripts/smoke-librechat.sh` 與 `docs/LIBRECHAT-UPGRADE-CHECKLIST.md` 必須跟 v0.8 endpoint 對齊。
 
 ### D-008 · Skills 體系是 Agent 的能力庫
 
@@ -110,6 +111,22 @@
 - **理由**:投標、活動與新聞發布都涉及客戶與對外承諾,使用者必須先審核再送 Agent。
 - **驗收**:直接 `/workflow/run*` 預設 403；`prepare-preset` 可回傳 steps / supervisor_prompt / saved_to_project 並寫 audit_log。
 
+### D-015 · NotebookLM 採「本地資料庫為主、NotebookLM 為深讀副本」且功能最大化
+
+- **決策**:NotebookLM 不取代本地 MongoDB / 檔案索引 / 工作包；它是可同步的深讀副本。使用者可建立資料包、同步資料包、上傳單檔、多檔或整個專案資料夾到 NotebookLM Enterprise。
+- **資料等級**:Level 01/02/03 在 NotebookLM 流程中只作標記與提示,不作為建立、同步或上傳的阻擋條件。
+- **透明揭露**:UI、教學與 Agent prompt 必須清楚說明「同步或上傳會送到 NotebookLM Enterprise 雲端服務；未連線時不送出,只保留本地資料包/紀錄」。
+- **資料關聯**:一個工作包對應一本 NotebookLM 筆記本；同工作包後續資料包、單檔、多檔與資料夾都歸入同一本。
+- **權限邊界**:專案資料包仍沿用工作包 owner / collaborators / next_owner / admin 邊界；公司知識、教學與標案摘要可由具 `knowledge.search` 權限者使用。
+- **Agent 使用**:主管家與專家 Agent 可建立 NotebookLM 資料包；是否直接同步由 action wiring 與 admin/internal token 控制,並需留下 sync run 紀錄。
+
+### D-016 · 前端可見品牌採白標化,內部專案名可暫留
+
+- **決策**:正式使用者 UI、安裝提示與教學入口不應出現固定「承富」品牌字樣；採「智慧助理 / AI 工作台 / 本公司」等可多公司部署的泛用命名。
+- **允許保留**:repo 名稱、歷史文件、舊報告、DMG 檔名與內部註解可暫留 ChengFu/承富,避免一次大規模改名造成交付風險。
+- **理由**:此 app 會分別給不同公司使用,使用者第一眼不能覺得是在用別家公司系統。
+- **後續**:正式白標交付文件需另開 docs cleanup sprint,清掉外部會看到的舊公司名與舊 29 Agent 語境。
+
 ---
 
 ## 三、待決議事項
@@ -117,6 +134,8 @@
 | 優先級 | 決議項 | 目前建議 |
 |---|---|---|
 | P0 | Cloudflare Tunnel 正式 domain | 需承富提供最終 `ai.<domain>` 與 Access policy 名單 |
+| P0 | 乾淨 Mac/VM 首裝錄影 | 本機 release gate 已通過,但正式對外 production-ready 前仍需乾淨環境首裝證據 |
+| P0 | NotebookLM Enterprise 真憑證驗收 | 需填 `NOTEBOOKLM_*` 後驗建立 notebook / 同步資料包 / 上傳單檔或資料夾 |
 | P0 | OpenAI / Claude 額度與 budget cap | 需部署前確認 OpenAI 主力額度、Claude 備援額度與 NT$ 月上限 |
 | P1 | LINE workflow 是否進 vNext | 若承富主要資料入口是 LINE,建議排在 Chrome Extension 後 |
 | P1 | NAS indexing path | 需確認實際 NAS 掛載路徑、檔案量與權限 |
@@ -134,6 +153,8 @@
 | 2026-04-24 | D-012 | 無 | vNext Phase A-E | 接續優化線需要明確執行順序 |
 | 2026-04-24 | D-013 | 細部權限僅 UI 儲存 | progressive enforcement | 高風險 endpoint 需真實權限邊界 |
 | 2026-04-24 | D-014 | workflow placeholder | draft-first + project handoff | 可接續工作,但不繞過人審 |
+| 2026-04-28 | D-015 | NotebookLM 安全限制優先 | 本地資料庫為主 + NotebookLM 深讀副本 + 功能最大化 | 使用者要求不要因資料安全縮減 NotebookLM 功能 |
+| 2026-04-28 | D-016 | 前端仍有承富品牌 | 使用者可見 UI 改白標泛用 | app 會給不同公司使用 |
 
 ---
 
