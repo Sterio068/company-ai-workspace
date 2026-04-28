@@ -257,5 +257,5 @@ audit_log(PDPA §11 + admin 操作 audit · 不可刪)
 ---
 
 **簽收欄:** ☐ 老闆確認 v1.2 已 review · 同意 Day 0 部署
-**Tag:** `v1.2.0` pushed to GitHub Sterio068/chengfu-ai
+**Tag:** `v1.2.0` pushed to GitHub Sterio068/company-ai-workspace
 **狀態:** R32 codex 全綠 0 紅 0 黃 · ship-ready

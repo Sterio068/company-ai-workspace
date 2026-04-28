@@ -6,7 +6,7 @@
 # 直接 git clone + Keychain + start
 #
 # 用法:
-#   curl -fsSL https://raw.githubusercontent.com/Sterio068/chengfu-ai/main/installer/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Sterio068/company-ai-workspace/main/installer/install.sh | bash
 #
 # 自訂安裝路徑(預設 ~/ChengFu):
 #   curl -fsSL .../install.sh | INSTALL_DIR=/opt/chengfu bash
@@ -17,7 +17,7 @@
 
 set -euo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/Sterio068/chengfu-ai.git}"
+REPO_URL="${REPO_URL:-https://github.com/Sterio068/company-ai-workspace.git}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/ChengFu}"
 BRANCH="${BRANCH:-main}"
 NONINTERACTIVE="${NONINTERACTIVE:-0}"
@@ -30,7 +30,7 @@ warn() { echo -e "  ${Y}⚠${N} $*"; }
 err()  { echo -e "  ${R}✗${N} $*" >&2; }
 step() { echo ""; echo -e "${B}━━━ $* ━━━${N}"; }
 
-trap 'err "安裝失敗 · 看上面錯誤訊息 · 詳見 https://github.com/Sterio068/chengfu-ai/blob/main/docs/06-TROUBLESHOOTING.md"' ERR
+trap 'err "安裝失敗 · 看上面錯誤訊息 · 詳見 https://github.com/Sterio068/company-ai-workspace/blob/main/docs/06-TROUBLESHOOTING.md"' ERR
 
 clear || true
 echo ""

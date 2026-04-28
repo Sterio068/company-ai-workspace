@@ -111,7 +111,7 @@ fi
 				if button returned of userChoice is "取消" then return
 				if button returned of userChoice is "A 自動 clone" then
 					display dialog "正在 clone · 視網路速度約 1-3 分鐘 ..." giving up after 1
-					do shell script "cd $HOME && git clone https://github.com/Sterio068/chengfu-ai.git ChengFu 2>&1"
+					do shell script "cd $HOME && git clone https://github.com/Sterio068/company-ai-workspace.git ChengFu 2>&1"
 					set repoPath to (do shell script "echo $HOME/ChengFu")
 				else
 					set repoChoice to choose folder with prompt "選 ChengFu repo 根目錄(含 config-templates/)"

@@ -18,7 +18,7 @@
 - [ ] `承富-ai.local` mDNS 能從 10 台同仁機 ping 通
 - [ ] Apple ID 登入 · TimeMachine 接外接 USB(Mac mini 本機備份第一層)
 - [ ] 安裝 Docker Desktop · 登入 · 測 `docker run hello-world`
-- [ ] clone repo:`git clone https://github.com/Sterio068/chengfu-ai.git /Users/<admin>/Workspace/ChengFu`
+- [ ] clone repo:`git clone https://github.com/Sterio068/company-ai-workspace.git /Users/<admin>/Workspace/ChengFu`
 
 ---
 

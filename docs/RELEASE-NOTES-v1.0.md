@@ -99,7 +99,7 @@
 
 | 項目 | 數量 |
 |---|---|
-| **GitHub commit** | 50+(全公開 https://github.com/Sterio068/chengfu-ai) |
+| **GitHub commit** | 50+(全公開 https://github.com/Sterio068/company-ai-workspace) |
 | **6 輪 reviewer + 5 輪 codex audit** | 共抓 60+ 紅黃線 · 修 50+ |
 | **pytest** | 92 pass + 2 skip(8 個測試檔 · 含 admin/knowledge/handoff/design) |
 | **smoke** | 11 endpoint contract test pass |

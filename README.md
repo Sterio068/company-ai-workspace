@@ -9,12 +9,12 @@
 Mac mini 接好網路 + 裝好 [Docker Desktop](https://www.docker.com/products/docker-desktop/) 後 · 開 Terminal 貼一行:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Sterio068/chengfu-ai/main/installer/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Sterio068/company-ai-workspace/main/installer/install.sh | bash
 ```
 
 6 步自動跑完 · 約 5 分鐘 · 完成後自動開 http://localhost
 
-> 不能用 curl?走 [DMG 備援路徑](https://github.com/Sterio068/chengfu-ai/releases/tag/v1.3.0)(需 `xattr -cr` 清 macOS Gatekeeper)
+> 不能用 curl?走 [DMG 備援路徑](https://github.com/Sterio068/company-ai-workspace/releases/tag/v1.3.0)(需 `xattr -cr` 清 macOS Gatekeeper)
 > 完整 SOP · [docs/SHIP-v1.3.md](docs/SHIP-v1.3.md)
 
 ---

@@ -82,7 +82,7 @@ bash scripts/rag-verify.sh
 承富 IT 在 Mac mini 開 Terminal · 貼:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Sterio068/chengfu-ai/main/installer/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Sterio068/company-ai-workspace/main/installer/install.sh | bash
 ```
 
 優點:
@@ -97,7 +97,7 @@ curl -fsSL https://raw.githubusercontent.com/Sterio068/chengfu-ai/main/installer
 
 ```
 installer/dist/ChengFu-AI-Installer.dmg  ·  59 MB
-GitHub Release · https://github.com/Sterio068/chengfu-ai/releases/tag/v1.3.0
+GitHub Release · https://github.com/Sterio068/company-ai-workspace/releases/tag/v1.3.0
 ```
 
 包含:
@@ -130,7 +130,7 @@ open "/Volumes/承富 AI 安裝精靈/ChengFu-AI-Installer.app"
 2. **裝 Docker Desktop** · https://www.docker.com/products/docker-desktop/ → 等右上角 docker 圖示變綠
 3. **跑 curl 一行**:
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/Sterio068/chengfu-ai/main/installer/install.sh | bash
+   curl -fsSL https://raw.githubusercontent.com/Sterio068/company-ai-workspace/main/installer/install.sh | bash
    ```
 4. **6 步自動跑完**:
    - Step 1 · 環境預檢(git / docker / disk / RAM)

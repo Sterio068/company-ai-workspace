@@ -341,7 +341,7 @@ nginx mount 改回原 `frontend/launcher/`(0 downtime · 既有 modules/*.js 都
    帳號:<cloudflare-email> · 2FA 由 Sterio 把一次性 recovery code 交 Champion
 
 3. GitHub repo
-   https://github.com/Sterio068/chengfu-ai · collaborator 權限
+   https://github.com/Sterio068/company-ai-workspace · collaborator 權限
 
 4. macOS Keychain 僅限讀取下列項目:
    · chengfu-ai-anthropic-key

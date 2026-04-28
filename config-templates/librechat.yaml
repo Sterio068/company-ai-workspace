@@ -22,10 +22,10 @@ interface:
   # 預設指 GitHub 上 docs · 確保是有效 URL · 不會炸 LibreChat URL 解析
   # 設好 Cloudflare Tunnel 後改成正式對外隱私權頁面
   privacyPolicy:
-    externalUrl: "https://github.com/Sterio068/chengfu-ai/blob/main/docs/05-SECURITY.md"
+    externalUrl: "https://github.com/Sterio068/company-ai-workspace/blob/main/docs/05-SECURITY.md"
     openNewTab: true
   termsOfService:
-    externalUrl: "https://github.com/Sterio068/chengfu-ai/blob/main/README.md"
+    externalUrl: "https://github.com/Sterio068/company-ai-workspace/blob/main/README.md"
     openNewTab: true
   endpointsMenu: true
   modelSelect: true

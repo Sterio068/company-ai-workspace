@@ -220,7 +220,7 @@ cat > "$DMG_STAGING/讀我.txt" << 'EOF'
 
   作者:Sterio
   Email:請填承富內部 IT / 專案負責窗口
-  GitHub:https://github.com/Sterio068/chengfu-ai
+  GitHub:https://github.com/Sterio068/company-ai-workspace
 EOF
 echo -e "  ${GREEN}✓${NC} 寫進「讀我.txt」"
 
