@@ -112,6 +112,10 @@ jobs:
         run: |
           for f in config-templates/actions/*.json; do
             echo "Validating $f..."
+            if ! python3 -c "import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get('openapi') else 1)" "$f"; then
+              echo "  Skip: metadata registry, not an OpenAPI document"
+              continue
+            fi
             openapi-spec-validator "$f"
           done
 

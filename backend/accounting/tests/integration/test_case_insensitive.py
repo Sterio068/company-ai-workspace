@@ -20,9 +20,9 @@ def test_ci_regex_matches_mixed_case(real_db):
 
     col.insert_many([
         {"user_email": "leaving@company-ai.local", "key": "a"},
-        {"user_email": "Leaving@CompanyAI.Local", "key": "b"},
-        {"user_email": "LEAVING@COMPANY_AI.LOCAL", "key": "c"},
-        {"user_email": "leaving@COMPANY_AI-ai.local", "key": "d"},
+        {"user_email": "Leaving@Company-AI.Local", "key": "b"},
+        {"user_email": "LEAVING@COMPANY-AI.LOCAL", "key": "c"},
+        {"user_email": "leaving@COMPANY-ai.local", "key": "d"},
         # 不該匹配
         {"user_email": "other@company-ai.local", "key": "e"},
         {"user_email": "leavingleaving@company-ai.local", "key": "f"},  # 部分含 leaving
