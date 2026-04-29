@@ -121,6 +121,21 @@ export ANTHROPIC_API_KEY
 export EMAIL_PASSWORD="$(read_kc "email-password")"
 export NOTEBOOKLM_ACCESS_TOKEN="$(read_kc "notebooklm-access-token")"
 
+# Electron 私有更新代理(v1.4.1)
+# App 只拿 proxy URL/token;GitHub token 只留在 server-side update proxy。
+VOTER_SERVICE_UPDATE_PROXY_URL="${VOTER_SERVICE_UPDATE_PROXY_URL:-$(read_kc "update-proxy-url")}"
+if [[ -z "$VOTER_SERVICE_UPDATE_PROXY_URL" ]]; then
+    VOTER_SERVICE_UPDATE_PROXY_URL="http://localhost"
+fi
+export VOTER_SERVICE_UPDATE_PROXY_URL
+export VOTER_SERVICE_UPDATE_PROXY_TOKEN="${VOTER_SERVICE_UPDATE_PROXY_TOKEN:-$(read_kc "update-proxy-token")}"
+export UPDATE_PROXY_GITHUB_TOKEN="${UPDATE_PROXY_GITHUB_TOKEN:-$(read_kc "update-proxy-github-token")}"
+export UPDATE_PROXY_GITHUB_REPOSITORY="${UPDATE_PROXY_GITHUB_REPOSITORY:-Sterio068/company-ai-workspace}"
+if [[ -z "$VOTER_SERVICE_UPDATE_PROXY_TOKEN" || -z "$UPDATE_PROXY_GITHUB_TOKEN" ]]; then
+    echo "  ⚠ Electron 自動更新代理尚未完整設定 · 不影響主系統啟動"
+    echo "     需設定 company-ai-update-proxy-token / company-ai-update-proxy-github-token"
+fi
+
 # 必要金鑰(產生過才有)
 # R26#1 · 加 internal-token · 沒它 prod startup raise · social-scheduler cron 跑不動
 # v1.70 · action-bridge-token · LibreChat Actions 只拿低權限 action token,不再持有 cron/admin token

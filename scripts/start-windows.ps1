@@ -95,6 +95,16 @@ $env:OPENAI_API_KEY = $openAIKey
 $env:ANTHROPIC_API_KEY = $anthropicKey
 $env:EMAIL_PASSWORD = Get-CompanyAISecret -Name "email-password"
 $env:NOTEBOOKLM_ACCESS_TOKEN = Get-CompanyAISecret -Name "notebooklm-access-token"
+$env:VOTER_SERVICE_UPDATE_PROXY_URL = Get-CompanyAISecret -Name "update-proxy-url"
+if ([string]::IsNullOrWhiteSpace($env:VOTER_SERVICE_UPDATE_PROXY_URL)) {
+    $env:VOTER_SERVICE_UPDATE_PROXY_URL = "http://localhost"
+}
+$env:VOTER_SERVICE_UPDATE_PROXY_TOKEN = Get-CompanyAISecret -Name "update-proxy-token"
+$env:UPDATE_PROXY_GITHUB_TOKEN = Get-CompanyAISecret -Name "update-proxy-github-token"
+$env:UPDATE_PROXY_GITHUB_REPOSITORY = if ($env:UPDATE_PROXY_GITHUB_REPOSITORY) { $env:UPDATE_PROXY_GITHUB_REPOSITORY } else { "Sterio068/company-ai-workspace" }
+if ([string]::IsNullOrWhiteSpace($env:VOTER_SERVICE_UPDATE_PROXY_TOKEN) -or [string]::IsNullOrWhiteSpace($env:UPDATE_PROXY_GITHUB_TOKEN)) {
+    Write-WarnLine "Electron 自動更新代理尚未完整設定 · 不影響主系統啟動"
+}
 $env:JWT_SECRET = Get-CompanyAISecret -Name "jwt-secret"
 $env:JWT_REFRESH_SECRET = Get-CompanyAISecret -Name "jwt-refresh-secret"
 $env:CREDS_KEY = Get-CompanyAISecret -Name "creds-key"
