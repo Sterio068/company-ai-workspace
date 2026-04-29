@@ -34,6 +34,8 @@
 
 ## 2. 機密管理(S-1 · Keychain)
 
+> Windows 版對應機制:使用目前 Windows 使用者的 DPAPI 加密字串,存放於 `config-templates/.secrets/`,由 `scripts/start-windows.ps1` 啟動時解密並注入 Docker Compose。`.env` 仍只放非機密設定。
+
 ### 2.1 為什麼用 Keychain
 - `.env` 明文存檔,**任何能登入 Mac mini 的人**都能看(FileVault 只保護開機前)
 - 開發機若誤 commit 會外流
@@ -78,6 +80,21 @@ OpenAI / Anthropic key 與 JWT secret 建議**每年**重產一次:
 ```
 
 輪替 JWT 會讓所有使用者被踢下線,改通知一次性影響即可。
+
+### 2.6 Windows DPAPI 操作
+
+Windows 一行安裝會自動建立 `config-templates/.secrets/`。這些檔案是目前 Windows 使用者可解密的 DPAPI 加密字串,不可直接複製到另一台機器使用。
+
+重設金鑰最簡單方式:
+```powershell
+Remove-Item "$env:USERPROFILE\CompanyAIWorkspace\config-templates\.secrets" -Recurse -Force
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\CompanyAIWorkspace\installer\install.ps1"
+```
+
+重啟服務:
+```powershell
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\CompanyAIWorkspace\scripts\start-windows.ps1"
+```
 
 ---
 

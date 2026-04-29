@@ -17,6 +17,7 @@
 config-templates/.env
 config-templates/.env.local
 config-templates/.env.production
+config-templates/.secrets/
 *.pem
 *.key
 *_rsa

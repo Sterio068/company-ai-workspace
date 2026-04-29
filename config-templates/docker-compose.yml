@@ -18,7 +18,9 @@
 #                指向 accounting 內建 /rag adapter,避免額外 registry / pgvector 交付風險
 #
 # 重要提醒:
-#   API key 與密碼應透過 scripts/start.sh 從 macOS Keychain 注入,
+#   API key 與密碼應由啟動腳本注入:
+#   - macOS: scripts/start.sh 從 Keychain 注入
+#   - Windows: scripts/start-windows.ps1 從 DPAPI 加密檔注入
 #   .env 僅存非機密設定(見 .env.example 與 docs/05-SECURITY.md)。
 
 services:

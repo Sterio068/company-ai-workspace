@@ -6,10 +6,20 @@
 
 ## ⚡ 快速安裝(公司 IT)
 
+### macOS / Mac mini
+
 Mac mini 接好網路後 · 開 Terminal 貼一行。腳本會自動檢查/安裝 [Docker Desktop](https://www.docker.com/products/docker-desktop/) 並啟動服務:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Sterio068/company-ai-workspace/main/installer/install.sh | bash
+```
+
+### Windows 10/11
+
+開 PowerShell 貼一行。腳本會檢查/安裝 Git + [Docker Desktop](https://www.docker.com/products/docker-desktop/),並要求現場設定第一位管理員 email/password:
+
+```powershell
+powershell -ExecutionPolicy Bypass -NoProfile -Command "irm https://raw.githubusercontent.com/Sterio068/company-ai-workspace/main/installer/install.ps1 | iex"
 ```
 
 6 步自動跑完 · 若已裝 Docker 約 5 分鐘,首次安裝 Docker 約 10-15 分鐘 · 完成後自動開 http://localhost

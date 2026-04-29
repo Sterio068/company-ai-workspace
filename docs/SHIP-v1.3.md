@@ -75,9 +75,9 @@ bash scripts/rag-verify.sh
 
 ---
 
-## 2 · 安裝路徑(主推 curl · DMG 留 backup)
+## 2 · 安裝路徑(主推一行安裝 · DMG 留 backup)
 
-### 主路徑 · curl 一行(2026-04-25 改主推)
+### 主路徑 A · macOS curl 一行(2026-04-25 改主推)
 
 公司 IT 在 Mac mini 開 Terminal · 貼:
 
@@ -93,6 +93,24 @@ curl -fsSL https://raw.githubusercontent.com/Sterio068/company-ai-workspace/main
 - 自動 cp `.env` + 啟容器 + health check + 開瀏覽器
 
 詳見 `installer/install.sh` 開頭註解。
+
+### 主路徑 B · Windows PowerShell 一行
+
+公司 IT 在 Windows 10/11 開 PowerShell · 貼:
+
+```powershell
+powershell -ExecutionPolicy Bypass -NoProfile -Command "irm https://raw.githubusercontent.com/Sterio068/company-ai-workspace/main/installer/install.ps1 | iex"
+```
+
+優點:
+- **含 Git / Docker Desktop 檢查與 winget 安裝**(第一次 Docker Desktop 可能要求 WSL2 / 授權 / 重開機)
+- API Key 輸入時會顯示取得網址(OpenAI / Claude / NotebookLM)
+- 第一位管理員 email/password 由對方現場設定
+- 機密用 Windows DPAPI 加密後放在 `config-templates/.secrets/`,不寫入 `.env` / repo / log
+- 後續重啟用:
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\CompanyAIWorkspace\scripts\start-windows.ps1"
+  ```
 
 ### 備援路徑 · DMG(若 IT 無法用 curl · 例如離線部署)
 

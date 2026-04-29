@@ -1,6 +1,38 @@
-# 企業 AI · Mac 原生安裝精靈
+# 企業 AI · 安裝器
 
 > Mac 原生 .app · 雙擊跑 · GUI 對話框引導 IT 輸入 .env · 不用碰 Terminal
+> Windows 則提供 PowerShell 一行安裝,同樣會引導 IT 輸入 API Key 與第一位管理員密碼。
+
+---
+
+## Windows 一行安裝
+
+公司 IT 在 Windows 10/11 開 PowerShell · 貼:
+
+```powershell
+powershell -ExecutionPolicy Bypass -NoProfile -Command "irm https://raw.githubusercontent.com/Sterio068/company-ai-workspace/main/installer/install.ps1 | iex"
+```
+
+流程:
+1. 檢查 Git / Docker Desktop；缺少時用 winget 安裝。
+2. 拉 GitHub repo 到 `%USERPROFILE%\CompanyAIWorkspace`。
+3. 顯示 API Key 取得網址並讓 IT 貼入 OpenAI / Claude / NotebookLM key。
+4. 讓 IT 現場設定第一位管理員 email/password。
+5. 用 Windows DPAPI 加密保存機密到 `config-templates\.secrets\`。
+6. 啟動 Docker Compose,建立第一位 admin,開 `http://localhost`。
+
+之後重啟:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\CompanyAIWorkspace\scripts\start-windows.ps1"
+```
+
+停止:
+
+```powershell
+cd "$env:USERPROFILE\CompanyAIWorkspace\config-templates"
+docker compose down
+```
 
 ---
 
