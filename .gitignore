@@ -18,6 +18,8 @@ config-templates/.env
 config-templates/.env.local
 config-templates/.env.production
 config-templates/.secrets/
+desktop/build/update-proxy.json
+desktop/dist/
 *.pem
 *.key
 *_rsa

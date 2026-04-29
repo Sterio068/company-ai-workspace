@@ -177,6 +177,11 @@ CompanyAIWorkspace/
 │
 ├── chrome-extension/            ← 同仁從任何網頁右鍵送內容到企業 AI(v1.3)
 │
+├── desktop/                     ← Electron 桌面殼 + private update proxy client
+│   ├── electron-builder.yml     ← macOS/Windows 打包 + extraResources/update-proxy.json
+│   ├── src/updater.cjs          ← Windows generic updater + macOS 開啟 DMG
+│   └── scripts/                 ← CI 產 update-proxy.json + rewrite latest*.yml
+│
 └── tests/                       ← 跨層級的 E2E + integration
     └── e2e/                     ← Playwright(CI 跑 sandbox)
 ```
@@ -538,6 +543,7 @@ v1.3.0 release base 之上推進 v1.66/1.67/1.68/1.69 共 4 個 minor 批次,再
 | **2026-04-28** Action bridge token | `ACTION_BRIDGE_TOKEN` in Keychain/env + `backend/accounting/main.py _action_bridge_path_allowed` + `auth_deps.py` |
 | **2026-04-28** Help markdown sanitize | `frontend/launcher/modules/help.js` + `frontend/launcher/modules/chat-sanitize.js` + `frontend/nginx/default.conf` |
 | **2026-04-28** 備份 fail-loud | `scripts/backup.sh`(無 GPG key `company_ai` 預設中止;dev 才可 `ALLOW_PLAINTEXT_BACKUP=1`) |
+| **2026-04-29** Electron private update proxy | `backend/accounting/routers/updates.py` + `desktop/` + `.github/workflows/release-desktop.yml` + `docs/ELECTRON-PRIVATE-UPDATE-PROXY.md` |
 
 ---
 
@@ -604,6 +610,7 @@ v1.3.0 release base 之上推進 v1.66/1.67/1.68/1.69 共 4 個 minor 批次,再
 23. **改 NotebookLM action schema 要同步 3 處**:`internal-services.json` / `notebooklm-bridge.json` / `scripts/wire-actions.py`;bridge 走 `ACTION_BRIDGE_TOKEN`,不是 `ECC_INTERNAL_TOKEN` / 一般 API_KEY
 24. **改 installer/build 或 launcher source 後跑 release gate**:`./scripts/release-verify.sh http://localhost`;最新合格 baseline 是 13/13,DMG SHA 在 `reports/release/release-manifest-2026-04-28-223907.md`
 25. **備份正式環境不可明文 fallback**:`scripts/backup.sh` 無 GPG key `company_ai` 會中止;不要為了方便在正式機設 `ALLOW_PLAINTEXT_BACKUP=1`
+26. **Electron 更新不可直連 private GitHub**:App 只打 `/api/updates/*` + proxy token;GitHub token 只在 server env。手動檢查更新必帶 `refresh=true`/no-cache;未簽章 macOS 只開 DMG,不要宣稱靜默覆蓋。
 
 ---
 

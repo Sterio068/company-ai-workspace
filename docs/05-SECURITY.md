@@ -53,6 +53,16 @@
 | `company-ai-meili-master-key` | Meilisearch | **必要** |
 | `company-ai-email-password` | Resend / SMTP | 選配 |
 
+Electron 自動更新 proxy 另有 3 個機密/半機密值:
+
+| key / env | 用途 | 放置位置 |
+|---|---|---|
+| `VOTER_SERVICE_UPDATE_PROXY_URL` | App 可連線的 update proxy URL | CI secret / server env;可視為非機密但不建議硬編到文件 |
+| `VOTER_SERVICE_UPDATE_PROXY_TOKEN` | App 呼叫 update proxy 的 bearer token | CI secret;會被打進受信任內部分發的 Electron extraResources |
+| `UPDATE_PROXY_GITHUB_TOKEN` | Server-side 讀 private GitHub Releases/assets | 只放 server env / Keychain / DPAPI,不可打進 app |
+
+詳見 `docs/ELECTRON-PRIVATE-UPDATE-PROXY.md`。任何 log、issue、handoff 都不得貼出 token 原文。
+
 ### 2.3 手動操作指令
 
 查看:

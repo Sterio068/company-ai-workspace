@@ -809,6 +809,13 @@ _system_router.register_rate_limited_routes(
 )
 app.include_router(_system_router.router)
 
+# ============================================================
+# Private Electron update proxy · /api/updates/*
+# App 只打 proxy + proxy token; server-side token 才讀 private GitHub Releases。
+# ============================================================
+from routers import updates as _updates_router
+app.include_router(_updates_router.router)
+
 
 # startup() 已 migrate 到上方 lifespan() · 此處留空避免重複註冊
 

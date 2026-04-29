@@ -1,0 +1,40 @@
+appId: tw.company-ai.workspace
+productName: 企業 AI 工作台
+directories:
+  output: dist
+  buildResources: build
+files:
+  - src/**/*
+  - package.json
+extraResources:
+  - from: build/update-proxy.json
+    to: update-proxy.json
+publish:
+  provider: generic
+  url: ${env.VOTER_SERVICE_UPDATE_PROXY_URL}/api/updates/generic
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  forceCodeSigning: false
+dmg:
+  sign: false
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  artifactName: ${productName}-Setup-${version}-${arch}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true

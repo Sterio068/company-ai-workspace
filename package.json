@@ -1,0 +1,10 @@
+{
+  "name": "company-ai-workspace",
+  "version": "1.3.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "npm run typecheck --prefix desktop",
+    "test": "cd backend/accounting && pytest tests/ test_main.py -q --tb=short --ignore=tests/integration",
+    "build": "npm run build --prefix frontend/launcher"
+  }
+}

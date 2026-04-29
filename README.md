@@ -27,6 +27,10 @@ powershell -ExecutionPolicy Bypass -NoProfile -Command "irm https://raw.githubus
 > 不能用 curl?走 [DMG 備援路徑](https://github.com/Sterio068/company-ai-workspace/releases/tag/v1.3.0)(需 `xattr -cr` 清 macOS Gatekeeper)
 > 完整 SOP · [docs/SHIP-v1.3.md](docs/SHIP-v1.3.md)
 
+### Electron 正式包更新(私有 GitHub)
+
+macOS / Windows Electron 正式包不直接連 private GitHub Release,改打自架 update proxy。設定與驗證見 [docs/ELECTRON-PRIVATE-UPDATE-PROXY.md](docs/ELECTRON-PRIVATE-UPDATE-PROXY.md)。
+
 ---
 
 ## 🤔 這系統能幫我什麼?

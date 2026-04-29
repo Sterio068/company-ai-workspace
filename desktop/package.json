@@ -1,0 +1,22 @@
+{
+  "name": "company-ai-desktop",
+  "version": "1.3.0",
+  "description": "Electron shell for Enterprise AI Workspace",
+  "private": true,
+  "main": "src/main.cjs",
+  "scripts": {
+    "prepare:update-config": "node scripts/write-update-proxy-config.mjs",
+    "rewrite:feeds": "node scripts/rewrite-release-feeds.mjs",
+    "typecheck": "node --check src/main.cjs && node --check src/preload.cjs && node --check src/update-config.cjs && node --check src/updater.cjs && node --check scripts/write-update-proxy-config.mjs && node --check scripts/rewrite-release-feeds.mjs",
+    "build": "npm run prepare:update-config && electron-builder --config electron-builder.yml --dir",
+    "dist:mac": "npm run prepare:update-config && electron-builder --config electron-builder.yml --mac dmg --publish never && npm run rewrite:feeds",
+    "dist:win": "npm run prepare:update-config && electron-builder --config electron-builder.yml --win nsis portable --publish never && npm run rewrite:feeds"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  }
+}

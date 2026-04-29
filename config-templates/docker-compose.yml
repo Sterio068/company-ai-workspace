@@ -219,6 +219,12 @@ services:
       - SOURCE_PACK_TRAINING_DIR=/data/source-docs/user-guide
       # 同仁連線網址(LAN IP / cloudflared)· admin view 顯示用
       - HOST_NETWORK_FILE=/data/host-network.json
+      # Electron private update proxy · app 不直接碰 private GitHub Release
+      - VOTER_SERVICE_UPDATE_PROXY_URL=${VOTER_SERVICE_UPDATE_PROXY_URL:-}
+      - VOTER_SERVICE_UPDATE_PROXY_TOKEN=${VOTER_SERVICE_UPDATE_PROXY_TOKEN:-}
+      - UPDATE_PROXY_GITHUB_TOKEN=${UPDATE_PROXY_GITHUB_TOKEN:-}
+      - UPDATE_PROXY_GITHUB_REPOSITORY=${UPDATE_PROXY_GITHUB_REPOSITORY:-Sterio068/company-ai-workspace}
+      - UPDATE_PROXY_CACHE_TTL_SECONDS=${UPDATE_PROXY_CACHE_TTL_SECONDS:-60}
     volumes:
       # start.sh 啟動時把偵測結果寫入 .host-network.json · 唯讀掛入容器
       - ./.host-network.json:/data/host-network.json:ro
