@@ -328,6 +328,9 @@ fi
 			end if
 			-- admin 密碼只給本次安裝建立帳號 / Agent 用,不寫進 installer-run.command 明文。
 			do shell script ¬
+				"security delete-generic-password -s 'company-ai-admin-install-email' 2>/dev/null; " & ¬
+				"security add-generic-password -a $USER -s 'company-ai-admin-install-email' -w " & quoted form of adminEmail & " 2>&1"
+			do shell script ¬
 				"security delete-generic-password -s 'company-ai-admin-install-password' 2>/dev/null; " & ¬
 				"security add-generic-password -a $USER -s 'company-ai-admin-install-password' -w " & quoted form of adminPassword & " 2>&1"
 		else

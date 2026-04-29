@@ -43,6 +43,19 @@ has_keychain_secret() {
         security find-generic-password -s "${LEGACY_SERVICE_PREFIX}-${key}" -w >/dev/null 2>&1
 }
 
+read_keychain_secret() {
+    local key="$1"
+    security find-generic-password -s "${SERVICE_PREFIX}-${key}" -w 2>/dev/null ||
+        security find-generic-password -s "${LEGACY_SERVICE_PREFIX}-${key}" -w 2>/dev/null
+}
+
+put_keychain_secret() {
+    local key="$1" value="$2"
+    local full_key="${SERVICE_PREFIX}-${key}"
+    security delete-generic-password -s "$full_key" >/dev/null 2>&1 || true
+    security add-generic-password -a "$USER" -s "$full_key" -w "$value" >/dev/null
+}
+
 require_tty() {
     if [ ! -r /dev/tty ] || [ ! -w /dev/tty ]; then
         err "需要互動輸入,但目前沒有可用 TTY"
@@ -78,6 +91,78 @@ confirm_yes() {
         y|Y|yes|YES|Yes) return 0 ;;
         *) return 1 ;;
     esac
+}
+
+prompt_secret_twice() {
+    local prompt="$1" first second
+    while true; do
+        printf "  %s: " "$prompt" >/dev/tty
+        IFS= read -rs first </dev/tty
+        echo "" >/dev/tty
+        printf "  再輸入一次確認: " >/dev/tty
+        IFS= read -rs second </dev/tty
+        echo "" >/dev/tty
+        if [ "$first" != "$second" ]; then
+            warn "兩次密碼不一致,請重試" >/dev/tty
+            continue
+        fi
+        if [ "${#first}" -lt 8 ]; then
+            warn "密碼至少 8 字" >/dev/tty
+            continue
+        fi
+        printf "%s" "$first"
+        return 0
+    done
+}
+
+ensure_admin_bootstrap_secrets() {
+    if has_keychain_secret "admin-install-email" && has_keychain_secret "admin-install-password"; then
+        ok "第一位管理員憑證已在 Keychain"
+        return 0
+    fi
+
+    if [ -n "${INSTALL_ADMIN_EMAIL:-}" ] && [ -n "${INSTALL_ADMIN_PASSWORD:-}" ]; then
+        put_keychain_secret "admin-install-email" "$INSTALL_ADMIN_EMAIL"
+        put_keychain_secret "admin-install-password" "$INSTALL_ADMIN_PASSWORD"
+        ok "已從環境變數寫入第一位管理員憑證"
+        return 0
+    fi
+
+    if [ "$NONINTERACTIVE" = "1" ]; then
+        err "NONINTERACTIVE=1 但沒有第一位管理員憑證"
+        echo "       請先設 INSTALL_ADMIN_EMAIL / INSTALL_ADMIN_PASSWORD,或用互動模式安裝"
+        exit 1
+    fi
+
+    require_tty
+    echo "  · 設定第一次登入用的管理員帳號"
+    printf "  管理員 Email [admin@company-ai.local]: " >/dev/tty
+    IFS= read -r admin_email </dev/tty
+    admin_email="${admin_email:-admin@company-ai.local}"
+    case "$admin_email" in
+        *@*) ;;
+        *) err "管理員 Email 格式不正確"; exit 1 ;;
+    esac
+    admin_password="$(prompt_secret_twice "管理員登入密碼")"
+    put_keychain_secret "admin-install-email" "$admin_email"
+    put_keychain_secret "admin-install-password" "$admin_password"
+    ok "第一位管理員憑證已寫入 Keychain"
+}
+
+set_env_value() {
+    local file="$1" key="$2" value="$3" tmp
+    tmp="${file}.tmp.$$"
+    if [ -f "$file" ] && grep -q "^${key}=" "$file"; then
+        awk -v k="$key" -v v="$value" '
+            BEGIN { updated = 0 }
+            $0 ~ "^" k "=" { print k "=" v; updated = 1; next }
+            { print }
+            END { if (updated == 0) print k "=" v }
+        ' "$file" > "$tmp"
+        mv "$tmp" "$file"
+    else
+        printf "%s=%s\n" "$key" "$value" >> "$file"
+    fi
 }
 
 ensure_homebrew() {
@@ -282,6 +367,8 @@ else
     SERVICE_PREFIX="$SERVICE_PREFIX" bash ./scripts/setup-keychain.sh </dev/tty
 fi
 
+ensure_admin_bootstrap_secrets
+
 # ============================================================
 # 4 · 啟動容器
 # ============================================================
@@ -299,6 +386,14 @@ if [ ! -f "$ENV_FILE" ]; then
     ok "建 .env(從 .env.example · 機密由 Keychain 注入)"
 fi
 
+ADMIN_EMAIL_FROM_KEYCHAIN="$(read_keychain_secret "admin-install-email" || true)"
+if [ -n "$ADMIN_EMAIL_FROM_KEYCHAIN" ]; then
+    set_env_value "$ENV_FILE" "ADMIN_EMAIL" "$ADMIN_EMAIL_FROM_KEYCHAIN"
+    set_env_value "$ENV_FILE" "ADMIN_EMAILS" "$ADMIN_EMAIL_FROM_KEYCHAIN"
+    set_env_value "$ENV_FILE" "ALLOW_REGISTRATION" "false"
+    set_env_value "$ENV_FILE" "ALLOW_EMAIL_LOGIN" "true"
+fi
+
 # 4.2 · 啟容器
 bash ./scripts/start.sh 2>&1 | sed 's/^/  /' || {
     err "start.sh 失敗"
@@ -306,6 +401,26 @@ bash ./scripts/start.sh 2>&1 | sed 's/^/  /' || {
     exit 1
 }
 ok "容器啟動完成"
+
+ADMIN_EMAIL_FROM_KEYCHAIN="$(read_keychain_secret "admin-install-email" || true)"
+ADMIN_PASSWORD_FROM_KEYCHAIN="$(read_keychain_secret "admin-install-password" || true)"
+USER_COUNT=$(docker exec company-ai-mongo mongosh company_ai --quiet --eval 'db.users.countDocuments()' 2>/dev/null | tr -d '[:space:]' || echo "0")
+if [ "${USER_COUNT:-0}" = "0" ]; then
+    if [ -n "$ADMIN_EMAIL_FROM_KEYCHAIN" ] && [ -n "$ADMIN_PASSWORD_FROM_KEYCHAIN" ]; then
+        echo "  · 建立第一位管理員帳號($ADMIN_EMAIL_FROM_KEYCHAIN)..."
+        docker exec company-ai-librechat sh -c 'echo y | npm run create-user -- "$1" "$2" "$3" "$4"' \
+            sh "$ADMIN_EMAIL_FROM_KEYCHAIN" "系統管理員" "$ADMIN_EMAIL_FROM_KEYCHAIN" "$ADMIN_PASSWORD_FROM_KEYCHAIN" \
+            >/tmp/company-ai-create-admin.log 2>&1 || {
+                tail -20 /tmp/company-ai-create-admin.log
+                err "建立第一位管理員失敗"
+                exit 1
+            }
+        ok "第一位管理員已建立 · $ADMIN_EMAIL_FROM_KEYCHAIN"
+    else
+        warn "尚未建立任何使用者,且 Keychain 沒有管理員密碼"
+        warn "請重跑安裝器或設 INSTALL_ADMIN_EMAIL / INSTALL_ADMIN_PASSWORD"
+    fi
+fi
 
 # ============================================================
 # 5 · 健康檢查
