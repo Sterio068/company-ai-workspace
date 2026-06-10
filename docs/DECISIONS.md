@@ -127,6 +127,13 @@
 - **理由**:此 app 會分別給不同公司使用,使用者第一眼不能覺得是在用別家公司系統。
 - **後續**:正式白標交付文件需另開 docs cleanup sprint,清掉外部會看到的舊公司名與舊 29 Agent 語境。
 
+### D-017 · ChengFu 為唯一主線 repo,CompanyAIWorkspace 併入後封存
+
+- **決策**:本產品只維護 ChengFu 一條主線。`/Volumes/CODEX/Workspace/CompanyAIWorkspace`(v1.8)的獨有資產 — Playwright E2E 測試、Agent Builder 文檔、GitHub Actions CI 設定 — 評估後併入 ChengFu,之後 CompanyAIWorkspace 標記封存、不再開發。
+- **理由**:兩個 repo 是同一產品(同為 10 人公關公司、LibreChat、5 Workspace、10 Agent),雙線維護成本是純浪費;ChengFu 較成熟(v1.69+ vs v1.8、後端測試覆蓋 88% vs 18 項、13/13 release gate 已過)。
+- **驗收**:CompanyAIWorkspace 根目錄有 `ARCHIVED-DECISION.md` 指回本條;獨有資產搬遷清單完成後該 repo 唯讀。
+- **注意**:CompanyAIWorkspace 的 GitHub raw installer URL(README 安裝指令)若仍有使用者依賴,封存前需確認 ChengFu 提供對等安裝入口或保留該 repo 的 installer 分支可讀。
+
 ---
 
 ## 三、待決議事項
@@ -155,6 +162,7 @@
 | 2026-04-24 | D-014 | workflow placeholder | draft-first + project handoff | 可接續工作,但不繞過人審 |
 | 2026-04-28 | D-015 | NotebookLM 安全限制優先 | 本地資料庫為主 + NotebookLM 深讀副本 + 功能最大化 | 使用者要求不要因資料安全縮減 NotebookLM 功能 |
 | 2026-04-28 | D-016 | 前端仍有本公司品牌 | 使用者可見 UI 改白標泛用 | app 會給不同公司使用 |
+| 2026-06-10 | D-017 | 無(雙 repo 並行) | CompanyAIWorkspace 併入 ChengFu 後封存 | 同一產品雙線維護成本純浪費;ChengFu 較成熟 |
 
 ---
 
